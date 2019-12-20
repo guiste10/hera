@@ -13,6 +13,13 @@
 %--- API -----------------------------------------------------------------------
 
 start_link() -> 
+    io:format("hello world ~n", []),
+    io:format("hello world ~n", []),
+    io:format("hello world ~n", []),
+    io:format("hello world ~n", []),
+    io:format("hello world ~n", []),
+    io:format("hello world ~n", []),
+    io:format("hello world ~n", []),
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
 %--- Callbacks -----------------------------------------------------------------
