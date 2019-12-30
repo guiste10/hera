@@ -1,17 +1,20 @@
 {application, hera, [
-    {description, "A GRiSP application"},
+    {description, "A framework to work with fusion of data.
+                    \n More precisely to filter and aggregate data.
+                    \n is designed to be used with achlys and grisp"},
     {vsn, "0.1.0"},
-    {registered, []},
+    {registered, [hera, hera_sup]},
     {mod, {hera, []}},
     {applications, [
         kernel,
-        stdlib,
-        grisp
+        stdlib
     ]},
     {env,[]},
-    {modules, []},
-
+    {modules, [hera, hera_sup]},
     {maintainers, []},
     {licenses, ["Apache 2.0"]},
-    {links, []}
+    {links, [{"Achlys","https://achlys.app"},
+            {"Github","https://github.com/achlysproject/achlys"},
+            {"GRiSP","https://www.grisp.org"},
+            {"LightKone","https://lightkone.eu/"}]}
 ]}.
