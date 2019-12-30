@@ -1,6 +1,7 @@
 % @doc hera public API.
 % @end
 -module(hera).
+-author("Julien Bastin <julien.bastin@student.uclouvain.be>, Guillaume Neirinckx <guillaume.neirinckx@student.uclouvain.be>").
 
 -behavior(application).
 
