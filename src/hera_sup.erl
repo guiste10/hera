@@ -31,9 +31,10 @@ start_link() ->
 %% @private
 -spec init(term()) ->
     {ok , {supervisor:sup_flags() , [supervisor:child_spec()]}}.
-init([]) -> 
+
+init([]) ->
     {ok, { 
         ?SUPFLAGS(5, 25), [
-            
+            ?CHILD(hera_filter, worker)
         ]} 
     }.
