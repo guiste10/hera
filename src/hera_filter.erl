@@ -15,6 +15,7 @@
 
 %% API
 -export([start_link/0]).
+-export([filter/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
@@ -22,7 +23,7 @@
 
 -define(SERVER, ?MODULE).
 
--record(hera_filter_state, {}).
+-record(state, {}).
 
 %%%===================================================================
 %%% API
@@ -34,6 +35,10 @@
 start_link() ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
+-spec filter(Filter :: hera:filter_task()) -> ok.
+filter(Filter) ->
+  gen_server:cast(?SERVER, {add_filter_task, Filter}).
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -41,40 +46,40 @@ start_link() ->
 %% @private
 %% @doc Initializes the server
 -spec(init(Args :: term()) ->
-  {ok, State :: #hera_filter_state{}} | {ok, State :: #hera_filter_state{}, timeout() | hibernate} |
+  {ok, State :: #state{}} | {ok, State :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
 init([]) ->
-  {ok, #hera_filter_state{}}.
+  {ok, #state{}}.
 
 %% @private
 %% @doc Handling call messages
 -spec(handle_call(Request :: term(), From :: {pid(), Tag :: term()},
-    State :: #hera_filter_state{}) ->
-  {reply, Reply :: term(), NewState :: #hera_filter_state{}} |
-  {reply, Reply :: term(), NewState :: #hera_filter_state{}, timeout() | hibernate} |
-  {noreply, NewState :: #hera_filter_state{}} |
-  {noreply, NewState :: #hera_filter_state{}, timeout() | hibernate} |
-  {stop, Reason :: term(), Reply :: term(), NewState :: #hera_filter_state{}} |
-  {stop, Reason :: term(), NewState :: #hera_filter_state{}}).
-handle_call(_Request, _From, State = #hera_filter_state{}) ->
+    State :: #state{}) ->
+  {reply, Reply :: term(), NewState :: #state{}} |
+  {reply, Reply :: term(), NewState :: #state{}, timeout() | hibernate} |
+  {noreply, NewState :: #state{}} |
+  {noreply, NewState :: #state{}, timeout() | hibernate} |
+  {stop, Reason :: term(), Reply :: term(), NewState :: #state{}} |
+  {stop, Reason :: term(), NewState :: #state{}}).
+handle_call(_Request, _From, State = #state{}) ->
   {reply, ok, State}.
 
 %% @private
 %% @doc Handling cast messages
--spec(handle_cast(Request :: term(), State :: #hera_filter_state{}) ->
-  {noreply, NewState :: #hera_filter_state{}} |
-  {noreply, NewState :: #hera_filter_state{}, timeout() | hibernate} |
-  {stop, Reason :: term(), NewState :: #hera_filter_state{}}).
-handle_cast(_Request, State = #hera_filter_state{}) ->
+-spec(handle_cast(Request :: term(), State :: #state{}) ->
+  {noreply, NewState :: #state{}} |
+  {noreply, NewState :: #state{}, timeout() | hibernate} |
+  {stop, Reason :: term(), NewState :: #state{}}).
+handle_cast(_Request, State = #state{}) ->
   {noreply, State}.
 
 %% @private
 %% @doc Handling all non call/cast messages
--spec(handle_info(Info :: timeout() | term(), State :: #hera_filter_state{}) ->
-  {noreply, NewState :: #hera_filter_state{}} |
-  {noreply, NewState :: #hera_filter_state{}, timeout() | hibernate} |
-  {stop, Reason :: term(), NewState :: #hera_filter_state{}}).
-handle_info(_Info, State = #hera_filter_state{}) ->
+-spec(handle_info(Info :: timeout() | term(), State :: #state{}) ->
+  {noreply, NewState :: #state{}} |
+  {noreply, NewState :: #state{}, timeout() | hibernate} |
+  {stop, Reason :: term(), NewState :: #state{}}).
+handle_info(_Info, State = #state{}) ->
   {noreply, State}.
 
 %% @private
@@ -83,16 +88,16 @@ handle_info(_Info, State = #hera_filter_state{}) ->
 %% necessary cleaning up. When it returns, the gen_server terminates
 %% with Reason. The return value is ignored.
 -spec(terminate(Reason :: (normal | shutdown | {shutdown, term()} | term()),
-    State :: #hera_filter_state{}) -> term()).
-terminate(_Reason, _State = #hera_filter_state{}) ->
+    State :: #state{}) -> term()).
+terminate(_Reason, _State = #state{}) ->
   ok.
 
 %% @private
 %% @doc Convert process state when code is changed
--spec(code_change(OldVsn :: term() | {down, term()}, State :: #hera_filter_state{},
+-spec(code_change(OldVsn :: term() | {down, term()}, State :: #state{},
     Extra :: term()) ->
-  {ok, NewState :: #hera_filter_state{}} | {error, Reason :: term()}).
-code_change(_OldVsn, State = #hera_filter_state{}, _Extra) ->
+  {ok, NewState :: #state{}} | {error, Reason :: term()}).
+code_change(_OldVsn, State = #state{}, _Extra) ->
   {ok, State}.
 
 %%%===================================================================
