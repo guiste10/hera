@@ -19,8 +19,7 @@
 
 start() ->
   %{ok, _} = application:ensure_all_started(hera),
-  %hera_sup:start_link().
-  ok.
+  hera_sup:start_link().
 stop() -> ok.
 
 %% ===================================================================
