@@ -12,15 +12,16 @@
 -export([filter/1]).
 
 % Callbacks
--export([start/0]).
--export([stop/0]).
+-export([start/2]).
+-export([stop/1]).
 
 %--- Callbacks -----------------------------------------------------------------
 
-start() ->
+start(_Type, _Args) ->
   %{ok, _} = application:ensure_all_started(hera),
   hera_sup:start_link().
-stop() -> ok.
+
+stop(_State) -> ok.
 
 %% ===================================================================
 %% API
