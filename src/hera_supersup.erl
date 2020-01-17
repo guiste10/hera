@@ -1,0 +1,69 @@
+% @doc hera top level supervisor.
+% @end
+-module(hera_supersup).
+-author("Julien Bastin <julien.bastin@student.uclouvain.be>, Guillaume Neirinckx <guillaume.neirinckx@student.uclouvain.be>").
+
+-behavior(supervisor).
+
+-include("hera.hrl").
+
+% API
+-export([start_link/0, stop/0, start_pool/3, stop_pool/1]).
+
+% Callbacks
+-export([init/1]).
+
+%--- API -----------------------------------------------------------------------
+
+% {ok, Pid :: pid()} | ignore | {error, Reason :: term()}.
+%% @doc Start hera top level supervisor.
+-spec start_link() ->
+    {ok, pid()}
+    | ignore
+    | {error, {already_started, pid()}
+    | {shutdown, term()}
+    | term()}.
+start_link() -> 
+    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+
+%% @doc  kill supervisor brutally
+-spec stop() ->
+    true
+    | ok.
+stop() ->
+    case whereis(?MODULE) of
+    P when is_pid(P) ->
+    exit(P, kill);
+    _ -> ok
+    end.
+
+% {ok, Child :: child()} |
+% {ok, Child :: child(), Info :: term()} |
+% {error, startchild_err()}.
+
+%% @doc starts a process pool
+-spec start_pool(Name :: atom(), Limit :: integer(), MFA :: tuple()) ->
+    supervisor:startchild_ret().
+start_pool(Name, Limit, MFA) ->
+    ChildSpec = {Name,
+    {hera_sup, start_link, [Name, Limit, MFA]},
+    permanent, 10500, supervisor, [hera_sup]},
+    supervisor:start_child(ppool, ChildSpec).
+
+%% @doc stops a process pool
+-spec stop_pool(PoolName :: atom()) ->
+    ok | 
+    {error, running | restarting | not_found | simple_one_for_one}.
+stop_pool(Name) ->
+    supervisor:terminate_child(ppool, Name),
+    supervisor:delete_child(ppool, Name).
+
+%--- Callbacks -----------------------------------------------------------------
+%% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
+%% @private
+-spec init([]) ->
+    {ok , {supervisor:sup_flags() , []}}.
+init([]) ->
+    MaxRestart = 6,
+    MaxTime = 3600,
+    {ok, {{one_for_one, MaxRestart, MaxTime}, []}}. % childless

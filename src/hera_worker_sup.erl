@@ -1,0 +1,22 @@
+-module(hera_worker_sup).
+-export([start_link/1, init/1]).
+-behaviour(supervisor).
+ 
+-spec start_link({Module :: atom(), Function :: atom(), Arguments :: list()}) ->
+    {ok, pid()}
+    | ignore
+    | {error, {already_started, pid()}
+    | {shutdown, term()}
+    | term()}.
+start_link(MFA = {_,_,_}) ->
+    supervisor:start_link(?MODULE, MFA).
+ 
+-spec init({Module :: atom(), Function :: atom(), Arguments :: list()}) ->
+    {ok , {supervisor:sup_flags() , [supervisor:child_spec()]}}.
+init({M,F,A}) ->
+    MaxRestart = 5,
+    MaxTime = 3600,
+    {ok, {{simple_one_for_one, MaxRestart, MaxTime},
+        [{ppool_worker,
+        {M,F,A},
+        temporary, 5000, worker, [M]}]}}.

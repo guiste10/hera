@@ -16,7 +16,7 @@
 %--- API -----------------------------------------------------------------------
 
 % {ok, Pid :: pid()} | ignore | {error, Reason :: term()}.
-%% @doc Start hera top level supervisor.
+%% @doc Start a pool supervisor.
 -spec start_link() ->
     {ok, pid()}
     | ignore
@@ -29,12 +29,15 @@ start_link() ->
 %--- Callbacks -----------------------------------------------------------------
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
 %% @private
--spec init(term()) ->
+-spec init({Name :: atom(), Limit :: integer(), MFA :: tuple()}) ->
     {ok , {supervisor:sup_flags() , [supervisor:child_spec()]}}.
-
-init([]) ->
-    {ok, { 
-        ?SUPFLAGS(5, 25), [
-            ?CHILD(hera_filter, worker)
-        ]} 
-    }.
+init({Name, Limit, MFA}) ->
+    MaxRestart = 1,
+    MaxTime = 3600,
+    {ok, {{one_for_all, MaxRestart, MaxTime}, 
+        [{serv,
+            {ppool_serv, start_link, [Name, Limit, self(), MFA]}, % supervisor pid passed to the server
+            permanent,
+            5000, % Shutdown time
+            worker, % type (= worker because it's not a supervisor)
+            [ppool_serv]}]}}.
