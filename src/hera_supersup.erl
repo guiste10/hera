@@ -24,14 +24,15 @@
     | {shutdown, term()}
     | term()}.
 start_link() -> 
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+    io:format("supersup process started ~n"),
+    supervisor:start_link({local, supersup}, ?MODULE, []).
 
 %% @doc  kill supervisor brutally
 -spec stop() ->
     true
     | ok.
 stop() ->
-    case whereis(?MODULE) of
+    case whereis(supersup) of
     P when is_pid(P) ->
     exit(P, kill);
     _ -> ok
@@ -41,22 +42,22 @@ stop() ->
 % {ok, Child :: child(), Info :: term()} |
 % {error, startchild_err()}.
 
-%% @doc starts a process pool
+%% @doc starts a process pool named "Name", with workers limit of 2, using worker specified in MFA
 -spec start_pool(Name :: atom(), Limit :: integer(), MFA :: tuple()) ->
     supervisor:startchild_ret().
 start_pool(Name, Limit, MFA) ->
-    ChildSpec = {Name,
-    {hera_sup, start_link, [Name, Limit, MFA]},
-    permanent, 10500, supervisor, [hera_sup]},
-    supervisor:start_child(ppool, ChildSpec).
+    ChildSpec = {Name, % id
+    {hera_sup, start_link, [Name, Limit, MFA]}, % start
+    permanent, 10500, supervisor, [hera_sup]}, % restart,shutdown,type,module
+    supervisor:start_child(supersup, ChildSpec).
 
 %% @doc stops a process pool
 -spec stop_pool(PoolName :: atom()) ->
     ok | 
     {error, running | restarting | not_found | simple_one_for_one}.
 stop_pool(Name) ->
-    supervisor:terminate_child(ppool, Name),
-    supervisor:delete_child(ppool, Name).
+    supervisor:terminate_child(supersup, Name),
+    supervisor:delete_child(supersup, Name).
 
 %--- Callbacks -----------------------------------------------------------------
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}

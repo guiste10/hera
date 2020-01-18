@@ -1,4 +1,4 @@
--module(ppool_serv).
+-module(hera_serv).
 -behaviour(gen_server).
 -export([start_link/4, run/2, sync_queue/2, async_queue/2, stop/1]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -6,9 +6,9 @@ code_change/3, terminate/2]).
 
 %% The worker supervisor is started dynamically!
 -define(SPEC(MFA),
-    {worker_sup,
-     {ppool_worker_sup, start_link, [MFA]},
-     temporary, 10000, supervisor,[ppool_worker_sup]}).
+    {worker_sup, % name
+     {hera_worker_sup, start_link, [MFA]},
+     temporary, 10000, supervisor,[hera_worker_sup]}).
 
 -record(state, {limit=0, sup, refs, queue=queue:new()}).
 
@@ -45,7 +45,7 @@ stop(Name) ->
 %%====================================================================
 
 % initializes the server
--spec (init({integer(), tuple(), term()}) ->
+-spec (init({Limit :: integer(), MFA :: tuple(), Supervisor :: term()}) ->
     {ok , State :: state()}).
 init({Limit, MFA, Sup}) ->
     %% We need to find the Pid of the worker supervisor from here,
