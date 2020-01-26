@@ -17,6 +17,6 @@ init({M,F,A}) ->
     MaxRestart = 5,
     MaxTime = 3600,
     {ok, {{simple_one_for_one, MaxRestart, MaxTime},
-        [{ppool_worker,
+        [{ppool_worker, % child id, used to identify the child specification internally by the supervisor heraworkersup
         {M,F,A},
         temporary, 5000, worker, [M]}]}}.

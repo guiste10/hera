@@ -1,5 +1,4 @@
 %% demo module, a nagger for tasks,
-%% because the previous one wasn't good enough
 -module(ppool_nagger).
 -behaviour(gen_server).
 -export([start_link/4, stop/1]).
@@ -18,7 +17,7 @@ stop(Pid) ->
 %%====================================================================
 
 init({Task, Delay, Max, SendTo}) ->
-    {ok, {Task, Delay, Max, SendTo}, Delay}.
+    {ok, {Task, Delay, Max, SendTo}, Delay}. % {ok, state, timeout}
 
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};

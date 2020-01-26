@@ -7,7 +7,7 @@ code_change/3, terminate/2]).
 %% The worker supervisor is started dynamically!
 -define(SPEC(MFA),
     {worker_sup, % name
-     {hera_worker_sup, start_link, [MFA]},
+     {hera_worker_sup, start_link, [MFA]}, % MFA = module,function,argument of the worker to run
      temporary, 10000, supervisor,[hera_worker_sup]}).
 
 -record(state, {limit=0, sup, refs, queue=queue:new()}).
@@ -64,7 +64,7 @@ handle_info({'DOWN', Ref, process, _Pid, _}, S = #state{refs=Refs}) ->
             {noreply, S}
     end;
 handle_info({start_worker_supervisor, Sup, MFA}, S = #state{}) ->
-    {ok, Pid} = supervisor:start_child(Sup, ?SPEC(MFA)), % ask the current supervisor to start a child
+    {ok, Pid} = supervisor:start_child(Sup, ?SPEC(MFA)), % ask the supervisor "sup" to start a child
     link(Pid),
     {noreply, S#state{sup=Pid}};
 handle_info(Msg, State) ->

@@ -17,7 +17,7 @@
 
 % {ok, Pid :: pid()} | ignore | {error, Reason :: term()}.
 %% @doc Start a pool supervisor.
--spec start_link(Name :: atom(), Limit :: integer(), MFA :: tuple()) ->
+-spec start_link(Name :: atom(), Limit :: integer(), MFA :: tuple()) ->  % args will be passed to init callback
     {ok, pid()}
     | ignore
     | {error, {already_started, pid()}
@@ -36,7 +36,7 @@ init({Name, Limit, MFA}) ->
     MaxTime = 3600,
     {ok, {{one_for_all, MaxRestart, MaxTime}, 
         [{serv,
-            {hera_serv, start_link, [Name, Limit, self(), MFA]}, % supervisor pid passed to the server
+            {hera_serv, start_link, [Name, Limit, self(), MFA]}, % !! supervisor pid passed to the server
             permanent,
             5000, % Shutdown time
             worker, % type (= worker because it's not a supervisor)

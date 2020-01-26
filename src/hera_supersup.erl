@@ -16,7 +16,7 @@
 %--- API -----------------------------------------------------------------------
 
 % {ok, Pid :: pid()} | ignore | {error, Reason :: term()}.
-%% @doc Start hera top level supervisor.
+%% @doc Start hera top level supervisor using the current supervisor (= shell)
 -spec start_link() ->
     {ok, pid()}
     | ignore
@@ -42,14 +42,15 @@ stop() ->
 % {ok, Child :: child(), Info :: term()} |
 % {error, startchild_err()}.
 
-%% @doc starts a process pool named "Name", with workers limit of 2, using worker specified in MFA
+%% @doc starts a process pool named "Name", with num of workers limit "limit", using worker specified in MFA
+% worker will be started by worker_sup = its supervisor
 -spec start_pool(Name :: atom(), Limit :: integer(), MFA :: tuple()) ->
     supervisor:startchild_ret().
 start_pool(Name, Limit, MFA) ->
     ChildSpec = {Name, % id
     {hera_sup, start_link, [Name, Limit, MFA]}, % start
     permanent, 10500, supervisor, [hera_sup]}, % restart,shutdown,type,module
-    supervisor:start_child(supersup, ChildSpec).
+    supervisor:start_child(supersup, ChildSpec). % supersup will be the supervisor, hera_sup:startlink will be called by supersup, supersup will be considered as the supervisor in hera_sup:startlink
 
 %% @doc stops a process pool
 -spec stop_pool(PoolName :: atom()) ->
