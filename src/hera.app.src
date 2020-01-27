@@ -3,14 +3,15 @@
                     \n More precisely to filter and aggregate data.
                     \n is designed to be used with achlys and grisp"},
     {vsn, "0.1.0"},
-    {registered, [hera, hera_sup]},
+    {registered, [hera, hera_supersup, hera_sup]},
     {mod, {hera, []}},
     {applications, [
         kernel,
-        stdlib
+        stdlib,
+        grisp
     ]},
     {env,[]},
-    {modules, [hera, hera_sup]},
+    {modules, [hera, hera_supersup, hera_sup]},
     {maintainers, []},
     {licenses, ["Apache 2.0"]},
     {links, [{"Achlys","https://achlys.app"},

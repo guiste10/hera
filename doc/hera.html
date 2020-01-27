@@ -10,16 +10,36 @@
 <hr>
 
 <h1>Module hera</h1>
-<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>hera public API.
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#types">Data Types</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>hera public API.
 
 
 <h2><a name="description">Description</a></h2>hera public API.
+<h2><a name="types">Data Types</a></h2>
+
+<h3 class="typedecl"><a name="type-filter_task">filter_task()</a></h3>
+<p><tt>filter_task() = #{category =&gt; atom(), data =&gt; list(), filter_fun =&gt; function(), frequency =&gt; number()}</tt></p>
+
+
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#start-2">start/2</a></td><td></td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#declare-4">declare/4</a></td><td>.</td></tr>
+<tr><td valign="top"><a href="#filter-1">filter/1</a></td><td>.</td></tr>
+<tr><td valign="top"><a href="#start-2">start/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#stop-1">stop/1</a></td><td></td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
+
+<h3 class="function"><a name="declare-4">declare/4</a></h3>
+<div class="spec">
+<p><tt>declare(Data::term(), Filter_Fun::fun((term()) -&gt; boolean()), Category::atom(), Frequency::number()) -&gt; <a href="hera.html#type-filter_task">hera:filter_task()</a></tt><br></p>
+</div><p>
+ </p>
+
+<h3 class="function"><a name="filter-1">filter/1</a></h3>
+<div class="spec">
+<p><tt>filter(Filter::<a href="hera.html#type-filter_task">hera:filter_task()</a>) -&gt; ok</tt><br></p>
+</div><p>
+ </p>
 
 <h3 class="function"><a name="start-2">start/2</a></h3>
 <div class="spec">

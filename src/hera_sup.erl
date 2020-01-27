@@ -8,7 +8,7 @@
 -include("hera.hrl").
 
 % API
--export([start_link/0]).
+-export([start_link/3]).
 
 % Callbacks
 -export([init/1]).
@@ -16,24 +16,28 @@
 %--- API -----------------------------------------------------------------------
 
 % {ok, Pid :: pid()} | ignore | {error, Reason :: term()}.
-%% @doc Start hera top level supervisor.
--spec start_link() ->
+%% @doc Start a pool supervisor.
+-spec start_link(Name :: atom(), Limit :: integer(), MFA :: tuple()) ->  % args will be passed to init callback
     {ok, pid()}
     | ignore
     | {error, {already_started, pid()}
     | {shutdown, term()}
     | term()}.
-start_link() -> 
-    supervisor:start_link({local, ?MODULE}, ?MODULE, []).
+start_link(Name, Limit, MFA) -> 
+    supervisor:start_link(?MODULE, {Name, Limit, MFA}).
 
 %--- Callbacks -----------------------------------------------------------------
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
 %% @private
--spec init(term()) ->
+-spec init({Name :: atom(), Limit :: integer(), MFA :: tuple()}) ->
     {ok , {supervisor:sup_flags() , [supervisor:child_spec()]}}.
-init([]) -> 
-    {ok, { 
-        ?SUPFLAGS(5, 25), [
-            
-        ]} 
-    }.
+init({Name, Limit, MFA}) ->
+    MaxRestart = 1,
+    MaxTime = 3600,
+    {ok, {{one_for_all, MaxRestart, MaxTime}, 
+        [{serv,
+            {hera_serv, start_link, [Name, Limit, self(), MFA]}, % !! supervisor pid passed to the server
+            permanent,
+            5000, % Shutdown time
+            worker, % type (= worker because it's not a supervisor)
+            [hera_serv]}]}}.

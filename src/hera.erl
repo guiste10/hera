@@ -5,12 +5,43 @@
 
 -behavior(application).
 
+-include("hera.hrl").
+
+%% API
+%-export([declare/4]).
+%-export([filter/1]).
+
 % Callbacks
--export([start/2]).
--export([stop/1]).
+%-export([start/2]).
+%-export([stop/1]).
+-compile({nowarn_export_all}).
+-compile(export_all).
 
 %--- Callbacks -----------------------------------------------------------------
 
-start(_Type, _Args) -> hera_sup:start_link().
+start(_Type, _Args) ->
+  %{ok, _} = application:ensure_all_started(hera),
+  %application:start(kernel),
+  %application:start(stdlib),
+  hera_supersup:start_link(). % verif bon appel?
 
 stop(_State) -> ok.
+
+%% ===================================================================
+%% API
+%% ===================================================================
+
+%% -------------------------------------------------------------------
+%% @doc
+%%
+%% @end
+%% -------------------------------------------------------------------
+test() ->
+  pmod_nav:read(alt, [temp_out]).
+
+%% -------------------------------------------------------------------
+%% @doc
+%%
+%% @end
+%% -------------------------------------------------------------------
+
