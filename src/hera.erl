@@ -12,8 +12,10 @@
 %-export([filter/1]).
 
 % Callbacks
--export([start/2]).
--export([stop/1]).
+%-export([start/2]).
+%-export([stop/1]).
+-compile({nowarn_export_all}).
+-compile(export_all).
 
 %--- Callbacks -----------------------------------------------------------------
 
@@ -34,7 +36,8 @@ stop(_State) -> ok.
 %%
 %% @end
 %% -------------------------------------------------------------------
-
+test() ->
+  pmod_nav:read(alt, [temp_out]).
 
 %% -------------------------------------------------------------------
 %% @doc
