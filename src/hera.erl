@@ -23,7 +23,7 @@ start(_Type, _Args) ->
   %{ok, _} = application:ensure_all_started(hera),
   %application:start(kernel),
   %application:start(stdlib),
-  hera_supersup:start_link(). % verif bon appel?
+  hera_pool:start_link(). % verif bon appel?
 
 stop(_State) -> ok.
 
