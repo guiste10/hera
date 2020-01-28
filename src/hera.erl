@@ -37,9 +37,11 @@ stop(_State) -> ok.
 %% @end
 %% -------------------------------------------------------------------
 launch_app() ->
-  hera_pool:start_pool(pool1, 2, {hera_measure, start_link, []}),
-  hera_pool:run(pool1, [1000]).
-  % hera_pool:start_pool(pool2, 2, {hera_position, start_link, [2000]}).
+  hera_pool:start_pool(pool1, 1, {hera_measure, start_link, []}),
+  hera_pool:run(pool1, [1000]),
+  hera_pool:start_pool(pool2, 1, {hera_position, start_link, []}),
+  hera_pool:run(pool2, [1000]).
+
 
 
 %% -------------------------------------------------------------------
