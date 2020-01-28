@@ -37,9 +37,16 @@ handle_info(timeout, {Delay, Id, Iter}) ->
     io:format("measure: (~p) ~n", [Measure]),
     Name = node(),
     {ok, Value} = lasp:query(Id),
-    [{R1, Name}] = sets:to_list(Value),
-    lasp:update(Id, {rmv, {R1, Name}}, self()),
-    lasp:update(Id, {add, {Measure, Name}}, self()),
+    S1 = sets:filter(fun(_Elem = {_Val, N}) -> N == Name end, Value), % the set containing only values for Name
+    Length = sets:size(S1),
+    if 
+        Length > 0 ->
+            [{R1, Name}] = sets:to_list(Value),
+            lasp:update(Id, {rmv, {R1, Name}}, self()),
+            lasp:update(Id, {add, {Measure, Name}}, self());
+        true ->
+            lasp:update(Id, {add, {Measure, Name}}, self())
+    end,
     {noreply, {Delay, Id, Iter+1}, Delay}.
 %% We cannot use handle_info below: if that ever happens,
 %% we cancel the timeouts (Delay) and basically zombify
