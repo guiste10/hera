@@ -5,7 +5,8 @@
 handle_info/2, code_change/3, terminate/2]).
  
 start_link(Delay) ->
-    gen_server:start_link(?MODULE, Delay, []).
+    gen_server:start_link(?MODULE, Delay, []),
+    io:format("position: startlink ~n").
  
 stop(Pid) ->
     gen_server:call(Pid, stop).
@@ -20,6 +21,7 @@ init(Delay) ->
     lasp:read(Id, {cardinality, 2}), % wait until set contains 2 measures
     Separation = 400,
     Iter = 0,
+    io:format("position: init ~n"),
     {ok, {Delay, Id, Separation, Iter}, Delay}. % {ok, state, timeout}
 
 handle_call(stop, _From, State) ->

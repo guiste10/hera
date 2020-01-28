@@ -5,7 +5,9 @@
 handle_info/2, code_change/3, terminate/2]).
  
 start_link(Delay) ->
-    gen_server:start_link(?MODULE, Delay, []).
+    gen_server:start_link(?MODULE, Delay, []),
+    io:format("measure: startlink ~n").
+
  
 stop(Pid) ->
     gen_server:call(Pid, stop).
@@ -18,6 +20,7 @@ stop(Pid) ->
 init(Delay) ->
     Iter = 0,
     Id = {<<"measurements">>, state_orset},
+    io:format("measure: init ~n"),
     {ok, {Delay, Id, Iter}, Delay}. % {ok, state, timeout}
 
 handle_call(stop, _From, State) ->
@@ -29,7 +32,8 @@ handle_cast(_Msg, State) ->
     {noreply, State}.
         
 handle_info(timeout, {Delay, Id, Iter}) ->
-    Measure = pmod_maxsonar:get() * 2.54,
+    % Measure = pmod_maxsonar:get() * 2.54,
+    Measure = hera:fake_sonar_get(),
     io:format("measure: (~p) ~n", [Measure]),
     Name = node(),
     lasp:update(Id, {add, {Measure, Name}}, self()),
