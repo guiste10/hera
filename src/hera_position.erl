@@ -35,7 +35,7 @@ handle_cast(_Msg, State) ->
         
 handle_info(timeout, {Delay, Id, Separation, Ready, Iter}) ->
     {ok, Values} = lasp:query(Id), 
-    if 
+    if  % assign ready2 to true if set contains 2 measures
         Ready =:= false ->
             Length = sets:size(Values),
             if 
@@ -55,11 +55,17 @@ handle_info(timeout, {Delay, Id, Separation, Ready, Iter}) ->
             S2 = 2 * Separation ,
             SSq = math : pow ( Separation , 2) ,
             X = ( R1Sq - R2Sq + SSq ) / S2 ,
-            Y1 = math : sqrt ( R1Sq - math : pow (X , 2) ) ,
-            Y2 = - Y1 ,
-            io:format("position: (~p, ~p) or (~p, ~p) ~n", [X, Y1, X, Y2]);
+            Helper = R1Sq - math : pow (X , 2),
+            if
+                Helper < 0 ->
+                    io:format("position: not definable: square root of neg number ~n");
+                true ->
+                    Y1 = math : sqrt ( Helper ) ,
+                    Y2 = - Y1 ,
+                    io:format("position: (~p, ~p) or (~p, ~p) ~n", [X, Y1, X, Y2])
+            end;
         true ->
-            io:format("position: not definable ~n")
+            io:format("position: not definable: not 2 available measures ~n")
     end,
     {noreply, {Delay, Id, Separation, Ready2, Iter+1}, Delay}.
 %% We cannot use handle_info below: if that ever happens,
