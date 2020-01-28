@@ -40,7 +40,7 @@ handle_info(timeout, {Delay, Id, Iter}) ->
     Length = sets:size(S1),
     if 
         Length > 0 ->
-            [{R1, Name}] = sets:to_list(Value),
+            [{R1, Name}] = sets:to_list(S1),
             lasp:update(Id, {rmv, {R1, Name}}, self()),
             lasp:update(Id, {add, {Measure, Name}}, self());
         true ->
