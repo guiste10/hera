@@ -9,6 +9,7 @@
     | {shutdown, term()}
     | term()}.
 start_link(MFA = {_,_,_}) ->
+    io:format("hera_worker_sup started!"),
     supervisor:start_link(?MODULE, MFA).
  
 -spec init({Module :: atom(), Function :: atom(), Arguments :: list()}) ->

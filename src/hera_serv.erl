@@ -22,6 +22,7 @@ code_change/3, terminate/2]).
 -spec(start_link(Name :: atom(), Limit :: integer(), Supervisor :: atom(), MFA :: tuple()) ->
     {ok , Pid :: pid()} | ignore | {error , Reason :: term()}).
 start_link(Name, Limit, Sup, MFA) when is_atom(Name), is_integer(Limit) ->
+    io:format("hera_serv started!"),
     gen_server:start_link({local, Name}, ?MODULE, {Limit, MFA, Sup}, []).
 
 -spec(run(Name :: atom(), Arguments :: list()) ->  gen_server:reply()).

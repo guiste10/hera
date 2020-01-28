@@ -4,6 +4,7 @@
 run/2, sync_queue/2, async_queue/2, stop_pool/1]).
  
 start_link() ->
+    io:format("hera_pool started!~n"),
     hera_supersup:start_link().
  
 stop() ->
