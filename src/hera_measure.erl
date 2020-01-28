@@ -5,8 +5,8 @@
 handle_info/2, code_change/3, terminate/2]).
  
 start_link(Delay) ->
-    gen_server:start_link(?MODULE, Delay, []),
-    io:format("measure: startlink ~n").
+    io:format("measure: startlink ~n"),
+    gen_server:start_link(?MODULE, Delay, []).
 
  
 stop(Pid) ->
