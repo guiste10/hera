@@ -18,6 +18,7 @@ stop(Pid) ->
 
 init(Delay) ->
     Id = {<<"measurements">>,state_orset},
+    io:format("position: wait ~n"),
     lasp:read(Id, {cardinality, 2}), % wait until set contains 2 measures
     Separation = 400,
     Iter = 0,
