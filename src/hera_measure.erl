@@ -5,10 +5,8 @@
 handle_info/2, code_change/3, terminate/2]).
  
 start_link(Delay) ->
-    io:format("measure: startlink ~n"),
     gen_server:start_link(?MODULE, Delay, []).
 
- 
 stop(Pid) ->
     gen_server:call(Pid, stop).
 
@@ -20,7 +18,6 @@ stop(Pid) ->
 init(Delay) ->
     Iter = 0,
     Id = {<<"measurements">>, state_orset},
-    io:format("measure: init ~n"),
     {ok, {Delay, Id, Iter}, Delay}. % {ok, state, timeout}
 
 handle_call(stop, _From, State) ->
@@ -37,7 +34,9 @@ handle_info(timeout, {Delay, Id, Iter}) ->
     io:format("measure: (~p) ~n", [Measure]),
     Name = node(),
     {ok, Value} = lasp:query(Id),
-    S1 = sets:filter(fun(_Elem = {_Val, N}) -> N == Name end, Value), % the set containing only values for Name
+    io:format("set: (~p) ~n", [Value]),
+    % S1, the set containing only values for Name
+    S1 = sets:filter(fun(_Elem = {_Val, N}) -> N == Name end, Value),
     Length = sets:size(S1),
     if 
         Length > 0 ->
