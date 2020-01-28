@@ -37,7 +37,7 @@ handle_info(timeout, {Delay, Id, Iter}) ->
     io:format("measure: (~p) ~n", [Measure]),
     Name = node(),
     lasp:update(Id, {add, {Measure, Name}}, self()),
-    {noreply, {Delay, Iter+1}, Delay}.
+    {noreply, {Delay, Id, Iter+1}, Delay}.
 %% We cannot use handle_info below: if that ever happens,
 %% we cancel the timeouts (Delay) and basically zombify
 %% the entire process. It's better to crash in this case.
