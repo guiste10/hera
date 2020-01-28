@@ -18,7 +18,7 @@ stop(Pid) ->
 init(Delay) ->
     Id = {<<"measurements">>,state_orset},
     lasp:read(Id, {cardinality, 2}), % wait until set contains 2 measures
-    Separation = 4,
+    Separation = 400,
     Iter = 0,
     {ok, {Delay, Id, Separation, Iter}, Delay}. % {ok, state, timeout}
 
@@ -40,7 +40,7 @@ handle_info(timeout, {Delay, Id, Separation, Iter}) ->
     X = ( R1Sq - R2Sq + SSq ) / S2 ,
     Y1 = math : sqrt ( R1Sq - math : pow (X , 2) ) ,
     Y2 = - Y1 ,
-    io:display("position: (~p, ~p) or (~p, ~p) ~n", [X, Y1, X, Y2]),
+    io:format("position: (~p, ~p) or (~p, ~p) ~n", [X, Y1, X, Y2]),
     {noreply, {Delay, Id, Separation, Iter+1}, Delay}.
 %% We cannot use handle_info below: if that ever happens,
 %% we cancel the timeouts (Delay) and basically zombify

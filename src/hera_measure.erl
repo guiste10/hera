@@ -29,7 +29,8 @@ handle_cast(_Msg, State) ->
     {noreply, State}.
         
 handle_info(timeout, {Delay, Id, Iter}) ->
-    Measure = pmod_maxsonar:get(),
+    Measure = pmod_maxsonar:get() * 2.54,
+    io:format("measure: (~p) ~n", [Measure]),
     Name = node(),
     lasp:update(Id, {add, {Measure, Name}}, self()),
     {noreply, {Delay, Iter+1}, Delay}.
