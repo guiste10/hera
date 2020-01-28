@@ -40,9 +40,9 @@ handle_info(timeout, {Delay, Id, Separation, Ready, Iter}) ->
             Length = sets:size(Values),
             if 
                 Length =:= 2 ->
-                    Ready2 = false;
+                    Ready2 = true;
                 true ->
-                    Ready2 = true
+                    Ready2 = false
             end;
         true ->
             Ready2 = true
