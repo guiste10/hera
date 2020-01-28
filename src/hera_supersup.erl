@@ -24,8 +24,8 @@
     | {shutdown, term()}
     | term()}.
 start_link() -> 
-    supervisor:start_link({local, supersup}, ?MODULE, []),
-    io:format("supersup process has been started ~n").
+    io:format("supersup process is being started ~n"),
+    supervisor:start_link({local, supersup}, ?MODULE, []).
 
 %% @doc  kill supervisor brutally
 -spec stop() ->

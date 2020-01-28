@@ -24,7 +24,6 @@
     | {shutdown, term()}
     | term()}.
 start_link(Name, Limit, MFA) -> 
-    io:format("hera_sup started!~n"),
     supervisor:start_link(?MODULE, {Name, Limit, MFA}).
 
 %--- Callbacks -----------------------------------------------------------------

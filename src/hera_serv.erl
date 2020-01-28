@@ -22,7 +22,6 @@ code_change/3, terminate/2]).
 -spec(start_link(Name :: atom(), Limit :: integer(), Supervisor :: atom(), MFA :: tuple()) ->
     {ok , Pid :: pid()} | ignore | {error , Reason :: term()}).
 start_link(Name, Limit, Sup, MFA) when is_atom(Name), is_integer(Limit) ->
-    io:format("hera_serv started!~n"),
     gen_server:start_link({local, Name}, ?MODULE, {Limit, MFA, Sup}, []).
 
 -spec(run(Name :: atom(), Arguments :: list()) ->  gen_server:reply()).
@@ -81,8 +80,7 @@ handle_info(Msg, State) ->
     {reply, NewState :: state()} |
     {noreply, NewState :: state()}).
 handle_call({run, Args}, _From, S = #state{limit=N, sup=Sup, refs=R}) when N > 0 ->
-    io:format("start worker~n"),
-    {ok, Pid} = supervisor:start_child(Sup, Args),
+    {ok, Pid} = supervisor:start_child(Sup, Args), % start worker now
     Ref = erlang:monitor(process, Pid),
     {reply, {ok,Pid}, S#state{limit=N-1, refs=gb_sets:add(Ref,R)}};
 handle_call({run, _Args}, _From, S=#state{limit=N}) when N =< 0 ->
