@@ -19,4 +19,4 @@ init({M,F,A}) ->
     {ok, {{simple_one_for_one, MaxRestart, MaxTime},
         [{ppool_worker, % child id, used to identify the child specification internally by the supervisor heraworkersup
         {M,F,A},
-        temporary, 5000, worker, [M]}]}}.
+        permanent, 5000, worker, [M]}]}}.

@@ -23,7 +23,7 @@ init(Delay) ->
     Separation = 400,
     Iter = 0,
     io:format("position: init ~n"),
-    {ok, {Delay, Id, Separation, false, Iter}, Delay}. % {ok, state, timeout}
+    {ok, {Delay, Id, Separation, Iter}, Delay}. % {ok, state, timeout}
 
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
@@ -33,22 +33,12 @@ handle_call(_Msg, _From, State) ->
 handle_cast(_Msg, State) ->
     {noreply, State}.
         
-handle_info(timeout, {Delay, Id, Separation, Ready, Iter}) ->
+handle_info(timeout, {Delay, Id, Separation, Iter}) ->
+    io:format("position: worker handling info ~n"),
     {ok, Values} = lasp:query(Id), 
+    Length = sets:size(Values),
     if  % assign ready2 to true if set contains 2 measures
-        Ready =:= false ->
-            Length = sets:size(Values),
-            if 
-                Length =:= 2 ->
-                    Ready2 = true;
-                true ->
-                    Ready2 = false
-            end;
-        true ->
-            Ready2 = true
-    end,
-    if
-        Ready2 =:= true ->
+        Length =:= 2 ->
             [{R1, _},{R2, _}] = sets:to_list(Values), % [{measure, name}, ...]
             R1Sq = math : pow ( R1 , 2) ,
             R2Sq = math : pow ( R2 , 2) ,
@@ -67,7 +57,7 @@ handle_info(timeout, {Delay, Id, Separation, Ready, Iter}) ->
         true ->
             io:format("position: not definable: not 2 available measures ~n")
     end,
-    {noreply, {Delay, Id, Separation, Ready2, Iter+1}, Delay}.
+    {noreply, {Delay, Id, Separation, Iter+1}, Delay}.
 %% We cannot use handle_info below: if that ever happens,
 %% we cancel the timeouts (Delay) and basically zombify
 %% the entire process. It's better to crash in this case.
