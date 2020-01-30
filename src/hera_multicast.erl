@@ -31,7 +31,8 @@
 %%====================================================================
 
 -record(state, {
-  controlling_process = {undefined, undefined}
+  controlling_process :: {pid(), reference()},
+  socket :: gen_udp:socket()
 }).
 -type state() :: #state{}.
 
@@ -58,6 +59,10 @@ stop(Pid) ->
 formation() ->
   gen_server:cast(?SERVER , formation).
 
+-spec(send(Message :: binary()) -> ok).
+send(Message) ->
+  gen_server:cast(?SERVER, send_message).
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -69,7 +74,8 @@ formation() ->
   {stop, Reason :: term()} | ignore).
 init([]) ->
   {ok, #state{
-    controlling_process = {undefined, undefined}
+    controlling_process = {undefined, undefined},
+    socket = undefined
   }}.
 
 %% @private
@@ -92,6 +98,13 @@ handle_call(_Request, _From, State) ->
   {noreply, NewState :: state(), timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: state()}).
 handle_cast(formation, State) ->
+  Socket = case State#state.socket of
+             undefined ->
+               Sock = open(),
+               Sock;
+             S ->
+               S
+           end,
   ControllingProcess = case State#state.controlling_process of
                          {undefined, undefined} ->
                            Sock = open(),
@@ -101,7 +114,9 @@ handle_cast(formation, State) ->
                          {Pid, Ref} ->
                            {Pid, Ref}
                        end,
-  {noreply, State#state{controlling_process = ControllingProcess}}.
+  {noreply, State#state{controlling_process = ControllingProcess}};
+handle_cast(send_message, State) ->
+
 
 %% @private
 %% @doc Handling all non call/cast messages
