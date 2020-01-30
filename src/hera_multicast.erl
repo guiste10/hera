@@ -12,7 +12,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, stop/1]).
+-export([start_link/0, stop/1, formation/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
@@ -48,6 +48,16 @@ start_link() ->
 stop(Pid) ->
   gen_server:call(Pid, stop).
 
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Formation signal call
+%% @end
+%%--------------------------------------------------------------------
+-spec(formation() -> ok).
+formation() ->
+  gen_server:cast(?SERVER , formation).
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -81,8 +91,17 @@ handle_call(_Request, _From, State) ->
   {noreply, NewState :: state()} |
   {noreply, NewState :: state(), timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: state()}).
-handle_cast(_Request, State) ->
-  {noreply, State}.
+handle_cast(formation, State) ->
+  ControllingProcess = case State#state.controlling_process of
+                         {undefined, undefined} ->
+                           Sock = open(),
+                           {Pid, Ref} = spawn_opt(?SERVER, receiver, [], [monitor]),
+                           ok = gen_udp:controlling_process(Sock, Pid),
+                           {Pid, Ref};
+                         {Pid, Ref} ->
+                           {Pid, Ref}
+                       end,
+  {noreply, State#state{controlling_process = ControllingProcess}}.
 
 %% @private
 %% @doc Handling all non call/cast messages
@@ -90,18 +109,8 @@ handle_cast(_Request, State) ->
   {noreply, NewState :: state()} |
   {noreply, NewState :: state(), timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: state()}).
-handle_info(_Info, State) ->
-  ControllingProcess = case State#state.controlling_process of
-   {undefined, undefined} ->
-     Sock = open(),
-     {Pid, Ref} = spawn_opt(?SERVER, receiver, [], [monitor]),
-     ok = gen_udp:controlling_process(Sock, Pid),
-     {Pid, Ref};
-   {Pid, Ref} ->
-     {Pid, Ref}
-  end,
-
-  {noreply, State#state{controlling_process = ControllingProcess}}.
+handle_info(_Request, State) ->
+  {noreply, State}.
 
 %% @private
 %% @doc This function is called by a gen_server when it is about to
