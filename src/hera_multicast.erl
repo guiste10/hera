@@ -117,11 +117,11 @@ handle_cast(formation, State) ->
   {noreply, State#state{controlling_process = ControllingProcess, socket = Socket}};
 handle_cast({send_message, Message}, State) ->
   case State#state.socket of
-    S ->
-      gen_server:send(S, ?MULTICAST_ADDR, ?MULTICAST_PORT, Message);
     undefined ->
       io:format("Socket not yet started~n"),
-      ok
+      ok;
+    S ->
+      gen_server:send(S, ?MULTICAST_ADDR, ?MULTICAST_PORT, Message)
   end,
   {noreply, State}.
 
