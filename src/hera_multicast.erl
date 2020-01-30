@@ -12,7 +12,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, stop/1, formation/0]).
+-export([start_link/0, stop/1, formation/0, send/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
@@ -25,6 +25,7 @@
 -define(SERVER, ?MODULE).
 -define(MULTICAST_ADDR, {224,0,0,251}).
 -define(MULTICAST_INTERFACE, {0,0,0,0}).
+-define(MULTICAST_PORT, 5353).
 
 %%====================================================================
 %% Records
@@ -61,7 +62,7 @@ formation() ->
 
 -spec(send(Message :: binary()) -> ok).
 send(Message) ->
-  gen_server:cast(?SERVER, send_message).
+  gen_server:cast(?SERVER, {send_message, Message}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -99,23 +100,30 @@ handle_call(_Request, _From, State) ->
   {stop, Reason :: term(), NewState :: state()}).
 handle_cast(formation, State) ->
   Socket = case State#state.socket of
-             undefined ->
-               Sock = open(),
-               Sock;
-             S ->
-               S
-           end,
+    undefined ->
+      Sock = open(),
+      Sock;
+    S ->
+      S
+  end,
   ControllingProcess = case State#state.controlling_process of
-                         {undefined, undefined} ->
-                           Sock = open(),
-                           {Pid, Ref} = spawn_opt(?SERVER, receiver, [], [monitor]),
-                           ok = gen_udp:controlling_process(Sock, Pid),
-                           {Pid, Ref};
-                         {Pid, Ref} ->
-                           {Pid, Ref}
-                       end,
-  {noreply, State#state{controlling_process = ControllingProcess}};
-handle_cast(send_message, State) ->
+    {undefined, undefined} ->
+     {Pid, Ref} = spawn_opt(?SERVER, receiver, [], [monitor]),
+     ok = gen_udp:controlling_process(Socket, Pid),
+     {Pid, Ref};
+    {Pid, Ref} ->
+     {Pid, Ref}
+  end,
+  {noreply, State#state{controlling_process = ControllingProcess, socket = Socket}};
+handle_cast({send_message, Message}, State) ->
+  case State#state.socket of
+    S ->
+      gen_server:send(S, ?MULTICAST_ADDR, ?MULTICAST_PORT, Message);
+    undefined ->
+      io:format("Socket not yet started~n"),
+      ok
+  end,
+  {noreply, State}.
 
 
 %% @private
@@ -150,7 +158,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 
 open() ->
-  {ok, Sock} = gen_udp:open(5353, [
+  {ok, Sock} = gen_udp:open(?MULTICAST_PORT, [
     binary,
     {ip, {224,0,0,251}},
     {multicast_ttl, 3},
