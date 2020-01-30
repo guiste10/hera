@@ -169,7 +169,7 @@ open() ->
   ]),
   Sock.
 
-stop({Sock, Pid}) ->
+stop_mc({Sock, Pid}) ->
   gen_udp:close(Sock),
   Pid ! stop.
 
