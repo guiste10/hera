@@ -29,8 +29,8 @@ handle_cast(_Msg, State) ->
     {noreply, State}.
         
 handle_info(timeout, {Delay, Id, Iter}) ->
-    Measure = pmod_maxsonar:get() * 2.54,
-    % Measure = hera:fake_sonar_get(),
+    %Measure = pmod_maxsonar:get() * 2.54,
+    Measure = hera:fake_sonar_get(),
     io:format("measure: (~p) ~n", [Measure]),
     Name = node(),
     {ok, Value} = lasp:query(Id),
