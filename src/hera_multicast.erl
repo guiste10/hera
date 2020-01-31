@@ -102,7 +102,7 @@ handle_call(_Request, _From, State) ->
   {noreply, NewState :: state(), timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: state()}).
 handle_cast(formation, State) ->
-  io:format("mc handle_cast formation"),
+  io:format("mc handle_cast formation~n"),
   Socket = case State#state.socket of
     undefined ->
       Sock = open(),
@@ -110,17 +110,20 @@ handle_cast(formation, State) ->
     S ->
       S
   end,
+  io:format("socket : ~p~n", [State#state.socket]),
   ControllingProcess = case State#state.controlling_process of
     {undefined, undefined} ->
-     {Pid, Ref} = spawn_opt(?SERVER, receiver, [], [monitor]),
-     ok = gen_udp:controlling_process(Socket, Pid),
-     {Pid, Ref};
+      {Pid, Ref} = spawn_opt(?SERVER, receiver, [], [monitor]),
+      io:format("~nFirst Pid: ~p~nRef: ~p~n",[Pid, Ref]),
+      ok = gen_udp:controlling_process(Socket, Pid),
+      {Pid, Ref};
     {Pid, Ref} ->
-     {Pid, Ref}
+      io:format("~nPid: ~p~nRef: ~p~n",[Pid, Ref]),
+      {Pid, Ref}
   end,
   {noreply, State#state{controlling_process = ControllingProcess, socket = Socket}};
 handle_cast({send_message, Message}, State) ->
-  io:format("mc handle_cast send message"),
+  io:format("mc handle_cast send message~n"),
   case State#state.socket of
     undefined ->
       io:format("Socket not yet started~n"),
@@ -170,8 +173,7 @@ open() ->
     {multicast_ttl, 3},
     {multicast_loop, false},
     {reuseaddr, true},
-    {add_membership, {{224,0,0,251},{0,0,0,0}}},
-    {active, true}
+    {add_membership, {{224,0,0,251},{0,0,0,0}}}
   ]),
   Sock.
 
