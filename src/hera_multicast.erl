@@ -130,7 +130,7 @@ handle_cast({send_message, Message}, State) ->
       io:format("Socket not yet started~n"),
       ok;
     S ->
-      gen_server:send(S, ?MULTICAST_ADDR, ?MULTICAST_PORT, Message)
+      gen_udp:send(S, ?MULTICAST_ADDR, ?MULTICAST_PORT, Message)
   end,
   {noreply, State}.
 
