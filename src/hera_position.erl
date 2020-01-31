@@ -34,7 +34,7 @@ handle_cast(_Msg, State) ->
     {noreply, State}.
         
 handle_info(timeout, {Delay, Id, Separation, Iter}) ->
-    io:format("position: worker handling info ~n"),
+    %io:format("position: worker handling info ~n"),
     {ok, Values} = lasp:query(Id), 
     Length = sets:size(Values),
     if  % assign ready2 to true if set contains 2 measures

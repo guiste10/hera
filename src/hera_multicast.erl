@@ -102,6 +102,7 @@ handle_call(_Request, _From, State) ->
   {noreply, NewState :: state(), timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: state()}).
 handle_cast(formation, State) ->
+  io:format("mc handle_cast formation"),
   Socket = case State#state.socket of
     undefined ->
       Sock = open(),
@@ -119,6 +120,7 @@ handle_cast(formation, State) ->
   end,
   {noreply, State#state{controlling_process = ControllingProcess, socket = Socket}};
 handle_cast({send_message, Message}, State) ->
+  io:format("mc handle_cast send message"),
   case State#state.socket of
     undefined ->
       io:format("Socket not yet started~n"),
@@ -136,6 +138,7 @@ handle_cast({send_message, Message}, State) ->
   {noreply, NewState :: state(), timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: state()}).
 handle_info(_Request, State) ->
+  io:format("mc handle_info, request : ~p~n", [_Request]),
   {noreply, State}.
 
 %% @private
