@@ -11,6 +11,7 @@
 -export([launch_app/0]).
 -export([clusterize/0]).
 -export([fake_sonar_get/0]).
+-export([send/1]).
 
 % Callbacks
 -export([start/2]).
