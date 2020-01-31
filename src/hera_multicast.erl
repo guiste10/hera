@@ -171,12 +171,11 @@ open() ->
   {ok, Sock} = gen_udp:open(?MULTICAST_PORT, [
     binary,
     {ip, {224,0,0,251}},
-    {multicast_ttl, 3},
+    %{multicast_ttl, 3},
     {multicast_loop, false},
-    {reuseaddr, true},
-    {add_membership, {{224,0,0,251},{0,0,0,0}}},
-    {active, true}
+    {reuseaddr, true}
   ]),
+  inet:setopts(Sock, [{add_membership, {?MULTICAST_ADDR, ?MULTICAST_INTERFACE}}]),
   Sock.
 
 stop_mc({Sock, Pid}) ->
