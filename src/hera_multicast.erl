@@ -174,7 +174,8 @@ open() ->
     {multicast_ttl, 3},
     {multicast_loop, false},
     {reuseaddr, true},
-    {add_membership, {{224,0,0,251},{0,0,0,0}}}
+    {add_membership, {{224,0,0,251},{0,0,0,0}}},
+    {active, true}
   ]),
   Sock.
 
