@@ -45,6 +45,7 @@
 -spec(start_link() ->
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start_link() ->
+  io:format("multicast startlink~n"),
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
 stop(Pid) ->
@@ -58,10 +59,12 @@ stop(Pid) ->
 %%--------------------------------------------------------------------
 -spec(formation() -> ok).
 formation() ->
+  io:format("Formation of mc cluster~n"),
   gen_server:cast(?SERVER , formation).
 
 -spec(send(Message :: binary()) -> ok).
 send(Message) ->
+  io:format("Send a message~n"),
   gen_server:cast(?SERVER, {send_message, Message}).
 
 %%%===================================================================

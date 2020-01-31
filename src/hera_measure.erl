@@ -31,10 +31,10 @@ handle_cast(_Msg, State) ->
 handle_info(timeout, {Delay, Id, Iter}) ->
     %Measure = pmod_maxsonar:get() * 2.54,
     Measure = hera:fake_sonar_get(),
-    io:format("measure: (~p) ~n", [Measure]),
+    %io:format("measure: (~p) ~n", [Measure]),
     Name = node(),
     {ok, Value} = lasp:query(Id),
-    io:format("set: (~p) ~n", [Value]),
+    %io:format("set: (~p) ~n", [Value]),
     % S1, the set containing only values for Name
     S1 = sets:filter(fun(_Elem = {_Val, N}) -> N == Name end, Value),
     Length = sets:size(S1),

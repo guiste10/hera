@@ -48,14 +48,16 @@ handle_info(timeout, {Delay, Id, Separation, Iter}) ->
             Helper = R1Sq - math : pow (X , 2),
             if
                 Helper < 0 ->
-                    io:format("position: not definable: square root of neg number ~n");
+                    ok;
+                    %io:format("position: not definable: square root of neg number ~n");
                 true ->
                     Y1 = math : sqrt ( Helper ) ,
-                    Y2 = - Y1 ,
-                    io:format("position: (~p, ~p) or (~p, ~p) ~n", [X, Y1, X, Y2])
+                    Y2 = - Y1
+                    %io:format("position: (~p, ~p) or (~p, ~p) ~n", [X, Y1, X, Y2])
             end;
         true ->
-            io:format("position: not definable: not 2 available measures ~n")
+            ok
+            %io:format("position: not definable: not 2 available measures ~n")
     end,
     {noreply, {Delay, Id, Separation, Iter+1}, Delay}.
 %% We cannot use handle_info below: if that ever happens,
