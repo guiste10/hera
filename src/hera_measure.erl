@@ -82,7 +82,7 @@ handle_cast(_Msg, State) ->
 handle_info(timeout, State) ->
     %Measure = pmod_maxsonar:get() * 2.54,
     Measure = hera:fake_sonar_get(),
-    %io:format("measure: (~p) ~n", [Measure]),
+    io:format("measure: (~p) ~n", [Measure]),
     Name = node(),
 
     %with lasp

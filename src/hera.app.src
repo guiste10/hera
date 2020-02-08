@@ -3,7 +3,7 @@
                     \n More precisely to filter and aggregate data.
                     \n is designed to be used with achlys and grisp"},
     {vsn, "0.1.0"},
-    {registered, [hera, hera_supersup, hera_sup, hera_serv, hera_worker_sup, hera_pool, hera_measure, hera_position]},
+    {registered, [hera, hera_supersup, hera_sup, hera_serv, hera_worker_sup, hera_pool, hera_measure, hera_position, hera_multicast]},
     {mod, {hera, []}},
     {applications, [
         kernel,
@@ -11,7 +11,7 @@
         grisp
     ]},
     {env,[]},
-    {modules, [hera, hera_supersup, hera_sup, hera_serv, hera_worker_sup, hera_pool, hera_measure, hera_position]},
+    {modules, [hera, hera_supersup, hera_sup, hera_serv, hera_worker_sup, hera_pool, hera_measure, hera_position, hera_multicast]},
     {maintainers, []},
     {licenses, ["Apache 2.0"]},
     {links, [{"Achlys","https://achlys.app"},

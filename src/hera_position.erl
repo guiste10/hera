@@ -46,6 +46,7 @@ stop(Pid) ->
 %%--------------------------------------------------------------------
 -spec(store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok).
 store_data(Node, Seqnum, Data) ->
+    io:format("store data~n"),
     gen_server:cast(?SERVER, {store_data, Node, Seqnum, Data}).
 %%====================================================================
 %% gen_server callbacks
