@@ -137,8 +137,8 @@ handle_info(timeout, State) ->
                     io:format("position: (~p, ~p) or (~p, ~p) ~n", [X, Y1, X, Y2])
             end;
         true ->
-            ok
-            %io:format("position: not definable: not 2 available measures ~n")
+            %ok
+            io:format("position: not definable: not 2 available measures : ~p~n", [Values])
     end,
     {noreply, State#state{iter = State#state.iter + 1}, State#state.delay}.
 %% We cannot use handle_info below: if that ever happens,

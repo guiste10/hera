@@ -70,7 +70,7 @@ formation() ->
 %%--------------------------------------------------------------------
 -spec(send(Message :: binary()) -> ok).
 send(Message) ->
-  io:format("Send a message~n"),
+  %io:format("Send a message~n"),
   gen_server:cast(?SERVER, {send_message, Message}).
 
 %%%===================================================================
@@ -194,7 +194,7 @@ receiver() ->
       {Node, Iter, Measure} = T,
       hera:store_data(Node, Iter, Measure),
       %io:format("~n~nFrom: ~p~nPort: ~p~nData:~p~n", [IP,InPortNo,Packet]),
-      %io:format("~nNode: ~p~nMeasure: ~p~nIter: ~p~n", [Node, Measure, Iter]),
+      io:format("~nNode: ~p~nMeasure: ~p~nIter: ~p~n", [Node, Measure, Iter]),
       receiver();
     stop -> true;
     AnythingElse -> io:format("RECEIVED: ~p~n", [AnythingElse]),
