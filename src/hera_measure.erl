@@ -33,19 +33,23 @@ handle_info(timeout, {Delay, Id, Iter}) ->
     Measure = hera:fake_sonar_get(),
     %io:format("measure: (~p) ~n", [Measure]),
     Name = node(),
-    {ok, Value} = lasp:query(Id),
-    %io:format("set: (~p) ~n", [Value]),
-    % S1, the set containing only values for Name
-    S1 = sets:filter(fun(_Elem = {_Val, N}) -> N == Name end, Value),
-    Length = sets:size(S1),
-    if 
-        Length > 0 ->
-            [{R1, Name}] = sets:to_list(S1),
-            lasp:update(Id, {rmv, {R1, Name}}, self()),
-            lasp:update(Id, {add, {Measure, Name}}, self());
-        true ->
-            lasp:update(Id, {add, {Measure, Name}}, self())
-    end,
+
+    %with lasp
+%%    {ok, Value} = lasp:query(Id),
+%%    %io:format("set: (~p) ~n", [Value]),
+%%    % S1, the set containing only values for Name
+%%    S1 = sets:filter(fun(_Elem = {_Val, N}) -> N == Name end, Value),
+%%    Length = sets:size(S1),
+%%    if
+%%        Length > 0 ->
+%%            [{R1, Name}] = sets:to_list(S1),
+%%            lasp:update(Id, {rmv, {R1, Name}}, self()),
+%%            lasp:update(Id, {add, {Measure, Name}}, self());
+%%        true ->
+%%            lasp:update(Id, {add, {Measure, Name}}, self())
+%%    end,
+
+    hera:send(<<Name, Measure, Iter>>),
     {noreply, {Delay, Id, Iter+1}, Delay}.
 %% We cannot use handle_info below: if that ever happens,
 %% we cancel the timeouts (Delay) and basically zombify

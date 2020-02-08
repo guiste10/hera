@@ -26,7 +26,7 @@
 -define(SERVER, ?MODULE).
 -define(MULTICAST_ADDR, {224,0,0,251}).
 -define(MULTICAST_INTERFACE, {0,0,0,0}).
--define(MULTICAST_PORT, 5353).
+-define(MULTICAST_PORT, 8789).
 
 %%====================================================================
 %% Records
@@ -184,8 +184,9 @@ stop_mc({Sock, Pid}) ->
 
 receiver() ->
   receive
-    {udp, _Sock, IP, InPortNo, Packet} ->
-      io:format("~n~nFrom: ~p~nPort: ~p~nData:~p~n", [IP,InPortNo,inet_dns:decode(Packet)]),
+    {udp, _Sock, IP, InPortNo, Packet = <<Node, Measure, Iter>>} ->
+      io:format("~n~nFrom: ~p~nPort: ~p~nData:~p~n", [IP,InPortNo,Packet]),
+      io:format("~nNode: ~p~nMeasure: ~p~nIter: ~p~n", [Node, Measure, Iter]),
       receiver();
     stop -> true;
     AnythingElse -> io:format("RECEIVED: ~p~n", [AnythingElse]),
