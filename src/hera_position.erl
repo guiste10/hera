@@ -97,6 +97,7 @@ handle_cast({store_data, Node, Seqnum, Data}, State) ->
                             State#state.data
                     end;
                 error ->
+                    io:format("store data first ~n"),
                     dict:store(Node, {Seqnum, Data}, State#state.data)
             end,
     {noreply, State#state{data = Dict2}}.
