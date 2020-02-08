@@ -49,7 +49,7 @@ handle_info(timeout, {Delay, Id, Iter}) ->
 %%            lasp:update(Id, {add, {Measure, Name}}, self())
 %%    end,
 
-    hera:send(<<Name, Measure, Iter>>),
+    hera:send(term_to_binary({Name, Measure, Iter})),
     {noreply, {Delay, Id, Iter+1}, Delay}.
 %% We cannot use handle_info below: if that ever happens,
 %% we cancel the timeouts (Delay) and basically zombify

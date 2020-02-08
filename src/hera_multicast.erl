@@ -184,7 +184,9 @@ stop_mc({Sock, Pid}) ->
 
 receiver() ->
   receive
-    {udp, _Sock, IP, InPortNo, Packet = <<Node, Measure, Iter>>} ->
+    {udp, _Sock, IP, InPortNo, Packet} ->
+      T = binary_to_term(Packet),
+      {Node, Measure, Iter} = T,
       io:format("~n~nFrom: ~p~nPort: ~p~nData:~p~n", [IP,InPortNo,Packet]),
       io:format("~nNode: ~p~nMeasure: ~p~nIter: ~p~n", [Node, Measure, Iter]),
       receiver();
