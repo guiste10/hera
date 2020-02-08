@@ -3,7 +3,31 @@
 -export([start_link/1, stop/1]).
 -export([init/1, handle_call/3, handle_cast/2,
 handle_info/2, code_change/3, terminate/2]).
- 
+
+%%====================================================================
+%% Macros
+%%====================================================================
+
+-define(SERVER, ?MODULE).
+
+%%====================================================================
+%% Records
+%%====================================================================
+
+-record(state, {
+    delay :: integer(),
+    id :: {binary(), atom()},
+    iter :: integer()
+}).
+-type state() :: #state{}.
+
+%%%===================================================================
+%%% API
+%%%===================================================================
+
+%% @doc Spawns the server and registers the local name (unique)
+-spec(start_link(Delay :: integer()) ->
+    {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start_link(Delay) ->
     gen_server:start_link(?MODULE, Delay, []).
 
@@ -15,20 +39,47 @@ stop(Pid) ->
 %% gen_server callbacks
 %%====================================================================
 
+%% @private
+%% @doc Initializes the server
+-spec(init(Args :: term()) ->
+    {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
+    {stop, Reason :: term()} | ignore).
 init(Delay) ->
     Iter = 0,
     Id = {<<"measurements">>, state_orset},
-    {ok, {Delay, Id, Iter}, Delay}. % {ok, state, timeout}
+    {ok, #state{delay = Delay, id = Id, iter = Iter}, Delay}. % {ok, state, timeout}
 
+%% @private
+%% @doc Handling call messages
+-spec(handle_call(Request :: term(), From :: {pid(), Tag :: term()},
+    State :: state()) ->
+    {reply, Reply :: term(), NewState :: state()} |
+    {reply, Reply :: term(), NewState :: state(), timeout() | hibernate} |
+    {noreply, NewState :: state()} |
+    {noreply, NewState :: state(), timeout() | hibernate} |
+    {stop, Reason :: term(), Reply :: term(), NewState :: state()} |
+    {stop, Reason :: term(), NewState :: state()}).
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
 handle_call(_Msg, _From, State) ->
     {noreply, State}.
-        
+
+%% @private
+%% @doc Handling cast messages
+-spec(handle_cast(Request :: term(), State :: state()) ->
+    {noreply, NewState :: state()} |
+    {noreply, NewState :: state(), timeout() | hibernate} |
+    {stop, Reason :: term(), NewState :: state()}).
 handle_cast(_Msg, State) ->
     {noreply, State}.
-        
-handle_info(timeout, {Delay, Id, Iter}) ->
+
+%% @private
+%% @doc Handling all non call/cast messages
+-spec(handle_info(Info :: timeout() | term(), State :: state()) ->
+    {noreply, NewState :: state()} |
+    {noreply, NewState :: state(), timeout() | hibernate} |
+    {stop, Reason :: term(), NewState :: state()}).
+handle_info(timeout, State) ->
     %Measure = pmod_maxsonar:get() * 2.54,
     Measure = hera:fake_sonar_get(),
     %io:format("measure: (~p) ~n", [Measure]),
@@ -49,15 +100,29 @@ handle_info(timeout, {Delay, Id, Iter}) ->
 %%            lasp:update(Id, {add, {Measure, Name}}, self())
 %%    end,
 
-    hera:send(term_to_binary({Name, Measure, Iter})),
-    {noreply, {Delay, Id, Iter+1}, Delay}.
+    %With udp multicast
+    hera:store_data(Name, State#state.iter, Measure),
+    hera:send(term_to_binary({Name, State#state.iter, Measure})),
+    {noreply, State#state{iter = State#state.iter+1}, State#state.delay}.
 %% We cannot use handle_info below: if that ever happens,
 %% we cancel the timeouts (Delay) and basically zombify
 %% the entire process. It's better to crash in this case.
 %% handle_info(_Msg, State) ->
 %%    {noreply, State}.
-        
+
+%% @private
+%% @doc Convert process state when code is changed
+-spec(code_change(OldVsn :: term() | {down, term()}, State :: state(),
+    Extra :: term()) ->
+    {ok, NewState :: state()} | {error, Reason :: term()}).
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
-        
+
+%% @private
+%% @doc This function is called by a gen_server when it is about to
+%% terminate. It should be the opposite of Module:init/1 and do any
+%% necessary cleaning up. When it returns, the gen_server terminates
+%% with Reason. The return value is ignored.
+-spec(terminate(Reason :: (normal | shutdown | {shutdown, term()} | term()),
+    State :: state()) -> term()).
 terminate(_Reason, _State) -> ok.

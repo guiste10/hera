@@ -63,6 +63,11 @@ formation() ->
   io:format("Formation of mc cluster~n"),
   gen_server:cast(?SERVER , formation).
 
+%%--------------------------------------------------------------------
+%% @doc
+%% Send a message over the multicast cluster
+%% @end
+%%--------------------------------------------------------------------
 -spec(send(Message :: binary()) -> ok).
 send(Message) ->
   io:format("Send a message~n"),
@@ -124,7 +129,7 @@ handle_cast(formation, State) ->
   end,
   {noreply, State#state{controlling_process = ControllingProcess, socket = Socket}};
 handle_cast({send_message, Message}, State) ->
-  io:format("mc handle_cast send message~n"),
+  %io:format("mc handle_cast send message~n"),
   case State#state.socket of
     undefined ->
       io:format("Socket not yet started~n"),
@@ -142,7 +147,7 @@ handle_cast({send_message, Message}, State) ->
   {noreply, NewState :: state(), timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: state()}).
 handle_info(_Request, State) ->
-  io:format("mc handle_info, request : ~p~n", [_Request]),
+  %io:format("mc handle_info, request : ~p~n", [_Request]),
   {noreply, State}.
 
 %% @private
@@ -186,9 +191,10 @@ receiver() ->
   receive
     {udp, _Sock, IP, InPortNo, Packet} ->
       T = binary_to_term(Packet),
-      {Node, Measure, Iter} = T,
-      io:format("~n~nFrom: ~p~nPort: ~p~nData:~p~n", [IP,InPortNo,Packet]),
-      io:format("~nNode: ~p~nMeasure: ~p~nIter: ~p~n", [Node, Measure, Iter]),
+      {Node, Iter, Measure} = T,
+      hera:store_data(Node, Iter, Measure),
+      %io:format("~n~nFrom: ~p~nPort: ~p~nData:~p~n", [IP,InPortNo,Packet]),
+      %io:format("~nNode: ~p~nMeasure: ~p~nIter: ~p~n", [Node, Measure, Iter]),
       receiver();
     stop -> true;
     AnythingElse -> io:format("RECEIVED: ~p~n", [AnythingElse]),

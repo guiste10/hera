@@ -12,6 +12,7 @@
 -export([clusterize/0]).
 -export([fake_sonar_get/0]).
 -export([send/1]).
+-export([store_data/3]).
 
 % Callbacks
 -export([start/2]).
@@ -43,11 +44,12 @@ launch_app() ->
   hera_pool:start_pool(pool1, 1, {hera_measure, start_link, []}),
   hera_pool:run(pool1, [1000]),
   hera_pool:start_pool(pool2, 1, {hera_position, start_link, []}),
-  hera_pool:run(pool2, [2000]).
+  hera_pool:run(pool2, [2000]),
+  clusterize().
 
 %% -------------------------------------------------------------------
 %% @doc
-%%
+%% Start the formation of an udp multicast cluster
 %% @end
 %% -------------------------------------------------------------------
 -spec(clusterize() -> ok).
@@ -56,7 +58,7 @@ clusterize() ->
 
 %% -------------------------------------------------------------------
 %% @doc
-%%
+%% Send a message over the multicast cluster
 %% @end
 %% -------------------------------------------------------------------
 -spec(send(Message :: binary()) -> ok).
@@ -65,9 +67,12 @@ send(Message) ->
 
 %% -------------------------------------------------------------------
 %% @doc
-%%
+%% Add a new data for the specified node
 %% @end
 %% -------------------------------------------------------------------
+-spec(store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok).
+store_data(Node, Seqnum, Data) ->
+  hera_position:store_data(Node, Seqnum, Data).
 
 fake_sonar_get() ->
   rand:uniform(10).
