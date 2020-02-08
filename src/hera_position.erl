@@ -90,6 +90,7 @@ handle_call(_Msg, _From, State) ->
 handle_cast({store_data, Node, Seqnum, Data}, State) ->
     Dict2 = case dict:find(Node, State#state.data) of
                 {ok, {S, _Data}} ->
+                    io:format("S : ~p, Data : ~p~n", [S, _Data]),
                     if
                         S < Seqnum ->
                             dict:store(Node, {Seqnum, Data}, State#state.data);
@@ -100,6 +101,7 @@ handle_cast({store_data, Node, Seqnum, Data}, State) ->
                     io:format("store data first ~n"),
                     dict:store(Node, {Seqnum, Data}, State#state.data)
             end,
+    io:format("Dict2 : ~p~n", [Dict2]),
     {noreply, State#state{data = Dict2}}.
 
 %% @private
