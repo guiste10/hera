@@ -39,6 +39,8 @@ stop(_State) -> ok.
 %% @end
 %% -------------------------------------------------------------------
 launch_app() ->
+  hera_pool:start_pool(sensor_data_pool, 1, {hera_sensors_data, start_link, []}),
+  hera_pool:run(sensor_data_pool, []),
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
   hera_pool:start_pool(pool1, 1, {hera_measure, start_link, []}),
@@ -72,7 +74,7 @@ send(Message) ->
 %% -------------------------------------------------------------------
 -spec(store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok).
 store_data(Node, Seqnum, Data) ->
-  hera_position:store_data(Node, Seqnum, Data).
+  hera_sensors_data:store_data(Node, Seqnum, Data).
 
 fake_sonar_get() ->
   rand:uniform(10).

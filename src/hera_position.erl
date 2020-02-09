@@ -1,6 +1,6 @@
 -module(hera_position).
 -behaviour(gen_server).
--export([start_link/1, stop/1, store_data/3]).
+-export([start_link/1, stop/1]).
 -export([init/1, handle_call/3, handle_cast/2,
 handle_info/2, code_change/3, terminate/2]).
 
@@ -9,6 +9,7 @@ handle_info/2, code_change/3, terminate/2]).
 %%====================================================================
 
 -define(SERVER, ?MODULE).
+-define(DATA_SERVER, hera_sensors_data).
 
 %%====================================================================
 %% Records
@@ -39,15 +40,6 @@ start_link(Delay) ->
 stop(Pid) ->
     gen_server:call(Pid, stop).
 
-%%--------------------------------------------------------------------
-%% @doc
-%% Update the state with a new value of the data
-%% @end
-%%--------------------------------------------------------------------
--spec(store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok).
-store_data(Node, Seqnum, Data) ->
-    io:format("store data~n"),
-    gen_server:call(?SERVER, {store_data, {Node, Seqnum, Data}}).
 %%====================================================================
 %% gen_server callbacks
 %%====================================================================
@@ -79,23 +71,6 @@ init(Delay) ->
     {stop, Reason :: term(), NewState :: state()}).
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
-handle_call({store_data, {Node, Seqnum, Data}}, _From, State) ->
-    io:format("store_data~n"),
-    Dict2 = case dict:find(Node, State#state.data) of
-                {ok, {S, _Data}} ->
-                    io:format("S : ~p, Data : ~p~n", [S, _Data]),
-                    if
-                        S < Seqnum ->
-                            dict:store(Node, {Seqnum, Data}, State#state.data);
-                        true ->
-                            State#state.data
-                    end;
-                error ->
-                    io:format("store data first ~n"),
-                    dict:store(Node, {Seqnum, Data}, State#state.data)
-            end,
-    io:format("Dict2 : ~p~n", [Dict2]),
-    {noreply, State#state{data = Dict2}};
 handle_call(_Msg, _From, State) ->
     {noreply, State}.
 
@@ -121,8 +96,9 @@ handle_info(timeout, State) ->
     %Length = sets:size(Values),
 
     %without lasp
-    Values = dict:to_list(State#state.data),
-    Length = dict:size(State#state.data),
+    Data = gen_server:call(?DATA_SERVER, get_data),
+    Values = dict:to_list(Data),
+    Length = dict:size(Data),
 
     if  % assign ready2 to true if set contains 2 measures
         Length =:= 2 ->
