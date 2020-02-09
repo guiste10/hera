@@ -96,7 +96,7 @@ handle_info(timeout, State) ->
     %Length = sets:size(Values),
 
     %without lasp
-    Data = gen_server:call(?DATA_SERVER, get_data),
+    Data = hera:get_data(),
     Values = dict:to_list(Data),
     Length = dict:size(Data),
 

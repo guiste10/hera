@@ -13,6 +13,7 @@
 -export([fake_sonar_get/0]).
 -export([send/1]).
 -export([store_data/3]).
+-export([get_data/0]).
 
 % Callbacks
 -export([start/2]).
@@ -75,6 +76,9 @@ send(Message) ->
 -spec(store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok).
 store_data(Node, Seqnum, Data) ->
   hera_sensors_data:store_data(Node, Seqnum, Data).
+
+get_data() ->
+  hera_sensors_data:get_data().
 
 fake_sonar_get() ->
   rand:uniform(10).

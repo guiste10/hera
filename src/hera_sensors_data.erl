@@ -14,6 +14,7 @@
 %% API
 -export([start_link/0]).
 -export([store_data/3]).
+-export([get_data/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
@@ -48,6 +49,14 @@ start_link() ->
 
 %%--------------------------------------------------------------------
 %% @doc
+%% Retrieve the data
+%% @end
+%%--------------------------------------------------------------------
+get_data() ->
+  gen_server:call(?MODULE, get_data).
+
+%%--------------------------------------------------------------------
+%% @doc
 %% Update the state with a new value of the data
 %% @end
 %%--------------------------------------------------------------------
@@ -77,7 +86,7 @@ init([]) ->
   {noreply, NewState :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term(), Reply :: term(), NewState :: #state{}} |
   {stop, Reason :: term(), NewState :: #state{}}).
-handle_call(get_data, _From, State) -> 
+handle_call(get_data, _From, State) ->
   {reply, State#state.data, State};
 handle_call(_Request, _From, State = #state{}) ->
   {reply, ok, State}.
