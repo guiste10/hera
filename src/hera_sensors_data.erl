@@ -113,7 +113,7 @@ handle_cast({store_data, {Node, Seqnum, Data}}, State) ->
               dict:store(Node, {Seqnum, Data}, State#state.data)
           end,
   io:format("Dict2 : ~p~n", [Dict2]),
-  {reply, State#state.data, State#state{data = Dict2}};
+  {noreply, State#state{data = Dict2}};
 handle_cast(_Request, State = #state{}) ->
   {noreply, State}.
 
