@@ -36,9 +36,12 @@ stop(_State) -> ok.
 
 %% -------------------------------------------------------------------
 %% @doc
+%% Start all pools
 %%
+%% @spec launch_app() -> ok
 %% @end
 %% -------------------------------------------------------------------
+-spec launch_app() -> ok.
 launch_app() ->
   hera_pool:start_pool(sensor_data_pool, 1, {hera_sensors_data, start_link, []}),
   hera_pool:run(sensor_data_pool, []),
@@ -53,30 +56,44 @@ launch_app() ->
 %% -------------------------------------------------------------------
 %% @doc
 %% Start the formation of an udp multicast cluster
+%%
+%% @spec clusterize() -> ok
 %% @end
 %% -------------------------------------------------------------------
--spec(clusterize() -> ok).
+-spec clusterize() -> ok.
 clusterize() ->
   hera_multicast:formation().
 
 %% -------------------------------------------------------------------
 %% @doc
 %% Send a message over the multicast cluster
+%%
+%% @spec send(Message :: binary()) -> ok
 %% @end
 %% -------------------------------------------------------------------
--spec(send(Message :: binary()) -> ok).
+-spec send(Message :: binary()) -> ok.
 send(Message) ->
   hera_multicast:send(Message).
 
 %% -------------------------------------------------------------------
 %% @doc
 %% Add a new data for the specified node
+%%
+%% @spec store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok.
 %% @end
 %% -------------------------------------------------------------------
--spec(store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok).
+-spec store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok.
 store_data(Node, Seqnum, Data) ->
   hera_sensors_data:store_data(Node, Seqnum, Data).
 
+%%--------------------------------------------------------------------
+%% @doc
+%% Retrieve the data of sensors of all nodes
+%%
+%% @spec get_data() -> dict:dict(string(), {integer(), integer() | float()})
+%% @end
+%%--------------------------------------------------------------------
+-spec get_data() -> dict:dict(string(), {integer(), integer() | float()}).
 get_data() ->
   hera_sensors_data:get_data().
 

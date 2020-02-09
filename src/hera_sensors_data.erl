@@ -49,18 +49,23 @@ start_link() ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Retrieve the data
+%% Retrieve the data of the sensors of all nodes
+%%
+%% @spec get_data() -> dict:dict(string(), {integer(), integer() | float()})
 %% @end
 %%--------------------------------------------------------------------
+-spec get_data() -> dict:dict(string(), {integer(), integer() | float()}).
 get_data() ->
   gen_server:call(?MODULE, get_data).
 
 %%--------------------------------------------------------------------
 %% @doc
 %% Update the state with a new value of the data
+%%
+%% @spec store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok
 %% @end
 %%--------------------------------------------------------------------
--spec(store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok).
+-spec store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok.
 store_data(Node, Seqnum, Data) ->
   gen_server:cast(?SERVER, {store_data, {Node, Seqnum, Data}}).
 
@@ -98,10 +103,8 @@ handle_call(_Request, _From, State = #state{}) ->
   {noreply, NewState :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: #state{}}).
 handle_cast({store_data, {Node, Seqnum, Data}}, State) ->
-  io:format("store_data~n"),
   Dict2 = case dict:find(Node, State#state.data) of
             {ok, {S, _Data}} ->
-              io:format("S : ~p, Data : ~p~n", [S, _Data]),
               if
                 S < Seqnum ->
                   dict:store(Node, {Seqnum, Data}, State#state.data);
@@ -109,10 +112,8 @@ handle_cast({store_data, {Node, Seqnum, Data}}, State) ->
                   State#state.data
               end;
             error ->
-              io:format("store data first ~n"),
               dict:store(Node, {Seqnum, Data}, State#state.data)
           end,
-  io:format("Dict2 : ~p~n", [Dict2]),
   {noreply, State#state{data = Dict2}};
 handle_cast(_Request, State = #state{}) ->
   {noreply, State}.

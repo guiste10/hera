@@ -56,9 +56,11 @@ stop(Pid) ->
 %%--------------------------------------------------------------------
 %% @doc
 %% Formation signal call
+%%
+%% @spec formation() -> ok
 %% @end
 %%--------------------------------------------------------------------
--spec(formation() -> ok).
+-spec formation() -> ok.
 formation() ->
   io:format("Formation of mc cluster~n"),
   gen_server:cast(?SERVER , formation).
@@ -66,9 +68,11 @@ formation() ->
 %%--------------------------------------------------------------------
 %% @doc
 %% Send a message over the multicast cluster
+%%
+%% @spec send(Message :: binary()) -> ok
 %% @end
 %%--------------------------------------------------------------------
--spec(send(Message :: binary()) -> ok).
+-spec send(Message :: binary()) -> ok.
 send(Message) ->
   %io:format("Send a message~n"),
   gen_server:cast(?SERVER, {send_message, Message}).
@@ -108,7 +112,6 @@ handle_call(_Request, _From, State) ->
   {noreply, NewState :: state(), timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: state()}).
 handle_cast(formation, State) ->
-  io:format("mc handle_cast formation~n"),
   Socket = case State#state.socket of
     undefined ->
       Sock = open(),
