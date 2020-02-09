@@ -47,7 +47,7 @@ stop(Pid) ->
 -spec(store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok).
 store_data(Node, Seqnum, Data) ->
     io:format("store data~n"),
-    gen_server:cast(?SERVER, {store_data, Node, Seqnum, Data}).
+    gen_server:cast(?SERVER, {store_data, {Node, Seqnum, Data}}).
 %%====================================================================
 %% gen_server callbacks
 %%====================================================================
@@ -88,7 +88,8 @@ handle_call(_Msg, _From, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
-handle_cast({store_data, Node, Seqnum, Data}, State) ->
+handle_cast({store_data, {Node, Seqnum, Data}}, State) ->
+    io:format("store_data~n"),
     Dict2 = case dict:find(Node, State#state.data) of
                 {ok, {S, _Data}} ->
                     io:format("S : ~p, Data : ~p~n", [S, _Data]),
@@ -103,7 +104,10 @@ handle_cast({store_data, Node, Seqnum, Data}, State) ->
                     dict:store(Node, {Seqnum, Data}, State#state.data)
             end,
     io:format("Dict2 : ~p~n", [Dict2]),
-    {noreply, State#state{data = Dict2}}.
+    {noreply, State#state{data = Dict2}};
+handle_cast(_Request, State) ->
+    io:format("other, State : ~p, Request : ~p~n", [State, _Request]),
+    {noreply, State}.
 
 %% @private
 %% @doc Handling all non call/cast messages
