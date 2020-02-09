@@ -47,7 +47,7 @@ stop(Pid) ->
 -spec(store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok).
 store_data(Node, Seqnum, Data) ->
     io:format("store data~n"),
-    gen_server:cast(?SERVER, {store_data, {Node, Seqnum, Data}}).
+    gen_server:call(?SERVER, {store_data, {Node, Seqnum, Data}}).
 %%====================================================================
 %% gen_server callbacks
 %%====================================================================
@@ -79,16 +79,7 @@ init(Delay) ->
     {stop, Reason :: term(), NewState :: state()}).
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
-handle_call(_Msg, _From, State) ->
-    {noreply, State}.
-
-%% @private
-%% @doc Handling cast messages
--spec(handle_cast(Request :: term(), State :: state()) ->
-    {noreply, NewState :: state()} |
-    {noreply, NewState :: state(), timeout() | hibernate} |
-    {stop, Reason :: term(), NewState :: state()}).
-handle_cast({store_data, {Node, Seqnum, Data}}, State) ->
+handle_call({store_data, {Node, Seqnum, Data}}, _From, State) ->
     io:format("store_data~n"),
     Dict2 = case dict:find(Node, State#state.data) of
                 {ok, {S, _Data}} ->
@@ -105,8 +96,16 @@ handle_cast({store_data, {Node, Seqnum, Data}}, State) ->
             end,
     io:format("Dict2 : ~p~n", [Dict2]),
     {noreply, State#state{data = Dict2}};
+handle_call(_Msg, _From, State) ->
+    {noreply, State}.
+
+%% @private
+%% @doc Handling cast messages
+-spec(handle_cast(Request :: term(), State :: state()) ->
+    {noreply, NewState :: state()} |
+    {noreply, NewState :: state(), timeout() | hibernate} |
+    {stop, Reason :: term(), NewState :: state()}).
 handle_cast(_Request, State) ->
-    io:format("other, State : ~p, Request : ~p~n", [State, _Request]),
     {noreply, State}.
 
 %% @private
