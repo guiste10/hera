@@ -1,6 +1,6 @@
 -module(hera_measure).
 -behaviour(gen_server).
--export([start_link/1, stop/1]).
+-export([start_link/2, stop/1]).
 -export([init/1, handle_call/3, handle_cast/2,
 handle_info/2, code_change/3, terminate/2]).
 
@@ -15,6 +15,7 @@ handle_info/2, code_change/3, terminate/2]).
 %%====================================================================
 
 -record(state, {
+    measurement_func :: function(),
     delay :: integer(),
     id :: {binary(), atom()},
     iter :: integer()
@@ -26,10 +27,10 @@ handle_info/2, code_change/3, terminate/2]).
 %%%===================================================================
 
 %% @doc Spawns the server and registers the local name (unique)
--spec(start_link(Delay :: integer()) ->
+-spec(start_link(Measurement_function :: function(), Delay :: integer()) ->
     {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
-start_link(Delay) ->
-    gen_server:start_link(?MODULE, Delay, []).
+start_link(Measurement_function, Delay) ->
+    gen_server:start_link(?MODULE, {Measurement_function, Delay}, []).
 
 stop(Pid) ->
     gen_server:call(Pid, stop).
@@ -41,13 +42,13 @@ stop(Pid) ->
 
 %% @private
 %% @doc Initializes the server
--spec(init(Args :: term()) ->
+-spec(init({Measurement_function :: function(), Delay :: integer()}) ->
     {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
     {stop, Reason :: term()} | ignore).
-init(Delay) ->
+init({Measurement_function, Delay}) ->
     Iter = 0,
     Id = {<<"measurements">>, state_orset},
-    {ok, #state{delay = Delay, id = Id, iter = Iter}, Delay}. % {ok, state, timeout}
+    {ok, #state{measurement_func = Measurement_function, delay = Delay, id = Id, iter = Iter}, Delay}. % {ok, state, timeout}
 
 %% @private
 %% @doc Handling call messages
@@ -80,7 +81,8 @@ handle_cast(_Msg, State) ->
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
 handle_info(timeout, State) ->
-    Measure = pmod_maxsonar:get() * 2.54,
+    Measure = State#state.measurement_func,
+    %Measure = pmod_maxsonar:get() * 2.54,
     %Measure = hera:fake_sonar_get(),
     Name = node(),
 

@@ -1,6 +1,6 @@
 -module(hera_position).
 -behaviour(gen_server).
--export([start_link/1, stop/1]).
+-export([start_link/2, stop/1]).
 -export([init/1, handle_call/3, handle_cast/2,
 handle_info/2, code_change/3, terminate/2]).
 
@@ -19,6 +19,7 @@ handle_info/2, code_change/3, terminate/2]).
     % dictionary contraining the last data of all nodes
     % with the form [{node_name, {seqnum, data}}]
     data :: dict:dict(string(), {integer(), integer() | float()}),
+    calc_function :: function(),
     delay :: integer(),
     id :: {binary(), atom()},
     separation :: integer(),
@@ -31,11 +32,11 @@ handle_info/2, code_change/3, terminate/2]).
 %%%===================================================================
 
 %% @doc Spawns the server and registers the local name (unique)
--spec(start_link(Delay :: integer()) ->
+-spec(start_link(Calc_function :: function(), Delay :: integer()) ->
     {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
-start_link(Delay) ->
+start_link(Calc_function, Delay) ->
     io:format("position: startlink ~n"),
-    gen_server:start_link(?MODULE, Delay, []).
+    gen_server:start_link(?MODULE, {Calc_function, Delay}, []).
 
 stop(Pid) ->
     gen_server:call(Pid, stop).
@@ -46,10 +47,10 @@ stop(Pid) ->
 
 %% @private
 %% @doc Initializes the server
--spec(init(Args :: term()) ->
+-spec(init({Calc_function :: function(), Delay :: integer()}) ->
     {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
     {stop, Reason :: term()} | ignore).
-init(Delay) ->
+init({Calc_function, Delay}) ->
     Id = {<<"measurements">>,state_orset},
     %io:format("position: wait ~n"),
     %lasp:read(Id, {cardinality, 2}), % wait until set contains 2 measures
@@ -57,7 +58,7 @@ init(Delay) ->
     Iter = 0,
     io:format("position: init ~n"),
     Data = dict:new(),
-    {ok, #state{data = Data, delay = Delay, id = Id, separation = Separation, iter = Iter}, Delay}. % {ok, state, timeout}
+    {ok, #state{data = Data, calc_function = Calc_function, delay = Delay, id = Id, separation = Separation, iter = Iter}, Delay}. % {ok, state, timeout}
 
 %% @private
 %% @doc Handling call messages

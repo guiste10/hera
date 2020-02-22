@@ -1,3 +1,5 @@
 %% encoding: UTF-8
 {application,hera}.
-{modules,[hera,hera_filter,hera_sup]}.
+{modules,[hera,hera_measure,hera_multicast,hera_pool,hera_position,
+          hera_sensors_data,hera_serv,hera_sup,hera_supersup,hera_worker_sup,
+          ppool_nagger]}.
