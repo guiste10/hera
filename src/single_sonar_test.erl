@@ -32,7 +32,7 @@ handle_info(timeout, {Iter, Delay, File}) ->
     %Measure = pmod_maxsonar:get() * 2.54,
     Measure = hera:fake_sonar_get(),
     %io:format("measure: (~p) ~n", [Measure]), % print
-    io:format(File, "~s~n", [Measure]),
+    io:format(File, "~p~n", [Measure]),
     {noreply, {Iter+1, Delay, File}, Delay}.
 %% We cannot use handle_info below: if that ever happens,
 %% we cancel the timeouts (Delay) and basically zombify
