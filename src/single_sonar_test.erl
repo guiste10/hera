@@ -16,8 +16,9 @@ stop(Pid) ->
 %%====================================================================
 
 init(Delay) ->
+    {ok, File} = file:open("sonar_measures.txt", [write]),
     Iter = 0,
-    {ok, {Iter, Delay}, Delay}. % {ok, state, timeout}
+    {ok, {Iter, Delay, File}, Delay}. % {ok, state, timeout}
 
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
@@ -27,11 +28,11 @@ handle_call(_Msg, _From, State) ->
 handle_cast(_Msg, State) ->
     {noreply, State}.
         
-handle_info(timeout, {Iter, Delay}) ->
+handle_info(timeout, {Iter, Delay, File}) ->
     %Measure = pmod_maxsonar:get() * 2.54,
     Measure = hera:fake_sonar_get(),
     io:format("measure: (~p) ~n", [Measure]),
-    {noreply, {Iter+1, Delay}, Delay}.
+    {noreply, {Iter+1, Delay, File}, Delay}.
 %% We cannot use handle_info below: if that ever happens,
 %% we cancel the timeouts (Delay) and basically zombify
 %% the entire process. It's better to crash in this case.
