@@ -4,7 +4,7 @@
 -export([init/1, handle_call/3, handle_cast/2,
 handle_info/2, code_change/3, terminate/2]).
  
-start_link(Delay) ->
+start_link({Delay, Max_iter}) ->
     gen_server:start_link(?MODULE, Delay, []).
 
 stop(Pid) ->
@@ -15,10 +15,11 @@ stop(Pid) ->
 %% gen_server callbacks
 %%====================================================================
 
-init(Delay) ->
-    {ok, File} = file:open("sonar_measures.txt", [write]),
+init({Delay, Max_iter}) ->
+    File_name = "sonar_measures.txt",
+    {ok, File} = file:open(File_name, [read, write]),
     Iter = 0,
-    {ok, {Iter, Delay, File}, Delay}. % {ok, state, timeout}
+    {ok, {Iter, Max_iter, Delay, File, File_name}, Delay}. % {ok, state, timeout}
 
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
@@ -28,12 +29,14 @@ handle_call(_Msg, _From, State) ->
 handle_cast(_Msg, State) ->
     {noreply, State}.
         
-handle_info(timeout, {Iter, Delay, File}) ->
-    Measure = pmod_maxsonar:get() * 2.54,
-    %Measure = hera:fake_sonar_get(),
+handle_info(timeout, {Iter, Max_iter, Delay, File, File_name}) ->
+    %Measure = pmod_maxsonar:get() * 2.54,
+    Measure = hera:fake_sonar_get(),
     io:format("measure: (~p) ~n", [Measure]), % print
-    io:format(File, "~p~n", [Measure]), % add to file
-    {noreply, {Iter+1, Delay, File}, Delay}.
+    Measure_str = io_lib:format("~.2f", [Measure]),
+    Row = Measure_str ++ "\n",
+    file:pwrite(File, eof, [Row]),
+    {noreply, {Iter+1, Max_iter, Delay, File, File_name}, Delay}.
 %% We cannot use handle_info below: if that ever happens,
 %% we cancel the timeouts (Delay) and basically zombify
 %% the entire process. It's better to crash in this case.
