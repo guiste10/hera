@@ -1,10 +1,14 @@
 -module(single_sonar_test).
 -behaviour(gen_server).
--export([start_link/1, stop/1]).
+-export([start_link/2, stop/1]).
 -export([init/1, handle_call/3, handle_cast/2,
 handle_info/2, code_change/3, terminate/2]).
  
-start_link({Delay, Max_iter}) ->
+%%%===================================================================
+%%% API
+%%%===================================================================
+
+start_link(Delay, Max_iter) ->
     gen_server:start_link(?MODULE, {Delay, Max_iter}, []).
 
 stop(Pid) ->
