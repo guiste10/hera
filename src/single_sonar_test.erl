@@ -1,6 +1,6 @@
 -module(single_sonar_test).
 -behaviour(gen_server).
--export([start_link/2, stop/1]).
+-export([start_link/3, stop/1]).
 -export([init/1, handle_call/3, handle_cast/2,
 handle_info/2, code_change/3, terminate/2]).
  
@@ -8,8 +8,8 @@ handle_info/2, code_change/3, terminate/2]).
 %%% API
 %%%===================================================================
 
-start_link(Delay, Max_iter) ->
-    gen_server:start_link(?MODULE, {Delay, Max_iter}, []).
+start_link(Delay, Max_iter, File_name) ->
+    gen_server:start_link(?MODULE, {Delay, Max_iter, File_name}, []).
 
 stop(Pid) ->
     gen_server:call(Pid, stop).
@@ -19,8 +19,7 @@ stop(Pid) ->
 %% gen_server callbacks
 %%====================================================================
 
-init({Delay, Max_iter}) ->
-    File_name = "sonar_measures.txt",
+init({Delay, Max_iter, File_name}) ->
     {ok, File} = file:open(File_name, [read, write]),
     Iter = 0,
     {ok, {Iter, Max_iter, Delay, File, File_name}, Delay}. % {ok, state, timeout}
