@@ -5,7 +5,7 @@
 handle_info/2, code_change/3, terminate/2]).
  
 start_link({Delay, Max_iter}) ->
-    gen_server:start_link(?MODULE, Delay, []).
+    gen_server:start_link(?MODULE, {Delay, Max_iter}, []).
 
 stop(Pid) ->
     gen_server:call(Pid, stop).
@@ -36,7 +36,12 @@ handle_info(timeout, {Iter, Max_iter, Delay, File, File_name}) ->
     Measure_str = io_lib:format("~.2f", [Measure]),
     Row = Measure_str ++ "\n",
     file:pwrite(File, eof, [Row]),
-    {noreply, {Iter+1, Max_iter, Delay, File, File_name}, Delay}.
+    if
+        Iter < Max_iter ->
+            {noreply, {Iter+1, Max_iter, Delay, File, File_name}, Delay};
+            true ->
+               {ok, {Iter+1, Max_iter, Delay, File, File_name}}
+               end.
 %% We cannot use handle_info below: if that ever happens,
 %% we cancel the timeouts (Delay) and basically zombify
 %% the entire process. It's better to crash in this case.
