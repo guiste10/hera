@@ -46,7 +46,8 @@ handle_info(timeout, {Iter, Max_iter, Delay, File, File_name}) ->
         Iter < Max_iter ->
             {noreply, {Iter+1, Max_iter, Delay, File, File_name}, Delay};
             true ->
-               {ok, {Iter+1, Max_iter, Delay, File, File_name}}
+                file:close(File),
+               {noreply, {Iter+1, Max_iter, Delay, File, File_name}}
                end.
 %% We cannot use handle_info below: if that ever happens,
 %% we cancel the timeouts (Delay) and basically zombify
