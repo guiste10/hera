@@ -35,9 +35,11 @@ handle_cast(_Msg, State) ->
         
 handle_info(timeout, {Iter, Max_iter, Delay, File, File_name}) ->
     %Measure = pmod_maxsonar:get() * 2.54,
+    %Measure_str = io_lib:format("~.2f", [Measure]), % pour vrai sonar (float)
     Measure = hera:fake_sonar_get(),
-    io:format("measure: (~p) ~n", [Measure]), % print
-    Measure_str = io_lib:format("~.2f", [Measure]),
+    Measure_str = integer_to_list(Measure), % pour faux sonar (integer)
+
+    io:format("measure: (~s) ~n", [Measure]), % print
     Row = Measure_str ++ "\n",
     file:pwrite(File, eof, [Row]),
     if
