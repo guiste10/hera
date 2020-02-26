@@ -34,16 +34,16 @@ handle_cast(_Msg, State) ->
     {noreply, State}.
         
 handle_info(timeout, {Iter, Max_iter, Delay, File, File_name}) ->
-    %Measure = pmod_maxsonar:get() * 2.54,
-    %Measure_str = io_lib:format("~.2f", [Measure]), % pour vrai sonar (float)
-    Measure = hera:fake_sonar_get(),
-    Measure_str = integer_to_list(Measure), % pour faux sonar (integer)
+    Measure = pmod_maxsonar:get() * 2.54,
+    Measure_str = io_lib:format("~.2f", [Measure]), % pour vrai sonar (float)
+    %Measure = hera:fake_sonar_get(),
+    %Measure_str = integer_to_list(Measure), % pour faux sonar (integer)
 
     io:format("measure: (~s) ~n", [Measure_str]), % print
     Row = Measure_str ++ "\n",
     file:pwrite(File, eof, [Row]),
     if
-        Iter < Max_iter ->
+        Iter < Max_iter-1 ->
             {noreply, {Iter+1, Max_iter, Delay, File, File_name}, Delay};
             true ->
                 file:close(File),
