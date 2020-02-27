@@ -7,13 +7,14 @@
 
 -include("hera.hrl").
 
-%% API/home/julien/home/julien/home/julien
+%% API
 -export([launch_app/3]).
 -export([clusterize/0]).
 -export([fake_sonar_get/0]).
 -export([send/1]).
 -export([store_data/3]).
 -export([get_data/0]).
+-export([perform_measures/4]).
 
 % Callbacks
 -export([start/2]).
@@ -98,6 +99,22 @@ store_data(Node, Seqnum, Data) ->
 -spec get_data() -> dict:dict(string(), {integer(), integer() | float()}).
 get_data() ->
   hera_sensors_data:get_data().
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Perform measures
+%%
+%% @param Delay frequency of measurements
+%% @param Max_iter number of measures to perform
+%% @param File_name name of the file storing the data
+%% @param Func the function to perform the measure
+%%
+%% @spec perform_measures(Delay :: integer(), Max_iter :: integer(), File_name :: file:name_all(), Func :: function()) -> ok
+%% @end
+%%--------------------------------------------------------------------
+-spec perform_measures(Delay :: integer(), Max_iter :: integer(), File_name :: file:name_all(), Func :: function()) -> ok.
+perform_measures(Delay, Max_iter, File_name, Func) ->
+  single_sonar_test:perform_measures(Delay, Max_iter, File_name, Func).
 
 fake_sonar_get() ->
   rand:uniform(10).
