@@ -151,10 +151,9 @@ terminate(_Reason, _State) -> ok.
 make_measures(State) ->
     Measure_func = State#state.func,
     Measure = Measure_func(),
-    io:format("Measure_func : ~p~nMeasure : ~p~n", [Measure_func, Measure]),
-    Measure_str = io_lib:format("~.2f", [Measure]), % pour vrai sonar (float)
+    %Measure_str = io_lib:format("~.2f", [Measure]), % pour vrai sonar (float)
     %Measure = hera:fake_sonar_get(),
-    %Measure_str = integer_to_list(Measure), % pour faux sonar (integer)
+    Measure_str = integer_to_list(Measure), % pour faux sonar (integer)
 
     io:format("measure: (~s) ~n", [Measure_str]), % print
     Row = Measure_str ++ "\n",
