@@ -1,8 +1,9 @@
 -module(single_sonar_test).
 -behaviour(gen_server).
--export([start_link/0, stop/1]).
+-export([start_link/0, stop/1, perform_measures/4]).
 -export([init/1, handle_call/3, handle_cast/2,
-handle_info/2, code_change/3, terminate/2, perform_measures/4]).
+handle_info/2, code_change/3, terminate/2]).
+-export([make_measures/1]).
 
 %%====================================================================
 %% Macros
@@ -146,6 +147,7 @@ terminate(_Reason, _State) -> ok.
 %% Internal functions
 %%====================================================================
 
+-spec make_measures(State :: state()) -> ok.
 make_measures(State) ->
     Measure = State#state.func,
     Measure_str = io_lib:format("~.2f", [Measure]), % pour vrai sonar (float)
@@ -161,5 +163,5 @@ make_measures(State) ->
             make_measures(State#state{iter = State#state.iter+1});
         true ->
             file:close(State#state.file),
-            {noreply, State#state{iter = State#state.iter+1}}
+            ok
     end.
