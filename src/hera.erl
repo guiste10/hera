@@ -8,7 +8,7 @@
 -include("hera.hrl").
 
 %% API
--export([launch_app/3]).
+-export([launch_app/0]).
 -export([clusterize/0]).
 -export([fake_sonar_get/0]).
 -export([send/1]).
@@ -52,9 +52,9 @@ stop(_State) -> ok.
 %%        -> ok
 %% @end
 %% -------------------------------------------------------------------
-launch_app(Delay, Max_iter, File_name) ->
+launch_app() ->
   hera_pool:start_pool(pool1, 1, {single_sonar_test, start_link, []}),
-  hera_pool:run(pool1, [Delay, Max_iter, File_name]).
+  hera_pool:run(pool1, []).
 
 %% -------------------------------------------------------------------
 %% @doc

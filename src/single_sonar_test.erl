@@ -90,7 +90,7 @@ terminate(_Reason, _State) -> ok.
 %%====================================================================
 
 make_measures(State) ->
-    Measure = State#state.func * 2.54,
+    Measure = State#state.func,
     Measure_str = io_lib:format("~.2f", [Measure]), % pour vrai sonar (float)
     %Measure = hera:fake_sonar_get(),
     %Measure_str = integer_to_list(Measure), % pour faux sonar (integer)
