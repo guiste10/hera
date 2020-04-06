@@ -108,4 +108,4 @@ get_data() ->
   hera_sensors_data:get_data().
 
 fake_sonar_get() ->
-  rand:uniform(10).
+  float(rand:uniform(10)).
