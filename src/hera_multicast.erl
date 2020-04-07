@@ -24,9 +24,9 @@
 %%====================================================================
 
 -define(SERVER, ?MODULE).
--define(MULTICAST_ADDR, {224,0,0,251}).
--define(MULTICAST_INTERFACE, {0,0,0,0}).
--define(MULTICAST_PORT, 8789).
+-define(MULTICAST_ADDR, {127,0,0,1}).
+-define(MULTICAST_INTERFACE, {224,0,0,1}).
+-define(MULTICAST_PORT, 62476).
 
 %%====================================================================
 %% Records
@@ -178,12 +178,14 @@ code_change(_OldVsn, State, _Extra) ->
 open() ->
   {ok, Sock} = gen_udp:open(?MULTICAST_PORT, [
     binary,
-    {ip, {224,0,0,251}},
+    inet,
+    {active, true},
+    {ip, ?MULTICAST_ADDR},
     %{multicast_ttl, 3},
     {multicast_loop, false},
-    {reuseaddr, true}
+    {reuseaddr, true},
+    {add_membership, {?MULTICAST_ADDR, ?MULTICAST_INTERFACE}}
   ]),
-  inet:setopts(Sock, [{add_membership, {?MULTICAST_ADDR, ?MULTICAST_INTERFACE}}]),
   Sock.
 
 stop_mc({Sock, Pid}) ->
