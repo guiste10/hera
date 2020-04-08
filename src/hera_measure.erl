@@ -81,7 +81,8 @@ handle_cast(_Msg, State) ->
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
 handle_info(timeout, State) ->
-    Measure = State#state.measurement_func,
+    Measure_func = State#state.measurement_func,
+    Measure = Measure_func(),
     %Measure = pmod_maxsonar:get() * 2.54,
     %Measure = hera:fake_sonar_get(),
     Name = node(),
