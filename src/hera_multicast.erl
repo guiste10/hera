@@ -24,8 +24,7 @@
 %%====================================================================
 
 -define(SERVER, ?MODULE).
--define(MULTICAST_ADDR, {127,0,0,1}).
--define(MULTICAST_INTERFACE, {224,0,0,1}).
+-define(MULTICAST_ADDR, {224,0,2,254}).
 -define(MULTICAST_PORT, 62476).
 
 %%====================================================================
@@ -137,8 +136,8 @@ handle_cast({send_message, Message}, State) ->
     undefined ->
       io:format("Socket not yet started~n"),
       ok;
-    S ->
-      Ret = gen_udp:send(S, ?MULTICAST_ADDR, ?MULTICAST_PORT, Message),
+    Sock ->
+      Ret = gen_udp:send(Sock, ?MULTICAST_ADDR, ?MULTICAST_PORT, Message),
       io:format("Send return message : ~p~n", [Ret])
   end,
   {noreply, State}.
@@ -177,15 +176,20 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 
 open() ->
+  {ok, Addrs} = inet:getifaddrs(),
+  % get address of the wifi interface
+  OwnAddr = hd([
+    Addr || {_, Opts} <- Addrs, {addr, Addr} <- Opts,
+    size(Addr) == 4, Addr =/= {127,0,0,1}
+  ]),
   {ok, Sock} = gen_udp:open(?MULTICAST_PORT, [
     binary,
     inet,
     {active, true},
-    {ip, ?MULTICAST_ADDR},
-    %{multicast_ttl, 3},
-    {multicast_loop, false},
+    {multicast_if, OwnAddr}, %specify the network interface to use to send multicast
+    {multicast_loop, false}, %no return of the packets
     {reuseaddr, true},
-    {add_membership, {?MULTICAST_ADDR, ?MULTICAST_INTERFACE}}
+    {add_membership, {?MULTICAST_ADDR, OwnAddr}} %join a multicast group and use the specified network interface
   ]),
   Sock.
 
