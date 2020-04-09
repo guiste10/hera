@@ -137,8 +137,7 @@ handle_cast({send_message, Message}, State) ->
       io:format("Socket not yet started~n"),
       ok;
     Sock ->
-      Ret = gen_udp:send(Sock, ?MULTICAST_ADDR, ?MULTICAST_PORT, Message),
-      io:format("Send return message : ~p~n", [Ret])
+      gen_udp:send(Sock, ?MULTICAST_ADDR, ?MULTICAST_PORT, Message)
   end,
   {noreply, State}.
 
@@ -199,12 +198,12 @@ stop_mc({Sock, Pid}) ->
 
 receiver() ->
   receive
-    {udp, _Sock, IP, InPortNo, Packet} ->
+    {udp, _Sock, _IP, _InPortNo, Packet} ->
       T = binary_to_term(Packet),
       {Node, Iter, Measure} = T,
       hera:store_data(Node, Iter, Measure),
       %io:format("~n~nFrom: ~p~nPort: ~p~nData:~p~n", [IP,InPortNo,Packet]),
-      io:format("~nNode: ~p~nMeasure: ~p~nIter: ~p~n", [Node, Measure, Iter]),
+      %io:format("~nNode: ~p~nMeasure: ~p~nIter: ~p~n", [Node, Measure, Iter]),
       receiver();
     stop -> true;
     AnythingElse -> io:format("RECEIVED: ~p~n", [AnythingElse]),
