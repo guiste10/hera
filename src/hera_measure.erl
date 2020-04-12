@@ -1,8 +1,9 @@
 -module(hera_measure).
 -behaviour(gen_server).
--export([start_link/2, stop/1]).
+-export([start_link/0, stop/1, perform_measures/5]).
 -export([init/1, handle_call/3, handle_cast/2,
 handle_info/2, code_change/3, terminate/2]).
+-export([perform_sonar_warmup/0, perform_sonar_warmup_aux/3, make_measures/6]).
 
 %%====================================================================
 %% Macros
@@ -15,26 +16,45 @@ handle_info/2, code_change/3, terminate/2]).
 %%====================================================================
 
 -record(state, {
-    measurement_func :: function(),
-    delay :: integer(),
-    id :: {binary(), atom()},
-    iter :: integer()
+  default_distance :: float()
 }).
 -type state() :: #state{}.
-
+ 
 %%%===================================================================
 %%% API
 %%%===================================================================
 
 %% @doc Spawns the server and registers the local name (unique)
--spec(start_link(Measurement_function :: function(), Delay :: integer()) ->
+-spec(start_link() ->
     {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
-start_link(Measurement_function, Delay) ->
-    gen_server:start_link(?MODULE, {Measurement_function, Delay}, []).
+start_link() ->
+    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
+-spec(stop(Pid :: pid()) ->
+    term()).
 stop(Pid) ->
     gen_server:call(Pid, stop).
 
+%%--------------------------------------------------------------------
+%% @doc
+%% Perform measures
+%%
+%% @param Max_iter number of measures to perform
+%% @param Delay frequency of measurements
+%% @param Measure_func the function to perform the measure
+%% @param Do_filter set to true for applying filter on measures
+%% @param Measure_func set to true for performing a new warm up phase before the measurements
+%%
+%%--------------------------------------------------------------------
+-spec perform_measures(Max_iter :: integer(), Delay :: integer(), Measure_func :: function(), Do_filter :: boolean(), Do_sonar_warmup :: boolean()) -> ok.
+perform_measures(Max_iter, Delay, Measure_func, Do_filter, Do_sonar_warmup) ->
+    if
+        Do_sonar_warmup == true->
+            gen_server:call(?SERVER, Do_sonar_warmup);
+        true ->
+            ok
+    end,
+    gen_server:cast(?SERVER, {measure, Max_iter, Delay, Measure_func, Do_filter}).
 
 %%====================================================================
 %% gen_server callbacks
@@ -42,24 +62,26 @@ stop(Pid) ->
 
 %% @private
 %% @doc Initializes the server
--spec(init({Measurement_function :: function(), Delay :: integer()}) ->
+-spec(init(Args :: term()) ->
     {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
     {stop, Reason :: term()} | ignore).
-init({Measurement_function, Delay}) ->
-    Iter = 0,
-    Id = {<<"measurements">>, state_orset},
-    {ok, #state{measurement_func = Measurement_function, delay = Delay, id = Id, iter = Iter}, Delay}. % {ok, state, timeout}
+init([]) ->
+    {ok, #state{default_distance = -1.0}}.
 
 %% @private
 %% @doc Handling call messages
--spec(handle_call(Request :: term(), From :: {pid(), Tag :: term()},
-    State :: state()) ->
+-spec(handle_call(Request :: term(), From :: {pid(), Tag :: term()}, State :: state()) ->
     {reply, Reply :: term(), NewState :: state()} |
     {reply, Reply :: term(), NewState :: state(), timeout() | hibernate} |
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), Reply :: term(), NewState :: state()} |
     {stop, Reason :: term(), NewState :: state()}).
+handle_call(get_default_distance, _From, State) ->
+    {reply, State#state.default_distance, State};
+handle_call(do_sonar_warmup, _From, State) ->
+    Distance = perform_sonar_warmup(),
+    {reply, ok, State#state{default_distance = Distance}};
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
 handle_call(_Msg, _From, State) ->
@@ -71,6 +93,9 @@ handle_call(_Msg, _From, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
+handle_cast({measure, Max_iter, Delay, Measure_func, Do_filter}, State) ->
+    spawn(?SERVER, make_measures, [0, Max_iter, Delay, Measure_func, Do_filter, State#state.default_distance]), % def distance is encoded by hand, will be computed during warmup phase
+    {noreply, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -80,37 +105,9 @@ handle_cast(_Msg, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
-handle_info(timeout, State) ->
-    Measure_func = State#state.measurement_func,
-    Measure = Measure_func(),
-    %Measure = pmod_maxsonar:get() * 2.54,
-    %Measure = hera:fake_sonar_get(),
-    Name = node(),
+handle_info(_Request, State) ->
+    {noreply, State}.
 
-    %with lasp
-%%    {ok, Value} = lasp:query(Id),
-%%    %io:format("set: (~p) ~n", [Value]),
-%%    % S1, the set containing only values for Name
-%%    S1 = sets:filter(fun(_Elem = {_Val, N}) -> N == Name end, Value),
-%%    Length = sets:size(S1),
-%%    if
-%%        Length > 0 ->
-%%            [{R1, Name}] = sets:to_list(S1),
-%%            lasp:update(Id, {rmv, {R1, Name}}, self()),
-%%            lasp:update(Id, {add, {Measure, Name}}, self());
-%%        true ->
-%%            lasp:update(Id, {add, {Measure, Name}}, self())
-%%    end,
-
-    %With udp multicast
-    hera:store_data(Name, State#state.iter, Measure),
-    hera:send(term_to_binary({Name, State#state.iter, Measure})),
-    {noreply, State#state{iter = State#state.iter+1}, State#state.delay}.
-%% We cannot use handle_info below: if that ever happens,
-%% we cancel the timeouts (Delay) and basically zombify
-%% the entire process. It's better to crash in this case.
-%% handle_info(_Msg, State) ->
-%%    {noreply, State}.
 
 %% @private
 %% @doc Convert process state when code is changed
@@ -128,3 +125,52 @@ code_change(_OldVsn, State, _Extra) ->
 -spec(terminate(Reason :: (normal | shutdown | {shutdown, term()} | term()),
     State :: state()) -> term()).
 terminate(_Reason, _State) -> ok.
+
+%%====================================================================
+%% Internal functions
+%%====================================================================
+
+% only perform warmup when using real sonar
+-spec perform_sonar_warmup() -> 
+    Default_Distance :: float().
+perform_sonar_warmup() -> 
+    perform_sonar_warmup_aux(0, 100, 50).
+
+
+-spec perform_sonar_warmup_aux(Iter :: integer(), Max_iter :: integer(), Delay :: integer()) ->
+    Default_Distance :: float().
+perform_sonar_warmup_aux(Iter, Max_iter, Delay) -> % todo, selec mediane de toutes les mesures
+    if
+        Iter < Max_iter-1 ->
+            pmod_maxsonar:get(),
+            timer:sleep(Delay),
+            perform_sonar_warmup_aux(Iter+1, Max_iter, Delay);
+        Iter == Max_iter ->
+            Measure = pmod_maxsonar:get(),
+            Measure
+    end.
+
+
+
+-spec make_measures(Iter :: integer(), Max_iter :: integer(), Delay :: integer(), Measure_func :: function(), Do_filter :: boolean(), Default_Distance :: float()) -> ok.
+make_measures(Iter, Max_iter, Delay, Measure_func, Do_filter, Default_Distance) ->
+    Measure = Measure_func(),
+    Measure_str = io_lib:format("~.2f", [Measure]),
+    io:format("measure: (~s) ~n", [Measure_str]), % print (todo: log)
+    if % send current iter to other workers
+        Do_filter == true ->
+            hera:filter(Measure, Iter, Default_Distance); 
+        true ->
+            Name = node(),
+            hera:store_data(Name, Iter, Measure),
+            hera:send(term_to_binary({Name, Iter, Measure}))
+    end,
+    if
+        Iter < Max_iter-1 ->
+            timer:sleep(Delay),
+            make_measures(Iter+1, Max_iter, Delay, Measure_func, Do_filter, Default_Distance);
+        true -> % no more measures to make
+            io:format("measures done ~n", []),
+            ok
+    end.
+
