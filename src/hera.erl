@@ -15,6 +15,7 @@
 -export([store_data/3]).
 -export([get_data/0]).
 -export([perform_measures/4]).
+-export([get_timestamp/0]).
 
 % Callbacks
 -export([start/2]).
@@ -59,7 +60,6 @@ launch_app(Measurement_func, Measurement_frequency, Calculation_function, Calcul
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
   hera_pool:start_pool(filter_data_pool, 1, {hera_filter, start_link, []}),
-  {ok, filter_pid} = hera_pool:run(filter_data_pool, []),
   hera_pool:start_pool(pool1, 1, {hera_measure, start_link, []}),
   hera_pool:run(pool1, [Measurement_func, Measurement_frequency]),
   hera_pool:start_pool(pool2, 1, {hera_position, start_link, []}),
@@ -127,6 +127,13 @@ get_data() ->
 -spec perform_measures(Delay :: integer(), Max_iter :: integer(), File_name :: file:name_all(), Func :: function()) -> ok.
 perform_measures(Delay, Max_iter, File_name, Func) ->
   single_sonar_test:perform_measures(Delay, Max_iter, File_name, Func).
+
+
+
+-spec get_timestamp() -> integer().
+get_timestamp() ->
+  {Mega, Sec, Micro} = os:timestamp(),
+  (Mega*1000000 + Sec)*1000 + round(Micro/1000).
 
 
 
