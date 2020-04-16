@@ -130,7 +130,7 @@ get_data() ->
 %%--------------------------------------------------------------------
 -spec perform_measures(Max_iter :: integer(), Delay :: integer(), Measure_func :: function(), Do_filter :: boolean(), Do_sonar_warmup :: boolean()) -> ok.
 perform_measures(Max_iter, Delay, Measure_func, Do_filter, Do_sonar_warmup) ->
-  single_sonar_test:perform_measures(Max_iter, Delay, Measure_func, Do_filter, Do_sonar_warmup).
+  hera_measure:perform_measures(Max_iter, Delay, Measure_func, Do_filter, Do_sonar_warmup).
 
 
 
