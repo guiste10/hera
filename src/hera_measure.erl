@@ -66,7 +66,7 @@ perform_measures(Max_iter, Delay, Measure_func, Do_filter, Do_sonar_warmup) ->
     {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
     {stop, Reason :: term()} | ignore).
 init([]) ->
-    {ok, #state{default_Measure = -1.0}}.
+    {ok, #state{default_Measure = -1.0}}. % = tuple once warmed up, error raised when warm up not finished during filter
 
 %% @private
 %% @doc Handling call messages
