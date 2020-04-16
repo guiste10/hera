@@ -49,7 +49,7 @@ stop(Pid) ->
 perform_measures(Max_iter, Delay, Measure_func, Do_filter, Do_sonar_warmup) ->
     if
         Do_sonar_warmup == true->
-            gen_server:call(?SERVER, {Do_sonar_warmup, Measure_func}),
+            gen_server:cast(?SERVER, {Do_sonar_warmup, Measure_func}),
             io:format("warmup done ~n", []);
         true ->
             ok
@@ -79,9 +79,6 @@ init([]) ->
     {stop, Reason :: term(), NewState :: state()}).
 handle_call(get_default_measure, _From, State) ->
     {reply, State#state.default_Measure, State};
-handle_call({do_sonar_warmup, Measure_func}, _From, State) ->
-    Default_Measure = perform_sonar_warmup(Measure_func),
-    {reply, ok, State#state{default_Measure = Default_Measure}};
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
 handle_call(_Msg, _From, State) ->
@@ -93,6 +90,9 @@ handle_call(_Msg, _From, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
+handle_cast({do_sonar_warmup, Measure_func}, State) ->
+    Default_Measure = perform_sonar_warmup(Measure_func),
+    {noreply, State#state{default_Measure = Default_Measure}};
 handle_cast({measure, Max_iter, Delay, Measure_func, Do_filter}, State) ->
     %spawn(?SERVER, make_measures, [0, Max_iter, Delay, Measure_func, Do_filter, State#state.default_Measure]),
     make_measures(0, Max_iter, Delay, Measure_func, Do_filter, State#state.default_Measure),
@@ -135,7 +135,7 @@ terminate(_Reason, _State) -> ok.
 -spec perform_sonar_warmup(Measure_func :: function()) -> 
     Default_Measure :: {float(), integer()}.
 perform_sonar_warmup(Measure_func) -> 
-    perform_sonar_warmup_aux(0, 100, 50, Measure_func).
+    perform_sonar_warmup_aux(0, 100, 50, Measure_func). % hardcodé
 
 % todo: make maxiter/2 unused measures, then return median of next maxiter/2 measures? or osef?
 -spec perform_sonar_warmup_aux(Iter :: integer(), Max_iter :: integer(), Delay :: integer(), Measure_func :: function()) ->
