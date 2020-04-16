@@ -128,9 +128,9 @@ get_data() ->
 %% @spec perform_measures(Delay :: integer(), Max_iter :: integer(), File_name :: file:name_all(), Func :: function()) -> ok
 %% @end
 %%--------------------------------------------------------------------
--spec perform_measures(Delay :: integer(), Max_iter :: integer(), File_name :: file:name_all(), Func :: function(), Do_sonar_warmup :: boolean()) -> ok.
-perform_measures(Delay, Max_iter, File_name, Func, Do_sonar_warmup) ->
-  single_sonar_test:perform_measures(Delay, Max_iter, File_name, Func, Do_sonar_warmup).
+-spec perform_measures(Max_iter :: integer(), Delay :: integer(), Measure_func :: function(), Do_filter :: boolean(), Do_sonar_warmup :: boolean()) -> ok.
+perform_measures(Max_iter, Delay, Measure_func, Do_filter, Do_sonar_warmup) ->
+  single_sonar_test:perform_measures(Max_iter, Delay, Measure_func, Do_filter, Do_sonar_warmup).
 
 
 
