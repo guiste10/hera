@@ -49,7 +49,7 @@ stop(Pid) ->
 perform_measures(Max_iter, Delay, Measure_func, Do_filter, Do_sonar_warmup) ->
     if
         Do_sonar_warmup == true->
-            gen_server:call(?SERVER, Do_sonar_warmup),
+            gen_server:call(?SERVER, {Do_sonar_warmup, Measure_func}),
             io:format("warmup done ~n", []);
         true ->
             ok
@@ -79,8 +79,8 @@ init([]) ->
     {stop, Reason :: term(), NewState :: state()}).
 handle_call(get_default_measure, _From, State) ->
     {reply, State#state.default_Measure, State};
-handle_call(do_sonar_warmup, _From, State) ->
-    Default_Measure = perform_sonar_warmup(),
+handle_call({do_sonar_warmup, Measure_func}, _From, State) ->
+    Default_Measure = perform_sonar_warmup(Measure_func),
     {reply, ok, State#state{default_Measure = Default_Measure}};
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
@@ -132,22 +132,22 @@ terminate(_Reason, _State) -> ok.
 %%====================================================================
 
 % only perform warmup when using real sonar
--spec perform_sonar_warmup() -> 
+-spec perform_sonar_warmup(Measure_func :: function()) -> 
     Default_Measure :: {float(), integer()}.
-perform_sonar_warmup() -> 
-    perform_sonar_warmup_aux(0, 100, 50).
+perform_sonar_warmup(Measure_func) -> 
+    perform_sonar_warmup_aux(0, 100, 50, Measure_func).
 
 % todo: make maxiter/2 unused measures, then return median of next maxiter/2 measures? or osef?
--spec perform_sonar_warmup_aux(Iter :: integer(), Max_iter :: integer(), Delay :: integer()) ->
+-spec perform_sonar_warmup_aux(Iter :: integer(), Max_iter :: integer(), Delay :: integer(), Measure_func :: function()) ->
     Default_Measure :: {float(), integer()}.
-perform_sonar_warmup_aux(Iter, Max_iter, Delay) -> % todo, selec mediane de toutes les mesures
+perform_sonar_warmup_aux(Iter, Max_iter, Delay, Measure_func) -> % todo, selec mediane de toutes les mesures
     if
         Iter < Max_iter-1 ->
-            pmod_maxsonar:get(),
+            Measure_func(),
             timer:sleep(Delay),
-            perform_sonar_warmup_aux(Iter+1, Max_iter, Delay);
+            perform_sonar_warmup_aux(Iter+1, Max_iter, Delay, Measure_func);
         Iter == Max_iter ->
-            Measure = pmod_maxsonar:get(),
+            Measure = Measure_func(),
             Measure_timestamp = hera:get_timestamp(),
             {Measure, Measure_timestamp}
     end.
