@@ -14,7 +14,7 @@
 -export([send/1]).
 -export([store_data/3]).
 -export([get_data/0]).
--export([perform_measures/4]).
+-export([perform_measures/5]).
 -export([get_timestamp/0]).
 
 % Callbacks
@@ -124,9 +124,9 @@ get_data() ->
 %% @spec perform_measures(Delay :: integer(), Max_iter :: integer(), File_name :: file:name_all(), Func :: function()) -> ok
 %% @end
 %%--------------------------------------------------------------------
--spec perform_measures(Delay :: integer(), Max_iter :: integer(), File_name :: file:name_all(), Func :: function()) -> ok.
-perform_measures(Delay, Max_iter, File_name, Func) ->
-  single_sonar_test:perform_measures(Delay, Max_iter, File_name, Func).
+-spec perform_measures(Delay :: integer(), Max_iter :: integer(), File_name :: file:name_all(), Func :: function(), Do_sonar_warmup :: boolean()) -> ok.
+perform_measures(Delay, Max_iter, File_name, Func, Do_sonar_warmup) ->
+  single_sonar_test:perform_measures(Delay, Max_iter, File_name, Func, Do_sonar_warmup).
 
 
 

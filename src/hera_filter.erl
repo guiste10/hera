@@ -139,10 +139,11 @@ filter(Measure, Iter, Default_measure, State)->
         (Prev_is_def_dist == false andalso 
         Is_def_dist == false andalso
         abs(Measure_value - Prev_measure_value) > (10.0/35.714*Time_diff)) ->
-            io:format("filter measure out ~n", []);
+            io:format("filter measure out ~n", []),
+            State#state{num_measures = State#state.num_measures+1, num_filtered = State#state.num_filtered+1}; % keep old previous measure
         true ->
             Name = node(),
             hera:store_data(Name, Iter, Measure),
-            hera:send(term_to_binary({Name, Iter, Measure}))
-    end,
-    State.
+            hera:send(term_to_binary({Name, Iter, Measure})),
+            State#state{previous_measure = Measure, num_measures = State#state.num_measures+1} % don't increment numfiltered
+    end.
