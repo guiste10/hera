@@ -33,7 +33,8 @@
 -record(state, {
   % dictionary contraining the last data of all nodes
   % with the form [{node_name, {seqnum, data}}]
-  data :: dict:dict(string(), {integer(), integer() | float()})
+  data :: dict:dict(string(), {integer(), integer() | float()}),
+  logger_configs :: #{atom() := #{}}
 }).
 -type state() :: #state{}.
 
@@ -79,7 +80,7 @@ store_data(Node, Seqnum, Data) ->
   {ok, State :: #state{}} | {ok, State :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
 init([]) ->
-  {ok, #state{data = dict:new()}}.
+  {ok, #state{data = dict:new(), logger_configs = maps:new()}}.
 
 %% @private
 %% @doc Handling call messages
@@ -103,6 +104,24 @@ handle_call(_Request, _From, State = #state{}) ->
   {noreply, NewState :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: #state{}}).
 handle_cast({store_data, {Node, Seqnum, Data}}, State) ->
+  Logger_config = case maps:is_key(Node, State#state.logger_configs) of
+                    % If a handler is not yet added for the given Node, add a new handler
+                    false ->
+                      File_Name = "logs/" ++ atom_to_list(Node),
+                       Config = #{
+                          filters =>
+                            [
+                              {debug, {fun logger_filters:level/2, {stop, neq, debug}}}, %% Only allow debug logs
+                              {Node, {fun logger_filters:domain/2, {stop, not_equal, [Node]}}} %% Only allow debug logs for the domain {Node}
+                            ],
+                          config => #{  file => File_Name}, %% Measures will be logged to file logs/{Node}
+                          formatter => {logger_formatter  , #{single_line => true, max_size => 128, template => [msg, "\n"]}} %% Only log on one line the message
+                          },
+                       logger:add_handler(Node, logger_disk_log_h, Config), %% add the handler with the provided config
+                       State#state.logger_configs#{Node => Config};
+                    true -> State#state.logger_configs
+  end,
+  logger:debug("~p ~p", [Seqnum, Data], #{domain => Node}), %% Log data to file
   Dict2 = case dict:find(Node, State#state.data) of
             {ok, {S, _Data}} ->
               if
@@ -114,7 +133,7 @@ handle_cast({store_data, {Node, Seqnum, Data}}, State) ->
             error ->
               dict:store(Node, {Seqnum, Data}, State#state.data)
           end,
-  {noreply, State#state{data = Dict2}};
+  {noreply, State#state{data = Dict2, logger_configs = Logger_config}};
 handle_cast(_Request, State = #state{}) ->
   {noreply, State}.
 
