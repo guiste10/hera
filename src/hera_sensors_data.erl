@@ -34,7 +34,7 @@
   % dictionary contraining the last data of all nodes
   % with the form [{node_name, {seqnum, data}}]
   data :: dict:dict(string(), {integer(), integer() | float()}),
-  logger_configs :: #{atom() := #{}}
+  logger_configs :: map()
 }).
 -type state() :: #state{}.
 
@@ -108,17 +108,18 @@ handle_cast({store_data, {Node, Seqnum, Data}}, State) ->
                     % If a handler is not yet added for the given Node, add a new handler
                     false ->
                       File_Name = "logs/" ++ atom_to_list(Node),
-                       Config = #{
-                          filters =>
-                            [
-                              {debug, {fun logger_filters:level/2, {stop, neq, debug}}}, %% Only allow debug logs
-                              {Node, {fun logger_filters:domain/2, {stop, not_equal, [Node]}}} %% Only allow debug logs for the domain {Node}
-                            ],
-                          config => #{  file => File_Name}, %% Measures will be logged to file logs/{Node}
-                          formatter => {logger_formatter  , #{single_line => true, max_size => 128, template => [msg, "\n"]}} %% Only log on one line the message
-                          },
-                       logger:add_handler(Node, logger_disk_log_h, Config), %% add the handler with the provided config
-                       State#state.logger_configs#{Node => Config};
+                      Config = #{
+                        filters =>
+                        [
+                          {debug, {fun logger_filters:level/2, {stop, neq, debug}}}, %% Only allow debug logs
+                          {Node, {fun logger_filters:domain/2, {stop, not_equal, [Node]}}} %% Only allow debug logs for the domain {Node}
+                        ],
+                        config => #{  file => File_Name}, %% Measures will be logged to file logs/{Node}
+                        formatter => {logger_formatter  , #{single_line => true, max_size => 128, template => [msg, "\n"]}} %% Only log on one line the message
+                      },
+                      logger:add_handler(Node, logger_disk_log_h, Config), %% add the handler with the provided config
+                      Actual_Config = State#state.logger_configs,
+                      Actual_Config#{Node => Config};
                     true -> State#state.logger_configs
   end,
   logger:debug("~p ~p", [Seqnum, Data], #{domain => Node}), %% Log data to file
