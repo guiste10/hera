@@ -122,7 +122,7 @@ handle_cast({store_data, {Node, Seqnum, Data}}, State) ->
                       Actual_Config#{Node => Config};
                     true -> State#state.logger_configs
   end,
-  logger:debug("~p ~p", [Seqnum, Data], #{domain => Node}), %% Log data to file
+  logger:debug("~p ~p", [Seqnum, Data], #{domain => [Node]}), %% Log data to file
   Dict2 = case dict:find(Node, State#state.data) of
             {ok, {S, _Data}} ->
               if
