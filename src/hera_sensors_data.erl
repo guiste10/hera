@@ -132,7 +132,7 @@ handle_cast({log_measure, {Node, Seqnum, Data}}, State) ->
   case ets:member(State#state.logger_configs, Node) of
     % If a handler is not yet added for the given Node, add a new handler
     false ->
-      File_Name = "logs/" ++ atom_to_list(Node),
+      File_Name = "measures/" ++ atom_to_list(Node),
       Config = #{
         filters =>
         [

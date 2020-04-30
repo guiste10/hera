@@ -141,7 +141,7 @@ get_data() ->
 %% @spec store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok
 %% @end
 %%--------------------------------------------------------------------
--spec store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok.
+-spec log_measure(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok.
 log_measure(Node, Seqnum, Data) ->
   hera_sensors_data:log_measure(Node, Seqnum, Data).
 
