@@ -140,7 +140,7 @@ handle_cast({log_measure, {Node, Seqnum, Data}}, State) ->
           {Node, {fun logger_filters:domain/2, {stop, not_equal, [Node]}}} %% Only allow debug logs for the domain {Node}
         ],
         config => #{  file => File_Name}, %% Measures will be logged to file logs/{Node}
-        formatter => {logger_formatter  , #{single_line => true, max_size => 30, template => [msg]}} %% Only log on one line the message
+        formatter => {logger_formatter  , #{single_line => true, max_size => 30, template => [msg + "\n"]}} %% Only log on one line the message
       },
       logger:add_handler(Node, logger_disk_log_h, Config), %% add the handler with the provided config
       ets:insert(State#state.logger_configs, {Node, Config});
