@@ -7,8 +7,9 @@
 
 -include("hera.hrl").
 
-%% API/home/julien/home/julien/home/julien
+%% API
 -export([launch_app/4]).
+-export([launch_app/2]).
 -export([clusterize/0]).
 -export([fake_sonar_get/0]).
 -export([send/1]).
@@ -36,7 +37,7 @@ stop(_State) -> ok.
 
 %% -------------------------------------------------------------------
 %% @doc
-%% Start all pools
+%% Start all pools. Function to be called by GRiSP boards
 %%
 %% @param Measurement_func function to get measures
 %% @param Measurement_frequency frequency at which measurements are taken (in ms)
@@ -59,6 +60,31 @@ launch_app(Measurement_func, Measurement_frequency, Calculation_function, Calcul
   hera_pool:run(multicastPool, []),
   hera_pool:start_pool(pool1, 1, {hera_measure, start_link, []}),
   hera_pool:run(pool1, [Measurement_func, Measurement_frequency]),
+  hera_pool:start_pool(pool2, 1, {hera_position, start_link, []}),
+  hera_pool:run(pool2, [Calculation_function, Calculation_frequency]),
+  clusterize().
+
+%% -------------------------------------------------------------------
+%% @doc
+%% Start all pools. Function to be called by a shell on a computer
+%%
+%% @param Measurement_func function to get measures
+%% @param Measurement_frequency frequency at which measurements are taken (in ms)
+%% @param Calculation_function function that use the measurements to compute a result
+%% @param Calculation_frequency frequency at which the calculation is perform (in ms)
+%%
+%% @spec launch_app(
+%%            Calculation_function :: function(),
+%%            Calculation_frequency :: integer())
+%%        -> ok
+%% @end
+%% -------------------------------------------------------------------
+-spec launch_app(Calculation_function :: function(), Calculation_frequency :: integer()) -> ok.
+launch_app(Calculation_function, Calculation_frequency) ->
+  hera_pool:start_pool(sensor_data_pool, 1, {hera_sensors_data, start_link, []}),
+  hera_pool:run(sensor_data_pool, []),
+  hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
+  hera_pool:run(multicastPool, []),
   hera_pool:start_pool(pool2, 1, {hera_position, start_link, []}),
   hera_pool:run(pool2, [Calculation_function, Calculation_frequency]),
   clusterize().

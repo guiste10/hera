@@ -104,7 +104,7 @@ handle_call(_Request, _From, State = #state{}) ->
   {noreply, NewState :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: #state{}}).
 handle_cast({store_data, {Node, Seqnum, Data}}, State) ->
-  Logger_config = case maps:is_key(Node, State#state.logger_configs) of
+  Logger_config = case maps:is_key(Node, State#state.logger_configs) andalso erlang:system_info(logical_processors) > 1 of
                     % If a handler is not yet added for the given Node, add a new handler
                     false ->
                       File_Name = "logs/" ++ atom_to_list(Node),
