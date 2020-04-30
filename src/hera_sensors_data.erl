@@ -78,7 +78,7 @@ store_data(Node, Seqnum, Data) ->
 %% @spec store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok
 %% @end
 %%--------------------------------------------------------------------
--spec store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok.
+-spec log_measure(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok.
 log_measure(Node, Seqnum, Data) ->
   gen_server:cast(?SERVER, {log_measure, {Node, Seqnum, Data}}).
 
@@ -92,7 +92,7 @@ log_measure(Node, Seqnum, Data) ->
   {ok, State :: #state{}} | {ok, State :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
 init([]) ->
-  {ok, #state{data = dict:new(), logger_configs = maps:new()}}.
+  {ok, #state{data = dict:new(), logger_configs = ets:new(nodes_logger, [ordered_set, named_table])}}.
 
 %% @private
 %% @doc Handling call messages
