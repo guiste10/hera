@@ -174,6 +174,8 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
+%% @private
+%% @doc Open a new udp multicast socket
 open() ->
   {ok, Addrs} = inet:getifaddrs(),
   % get address of the wifi interface
@@ -196,14 +198,21 @@ stop_mc({Sock, Pid}) ->
   gen_udp:close(Sock),
   Pid ! stop.
 
+%% @private
+%% @doc Function that handles received udp multicast messages
 receiver() ->
   receive
     {udp, _Sock, _IP, _InPortNo, Packet} ->
-      T = binary_to_term(Packet),
-      {Node, Iter, Measure} = T,
-      hera:store_data(Node, Iter, Measure),
-      %io:format("~n~nFrom: ~p~nPort: ~p~nData:~p~n", [IP,InPortNo,Packet]),
-      %io:format("~nNode: ~p~nMeasure: ~p~nIter: ~p~n", [Node, Measure, Iter]),
+      case binary_to_term(Packet) of
+        {Node, Iter, Measure} ->
+          case os:type() of
+            {unix,rtems} -> %% if it is a GRiSP board, don't log the measures, only save the most recent one
+              hera:store_data(Node, Iter, Measure);
+            _ ->
+              hera:log_measure(Node, Iter, Measure),
+              hera:store_data(Node, Iter, Measure)
+          end
+      end,
       receiver();
     stop -> true;
     AnythingElse -> io:format("RECEIVED: ~p~n", [AnythingElse]),

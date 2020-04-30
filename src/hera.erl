@@ -15,6 +15,7 @@
 -export([send/1]).
 -export([store_data/3]).
 -export([get_data/0]).
+-export([log_measure/3]).
 
 % Callbacks
 -export([start/2]).
@@ -132,6 +133,17 @@ store_data(Node, Seqnum, Data) ->
 -spec get_data() -> dict:dict(string(), {integer(), integer() | float()}).
 get_data() ->
   hera_sensors_data:get_data().
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Log the given measure into a file with the same name as the node name
+%%
+%% @spec store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok
+%% @end
+%%--------------------------------------------------------------------
+-spec store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok.
+log_measure(Node, Seqnum, Data) ->
+  hera_sensors_data:log_measure(Node, Seqnum, Data).
 
 fake_sonar_get() ->
   float(rand:uniform(10)).
