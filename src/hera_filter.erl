@@ -109,7 +109,7 @@ terminate(_Reason, _State) -> ok.
 %%====================================================================
 %% Internal functions
 %%====================================================================
--spec(is_default_measure(Measure :: float(), Default_measure :: float())->
+-spec(is_default_measure(Measure :: float(), Default_measure :: {float(), integer()})->
     boolean()).
 is_default_measure(Measure, Default_measure)->
     if
@@ -123,26 +123,33 @@ is_default_measure(Measure, Default_measure)->
 -spec(filter(Measure :: {float(), integer}, Iter :: integer(), Default_measure :: {float(), integer()}, State :: state())->
     State :: state()).
 filter(Measure, Iter, Default_measure, State)->
-    erlang:display('filter'),
+    {Default_measure_val, _} = Default_measure,
+    erlang:display('filterNow'),
     if
         Iter == 1 -> % first performed measure after warmup
-            Previous_measure = Default_measure;
+            Previous_measure = Default_measure; % use measured val + timestamp
         true ->
             Previous_measure = State#state.previous_measure
     end,
     {Prev_measure_value, Prev_measure_timestamp} = Previous_measure,
     {Measure_value, Measure_timestamp} = Measure,
-    Prev_is_def_dist = is_default_measure(Prev_measure_value, Default_measure),
-    Is_def_dist = is_default_measure(Measure_value, Default_measure),
+    erlang:display('filterNow0'),
+    Prev_is_def_dist = is_default_measure(Prev_measure_value, Default_measure_val),
+    Is_def_dist = is_default_measure(Measure_value, Default_measure_val),
     Time_diff = abs(Measure_timestamp - Prev_measure_timestamp),
+    erlang:display('filterNow1'),
     if % if true then filter
-        Measure_value > Default_measure + 2.54 orelse 
+        Measure_value > Default_measure_val + 2.54 orelse 
         (Prev_is_def_dist == false andalso 
         Is_def_dist == false andalso
         abs(Measure_value - Prev_measure_value) > (10.0/35.714*Time_diff)) ->
+            erlang:display('filterNow2'),
+
             io:format("filter measure out ~n", []),
             State#state{num_measures = State#state.num_measures+1, num_filtered = State#state.num_filtered+1}; % keep old previous measure
         true ->
+            erlang:display('filterNow3'),
+
             Name = node(),
             hera:store_data(Name, Iter, Measure),
             hera:send(term_to_binary({Name, Iter, Measure})),
