@@ -151,7 +151,7 @@ filter(Measure, Iter, Default_measure, State)->
             erlang:display('filterNow3'),
 
             Name = node(),
-            %hera:store_data(Name, Iter, Measure),
+            hera:store_data(Name, Iter, Measure),
             %hera:send(term_to_binary({Name, Iter, Measure})),
             State#state{previous_measure = Measure, num_measures = State#state.num_measures+1} % don't increment numfiltered
     end.

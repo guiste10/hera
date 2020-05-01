@@ -165,8 +165,8 @@ make_measures(Iter, Max_iter, Delay, Measure_func, Do_filter, Default_Measure) -
         Do_filter == true ->
             hera_filter:filter({Measure, Measure_timestamp}, Iter, Default_Measure); 
         true ->
-            Name = node()
-            %hera:store_data(Name, Iter, Measure),
+            Name = node(),
+            hera:store_data(Name, Iter, Measure)
             %hera:send(term_to_binary({Name, Iter, Measure}))
     end,
     if
