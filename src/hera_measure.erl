@@ -49,8 +49,7 @@ stop(Pid) ->
 perform_measures(Max_iter, Delay, Measure_func, Do_filter, Do_sonar_warmup) ->
     if
         Do_sonar_warmup == true->
-            gen_server:cast(?SERVER, {do_sonar_warmup, Measure_func}),
-            io:format("warmup done ~n", []);
+            gen_server:cast(?SERVER, {do_sonar_warmup, Measure_func});
         true ->
             ok
     end,
@@ -92,6 +91,7 @@ handle_call(_Msg, _From, State) ->
     {stop, Reason :: term(), NewState :: state()}).
 handle_cast({do_sonar_warmup, Measure_func}, State) ->
     Default_Measure = perform_sonar_warmup(Measure_func),
+    io:format("warmup done ~n", []),
     {noreply, State#state{default_Measure = Default_Measure}};
 handle_cast({measure, Max_iter, Delay, Measure_func, Do_filter}, State) ->
     %spawn(?SERVER, make_measures, [0, Max_iter, Delay, Measure_func, Do_filter, State#state.default_Measure]),
@@ -141,6 +141,7 @@ perform_sonar_warmup(Measure_func) ->
 -spec perform_sonar_warmup_aux(Iter :: integer(), Max_iter :: integer(), Delay :: integer(), Measure_func :: function()) ->
     Default_Measure :: {float(), integer()}.
 perform_sonar_warmup_aux(Iter, Max_iter, Delay, Measure_func) -> % todo, selec mediane de toutes les mesures
+    erlang:display(Iter),
     if
         Iter < Max_iter-1 ->
             Measure_func(),
