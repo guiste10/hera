@@ -34,7 +34,7 @@ start_link() ->
 stop(Pid) ->
     gen_server:call(Pid, stop).
 
--spec(filter(Measure :: {float(), integer()}, Iter :: integer(), Default_measure :: float()) -> 
+-spec(filter(Measure :: {float(), integer()}, Iter :: integer(), Default_measure :: {float(), integer()}) -> 
     ok).
 filter(Measure, Iter, Default_measure)->
     gen_server:call(?SERVER, {filter, Measure, Iter, Default_measure}),
@@ -120,9 +120,10 @@ is_default_measure(Measure, Default_measure)->
     end.
 
 % suppose at first call that previous_measure = default distance as in hera_measure:perform_sonar_warmup_aux()
--spec(filter(Measure :: {float(), integer}, Iter :: integer(), Default_measure :: float(), State :: state())->
+-spec(filter(Measure :: {float(), integer}, Iter :: integer(), Default_measure :: {float(), integer()}, State :: state())->
     State :: state()).
 filter(Measure, Iter, Default_measure, State)->
+    erlang:display('filter'),
     if
         Iter == 1 -> % first performed measure after warmup
             Previous_measure = Default_measure;

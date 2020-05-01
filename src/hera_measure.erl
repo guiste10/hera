@@ -95,7 +95,7 @@ handle_cast({do_sonar_warmup, Measure_func}, State) ->
     {noreply, State#state{default_Measure = Default_Measure}};
 handle_cast({measure, Max_iter, Delay, Measure_func, Do_filter}, State) ->
     %spawn(?SERVER, make_measures, [0, Max_iter, Delay, Measure_func, Do_filter, State#state.default_Measure]),
-    make_measures(1, Max_iter, Delay, Measure_func, Do_filter, element(1, State#state.default_Measure)),
+    make_measures(1, Max_iter, Delay, Measure_func, Do_filter, State#state.default_Measure),
     {noreply, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -137,7 +137,7 @@ terminate(_Reason, _State) -> ok.
 perform_sonar_warmup(Measure_func) -> 
     perform_sonar_warmup_aux(1, 100, 50, Measure_func). % hardcodé
 
-% todo: make maxiter/2 unused measures, then return median of next maxiter/2 measures? or osef?
+% todo: make maxiter/2 unused measures, then return median of next maxiter/2 measures? or osef just send last measure?
 -spec perform_sonar_warmup_aux(Iter :: integer(), Max_iter :: integer(), Delay :: integer(), Measure_func :: function()) ->
     Default_Measure :: {float(), integer()}.
 perform_sonar_warmup_aux(Iter, Max_iter, Delay, Measure_func) -> % todo, selec mediane de toutes les mesures
