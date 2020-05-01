@@ -1,5 +1,8 @@
 -module(hera_measure).
 -behaviour(gen_server).
+
+-include("hera.hrl").
+
 -export([start_link/2, stop/1]).
 -export([init/1, handle_call/3, handle_cast/2,
 handle_info/2, code_change/3, terminate/2]).
@@ -105,7 +108,7 @@ handle_info(timeout, State) ->
     %With udp multicast
     hera:store_data(Name, State#state.iter, Measure),
     hera:send(term_to_binary({Name, State#state.iter, Measure})),
-    {noreply, State#state{iter = State#state.iter+1}, State#state.delay}.
+    {noreply, State#state{iter = State#state.iter+1 rem ?MAX_SEQNUM}, State#state.delay}.
 %% We cannot use handle_info below: if that ever happens,
 %% we cancel the timeouts (Delay) and basically zombify
 %% the entire process. It's better to crash in this case.

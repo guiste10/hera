@@ -11,6 +11,8 @@
 
 -behaviour(gen_server).
 
+-include("hera.hrl").
+
 %% API
 -export([start_link/0]).
 -export([store_data/3]).
@@ -119,7 +121,7 @@ handle_cast({store_data, {Node, Seqnum, Data}}, State) ->
   Dict2 = case dict:find(Node, State#state.data) of
             {ok, {S, _Data}} ->
               if
-                S < Seqnum ->
+                S < Seqnum orelse Seqnum == 0 ->
                   dict:store(Node, {Seqnum, Data}, State#state.data);
                 true ->
                   State#state.data
