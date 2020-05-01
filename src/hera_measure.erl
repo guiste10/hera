@@ -49,7 +49,7 @@ stop(Pid) ->
 perform_measures(Max_iter, Delay, Measure_func, Do_filter, Do_sonar_warmup) ->
     if
         Do_sonar_warmup == true->
-            gen_server:cast(?SERVER, {Do_sonar_warmup, Measure_func}),
+            gen_server:cast(?SERVER, {do_sonar_warmup, Measure_func}),
             io:format("warmup done ~n", []);
         true ->
             ok
