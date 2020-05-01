@@ -135,7 +135,7 @@ terminate(_Reason, _State) -> ok.
 -spec perform_sonar_warmup(Measure_func :: function()) -> 
     Default_Measure :: {float(), integer()}.
 perform_sonar_warmup(Measure_func) -> 
-    perform_sonar_warmup_aux(0, 100, 50, Measure_func). % hardcodé
+    perform_sonar_warmup_aux(1, 100, 50, Measure_func). % hardcodé
 
 % todo: make maxiter/2 unused measures, then return median of next maxiter/2 measures? or osef?
 -spec perform_sonar_warmup_aux(Iter :: integer(), Max_iter :: integer(), Delay :: integer(), Measure_func :: function()) ->
@@ -143,7 +143,7 @@ perform_sonar_warmup(Measure_func) ->
 perform_sonar_warmup_aux(Iter, Max_iter, Delay, Measure_func) -> % todo, selec mediane de toutes les mesures
     erlang:display(Iter),
     if
-        Iter < Max_iter-1 ->
+        Iter < Max_iter ->
             Measure_func(),
             timer:sleep(Delay),
             perform_sonar_warmup_aux(Iter+1, Max_iter, Delay, Measure_func);
