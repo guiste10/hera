@@ -37,7 +37,7 @@ stop(Pid) ->
 -spec(filter(Measure :: {float(), integer()}, Iter :: integer(), Default_measure :: {float(), integer()}) -> 
     ok).
 filter(Measure, Iter, Default_measure)->
-    gen_server:call(?SERVER, {filter, Measure, Iter, Default_measure}),
+    gen_server:cast(?SERVER, {filter, Measure, Iter, Default_measure}),
     ok.
 
 %%====================================================================
@@ -62,9 +62,6 @@ init([]) ->
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), Reply :: term(), NewState :: state()} |
     {stop, Reason :: term(), NewState :: state()}).
-handle_call({filter, Measure, Iter, Default_measure}, _From, State) ->
-    State2 = filter(Measure, Iter, Default_measure, State),
-    {noreply, State2};
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
 handle_call(_Msg, _From, State) ->
@@ -76,6 +73,9 @@ handle_call(_Msg, _From, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
+handle_cast({filter, Measure, Iter, Default_measure}, State) ->
+    State2 = filter(Measure, Iter, Default_measure, State),
+    {noreply, State2};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -151,7 +151,7 @@ filter(Measure, Iter, Default_measure, State)->
             erlang:display('filterNow3'),
 
             Name = node(),
-            hera:store_data(Name, Iter, Measure),
-            hera:send(term_to_binary({Name, Iter, Measure})),
+            %hera:store_data(Name, Iter, Measure),
+            %hera:send(term_to_binary({Name, Iter, Measure})),
             State#state{previous_measure = Measure, num_measures = State#state.num_measures+1} % don't increment numfiltered
     end.

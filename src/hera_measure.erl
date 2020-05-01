@@ -163,11 +163,11 @@ make_measures(Iter, Max_iter, Delay, Measure_func, Do_filter, Default_Measure) -
     io:format("measure: (~s) ~n", [Measure_str]), % print (todo: log)
     if % send current iter to other workers
         Do_filter == true ->
-            hera_filter:filter({Measure, Measure_timestamp},  Iter, Default_Measure); 
+            hera_filter:filter({Measure, Measure_timestamp}, Iter, Default_Measure); 
         true ->
-            Name = node(),
-            hera:store_data(Name, Iter, Measure),
-            hera:send(term_to_binary({Name, Iter, Measure}))
+            Name = node()
+            %hera:store_data(Name, Iter, Measure),
+            %hera:send(term_to_binary({Name, Iter, Measure}))
     end,
     if
         Iter < Max_iter ->
