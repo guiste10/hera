@@ -95,7 +95,7 @@ handle_cast({do_sonar_warmup, Measure_func}, State) ->
     {noreply, State#state{default_Measure = Default_Measure}};
 handle_cast({measure, Max_iter, Delay, Measure_func, Do_filter}, State) ->
     %spawn(?SERVER, make_measures, [0, Max_iter, Delay, Measure_func, Do_filter, State#state.default_Measure]),
-    make_measures(0, Max_iter, Delay, Measure_func, Do_filter, State#state.default_Measure),
+    make_measures(1, Max_iter, Delay, Measure_func, Do_filter, element(1, State#state.default_Measure)),
     {noreply, State};
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -141,7 +141,7 @@ perform_sonar_warmup(Measure_func) ->
 -spec perform_sonar_warmup_aux(Iter :: integer(), Max_iter :: integer(), Delay :: integer(), Measure_func :: function()) ->
     Default_Measure :: {float(), integer()}.
 perform_sonar_warmup_aux(Iter, Max_iter, Delay, Measure_func) -> % todo, selec mediane de toutes les mesures
-    erlang:display(Iter),
+    %erlang:display(Iter),
     if
         Iter < Max_iter ->
             Measure_func(),
@@ -170,7 +170,7 @@ make_measures(Iter, Max_iter, Delay, Measure_func, Do_filter, Default_Measure) -
             hera:send(term_to_binary({Name, Iter, Measure}))
     end,
     if
-        Iter < Max_iter-1 ->
+        Iter < Max_iter ->
             timer:sleep(Delay),
             make_measures(Iter+1, Max_iter, Delay, Measure_func, Do_filter, Default_Measure);
         true -> % no more measures to make

@@ -34,7 +34,7 @@ start_link() ->
 stop(Pid) ->
     gen_server:call(Pid, stop).
 
--spec(filter(Measure :: {float(), integer}, Iter :: integer(), Default_measure :: float()) -> 
+-spec(filter(Measure :: {float(), integer()}, Iter :: integer(), Default_measure :: float()) -> 
     ok).
 filter(Measure, Iter, Default_measure)->
     gen_server:call(?SERVER, {filter, Measure, Iter, Default_measure}),
@@ -124,7 +124,7 @@ is_default_measure(Measure, Default_measure)->
     State :: state()).
 filter(Measure, Iter, Default_measure, State)->
     if
-        Iter == 0 -> % first performed measure after warmup
+        Iter == 1 -> % first performed measure after warmup
             Previous_measure = Default_measure;
         true ->
             Previous_measure = State#state.previous_measure
