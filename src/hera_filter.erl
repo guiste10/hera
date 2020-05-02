@@ -126,32 +126,30 @@ filter(Measure, Iter, Default_measure, State)->
     {Default_measure_val, _} = Default_measure,
     erlang:display('filterNow'),
     if
-        Iter == 1 -> % first performed measure after warmup
+        Iter == 0 -> % first performed measure after warmup
             Previous_measure = Default_measure; % use measured val + timestamp
         true ->
             Previous_measure = State#state.previous_measure
     end,
-    {Prev_measure_value, Prev_measure_timestamp} = Previous_measure,
-    {Measure_value, Measure_timestamp} = Measure,
-    erlang:display('filterNow0'),
-    Prev_is_def_dist = is_default_measure(Prev_measure_value, Default_measure_val),
-    Is_def_dist = is_default_measure(Measure_value, Default_measure_val),
+    {Prev_measure_val, Prev_measure_timestamp} = Previous_measure,
+    {Curr_measure_val, Measure_timestamp} = Measure,
+    Prev_is_def_dist = is_default_measure(Prev_measure_val, Default_measure_val),
+    Is_def_dist = is_default_measure(Curr_measure_val, Default_measure_val),
     Time_diff = abs(Measure_timestamp - Prev_measure_timestamp),
-    erlang:display('filterNow1'),
     if % if true then filter
-        Measure_value > Default_measure_val + 2.54 orelse 
+        Curr_measure_val > Default_measure_val + 2.54 orelse 
         (Prev_is_def_dist == false andalso 
         Is_def_dist == false andalso
-        abs(Measure_value - Prev_measure_value) > (10.0/35.714*Time_diff)) ->
-            erlang:display('filterNow2'),
+        abs(Curr_measure_val - Prev_measure_val) > (10.0/35.714*Time_diff)) -> % diff in cm > max diff in cm between 2 intervals
+            erlang:display('filterOut'),
 
             io:format("filter measure out ~n", []),
             State#state{num_measures = State#state.num_measures+1, num_filtered = State#state.num_filtered+1}; % keep old previous measure
         true ->
-            erlang:display('filterNow3'),
+            erlang:display('keep'),
 
             Name = node(),
-            hera:store_data(Name, Iter, Measure),
-            hera:send(term_to_binary({Name, Iter, Measure})),
+            hera:store_data(Name, Iter, Curr_measure_val),
+            hera:send(term_to_binary({Name, Iter, Curr_measure_val})),
             State#state{previous_measure = Measure, num_measures = State#state.num_measures+1} % don't increment numfiltered
     end.
