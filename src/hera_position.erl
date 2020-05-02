@@ -48,29 +48,32 @@ sonar_measurement(Inch_to_cm) ->
     end.
 
 calc_position(Separation) ->
-    Data = hera:get_data(sonar),
-    Values = dict:to_list(Data),
-    Length = dict:size(Data),
+    case hera:get_data(sonar) of
+        {error, Reason} -> logger:error(Reason);
+        {ok, Data} ->
+            Values = dict:to_list(Data),
+            Length = dict:size(Data),
 
-    if  % assign ready2 to true if set contains 2 measures
-        Length =:= 2 ->
-            %[{R1, _},{R2, _}] = sets:to_list(Values), % [{measure, name}, ...]
-            [{_Seqnum1, R1}, {_Seqnum2, R2}] = [dict:fetch(Node, Values) || Node <- dict:fetch_keys(Values)],
-            R1Sq = math : pow ( R1 , 2) ,
-            R2Sq = math : pow ( R2 , 2) ,
-            S2 = 2 * Separation ,
-            SSq = math : pow ( Separation , 2) ,
-            X = ( R1Sq - R2Sq + SSq ) / S2 ,
-            Helper = R1Sq - math : pow (X , 2),
-            if
-                Helper < 0 ->
-                    {error, "Position not definable: square root of neg number~n"};
+            if  % assign ready2 to true if set contains 2 measures
+                Length =:= 2 ->
+                    %[{R1, _},{R2, _}] = sets:to_list(Values), % [{measure, name}, ...]
+                    [{_Seqnum1, R1}, {_Seqnum2, R2}] = [dict:fetch(Node, Values) || Node <- dict:fetch_keys(Values)],
+                    R1Sq = math : pow ( R1 , 2) ,
+                    R2Sq = math : pow ( R2 , 2) ,
+                    S2 = 2 * Separation ,
+                    SSq = math : pow ( Separation , 2) ,
+                    X = ( R1Sq - R2Sq + SSq ) / S2 ,
+                    Helper = R1Sq - math : pow (X , 2),
+                    if
+                        Helper < 0 ->
+                            {error, "Position not definable: square root of neg number~n"};
+                        true ->
+                            Y1 = math : sqrt ( Helper ) ,
+                            Y2 = - Y1,
+                            Result = io_lib:format("position: (~.2f, ~.2f) or (~.2f, ~.2f)", [X, Y1, X, Y2]),
+                            {ok, Result}
+                    end;
                 true ->
-                    Y1 = math : sqrt ( Helper ) ,
-                    Y2 = - Y1,
-                    Result = io_lib:format("position: (~.2f, ~.2f) or (~.2f, ~.2f)", [X, Y1, X, Y2]),
-                    {ok, Result}
-            end;
-        true ->
-            {error, "Not two mesurements available"}
+                    {error, "Not two mesurements available"}
+            end
     end.
