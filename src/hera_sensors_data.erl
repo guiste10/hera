@@ -142,7 +142,7 @@ init([]) ->
   {stop, Reason :: term(), Reply :: term(), NewState :: #state{}} |
   {stop, Reason :: term(), NewState :: #state{}}).
 handle_call({get_data, Name}, _From, State = #state{data = Data}) ->
-  Rep = case maps:is_key(Name) of
+  Rep = case maps:is_key(Name, Data) of
           true -> {ok, maps:get(Name, Data)};
           false -> {error, "Not yet values for this name"}
   end,
