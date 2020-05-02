@@ -48,7 +48,7 @@ sonar_measurement(Inch_to_cm) ->
     end.
 
 calc_position(Separation) ->
-    Data = hera:get_data(position),
+    Data = hera:get_data(sonar),
     Values = dict:to_list(Data),
     Length = dict:size(Data),
 
