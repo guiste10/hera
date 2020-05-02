@@ -160,7 +160,7 @@ make_measures(Iter, Max_iter, Delay, Measure_func, Do_filter, Default_Measure) -
     Measure = Measure_func(),
     Measure_timestamp = hera:get_timestamp(),
     Measure_str = io_lib:format("~.2f", [Measure]),
-    io:format("measure: (~s) ~n", [Measure_str]), % print (todo: log)
+    %io:format("measure: (~s) ~n", [Measure_str]), % print (todo: log)
     if % send current iter to other workers
         Do_filter == true ->
             hera_filter:filter({Measure, Measure_timestamp}, Iter, Default_Measure); 

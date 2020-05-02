@@ -124,7 +124,7 @@ is_default_measure(Measure, Default_measure)->
     State :: state()).
 filter(Measure, Iter, Default_measure, State)->
     {Default_measure_val, _} = Default_measure,
-    erlang:display('filterNow'),
+    %erlang:display('filterNow'),
     if
         Iter == 0 -> % first performed measure after warmup
             Previous_measure = Default_measure; % use measured val + timestamp
@@ -141,12 +141,12 @@ filter(Measure, Iter, Default_measure, State)->
         (Prev_is_def_dist == false andalso 
         Is_def_dist == false andalso
         abs(Curr_measure_val - Prev_measure_val) > (10.0/35.714*Time_diff)) -> % diff in cm > max diff in cm between 2 intervals
-            erlang:display('filterOut'),
+     %       erlang:display('filterOut'),
 
-            io:format("filter measure out ~n", []),
+        %    io:format("filter measure out ~n", []),
             State#state{num_measures = State#state.num_measures+1, num_filtered = State#state.num_filtered+1}; % keep old previous measure
         true ->
-            erlang:display('keep'),
+      %      erlang:display('keep'),
 
             Name = node(),
             hera:store_data(Name, Iter, Curr_measure_val),
