@@ -97,9 +97,12 @@ handle_cast(_Msg, State) ->
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
 handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_args = Args, iter = Iter, delay = Delay}) ->
-    Measure = erlang:apply(Func, Args),
-    hera:store_data(Name, node(), Iter, Measure),
-    hera:send({measure, Name, {node(), Iter, Measure}}),
+    case erlang:apply(Func, Args) of
+        {error, Reason} -> logger:error(Reason);
+        {ok, Measure} ->
+            hera:store_data(Name, node(), Iter, Measure),
+            hera:send({measure, Name, {node(), Iter, Measure}})
+    end,
     {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM}, Delay}.
 %% We cannot use handle_info below: if that ever happens,
 %% we cancel the timeouts (Delay) and basically zombify

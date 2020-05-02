@@ -97,8 +97,10 @@ handle_cast(_Request, State = #state{}) ->
   {noreply, NewState :: state(), timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: state()}).
 handle_info(timeout, State = #state{name = Name, calc_function = Func, func_args = Args, iter = Iter, delay = Delay}) ->
-  Res = erlang:apply(Func, Args),
-  hera:send({calc, Name, {node(), Iter, Res}}),
+  case erlang:apply(Func, Args) of
+    {error, Reason} -> logger:error(Reason);
+    {ok, Res} -> hera:send({calc, Name, {node(), Iter, Res}})
+  end,
   {noreply, State#state{iter = Iter+1 +1 rem ?MAX_SEQNUM}, Delay};
 handle_info(_Info, State = #state{}) ->
   {noreply, State}.

@@ -21,7 +21,7 @@
 -export([fake_sonar_get/0]).
 -export([send/1]).
 -export([store_data/4]).
--export([get_data/0]).
+-export([get_data/1]).
 -export([log_measure/4]).
 -export([log_calculation/4]).
 
@@ -131,9 +131,9 @@ store_data(Name, Node, Seqnum, Data) ->
 %% @spec get_data() -> dict:dict(string(), {integer(), integer() | float()})
 %% @end
 %%--------------------------------------------------------------------
--spec get_data() -> dict:dict(string(), {integer(), integer() | float()}).
-get_data() ->
-  hera_sensors_data:get_data().
+-spec get_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float()}).
+get_data(Name) ->
+  hera_sensors_data:get_data(Name).
 
 %%--------------------------------------------------------------------
 %% @doc

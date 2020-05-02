@@ -18,7 +18,7 @@
 %% API
 -export([start_link/0]).
 -export([store_data/4]).
--export([get_data/0]).
+-export([get_data/1]).
 -export([log_measure/4]).
 -export([log_calculation/4]).
 
@@ -39,7 +39,7 @@
 -record(state, {
   % dictionary contraining the last data of all nodes
   % with the form [{node_name, {seqnum, data}}]
-  data :: dict:dict(string(), {integer(), integer() | float()}), %% TODO: modify
+  data :: #{atom() => dict:dict(atom(), {integer(), integer() | float()})}, %% TODO: modify
   measures_logger_configs :: ets:tid(),
   calculations_logger_configs :: ets:tid()
 }).
@@ -67,9 +67,9 @@ stop(Pid) ->
 %% @spec get_data() -> dict:dict(string(), {integer(), integer() | float()})
 %% @end
 %%--------------------------------------------------------------------
--spec get_data() -> dict:dict(string(), {integer(), integer() | float()}).
-get_data() ->
-  gen_server:call(?MODULE, get_data).
+-spec get_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float()}).
+get_data(Name) ->
+  gen_server:call(?MODULE, {get_data, Name}).
 
 %% -------------------------------------------------------------------
 %% @doc
@@ -129,7 +129,7 @@ log_calculation(Name, Node, Seqnum, Result) ->
   {ok, State :: #state{}} | {ok, State :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
 init([]) ->
-  {ok, #state{data = dict:new(), measures_logger_configs = ets:new(measures_loggers, [ordered_set, named_table]), calculations_logger_configs = ets:new(calculations_loggers, [ordered_set, named_table])}}.
+  {ok, #state{data = maps:new(), measures_logger_configs = ets:new(measures_loggers, [ordered_set, named_table]), calculations_logger_configs = ets:new(calculations_loggers, [ordered_set, named_table])}}.
 
 %% @private
 %% @doc Handling call messages
@@ -141,8 +141,8 @@ init([]) ->
   {noreply, NewState :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term(), Reply :: term(), NewState :: #state{}} |
   {stop, Reason :: term(), NewState :: #state{}}).
-handle_call(get_data, _From, State) ->
-  {reply, State#state.data, State};
+handle_call({get_data, Name}, _From, State = #state{data = Data}) ->
+  {reply, maps:get(Name, Data), State};
 handle_call(_Request, _From, State = #state{}) ->
   {reply, ok, State}.
 
@@ -152,20 +152,27 @@ handle_call(_Request, _From, State = #state{}) ->
   {noreply, NewState :: #state{}} |
   {noreply, NewState :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: #state{}}).
-handle_cast({store_data, {Name, {Node, Seqnum, Data}}}, State) ->
+handle_cast({store_data, {Name, {Node, Seqnum, Measure}}}, State = #state{data = Data}) ->
+  New_data = case maps:is_key(Name, Data) of
+               false ->
+                 Data#{Name => dict:new()};
+               true ->
+                 Data
+  end,
   %% TODO: modify to take the name into account
-  Dict2 = case dict:find(Node, State#state.data) of
+  Dict = maps:get(Name, New_data),
+  Dict2 = case dict:find(Node, Dict) of
             {ok, {S, _Data}} ->
               if
                 S < Seqnum orelse Seqnum == 0 ->
-                  dict:store(Node, {Seqnum, Data}, State#state.data);
+                  dict:store(Node, {Seqnum, Measure}, Dict);
                 true ->
-                  State#state.data
+                  Dict
               end;
             error ->
-              dict:store(Node, {Seqnum, Data}, State#state.data)
+              dict:store(Node, {Seqnum, Measure}, Dict)
           end,
-  {noreply, State#state{data = Dict2}};
+  {noreply, State#state{data = New_data#{Name => Dict2}}};
 handle_cast({log_measure, {Name, {Node, Seqnum, Data}}}, State = #state{measures_logger_configs = Log_Conf}) ->
   check_handlers(Name, Node, Log_Conf, measures),
   logger:debug("~p ~p", [Seqnum, Data], #{domain => [measures, Node, Name]}), %% Log data to file

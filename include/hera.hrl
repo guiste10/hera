@@ -16,9 +16,9 @@
 %% @doc
 %% Type of a calculation to be perform by the application
 %% @type calculation() :: {atom(), #{func => function(), args => list(any()), frequency => integer()}}
--type calculation() :: {atom(), #{func => function(), args => list(any()), frequency => integer()}}.
+-type calculation() :: {atom(), #{func => fun((...) -> {ok, term()} | {error, term()}), args => list(any()), frequency => integer()}}.
 
 %% @doc
 %% Type of a measurement to be perform by the application
 %% @type measurement() :: {atom(), #{func => function(), args => list(any()), frequency => integer()}}
--type measurement() :: {atom(), #{func => function(), args => list(any()), frequency => integer()}}.
+-type measurement() :: {atom(), #{func => fun((...) -> {ok, term()} | {error, term()}), args => list(any()), frequency => integer()}}.
