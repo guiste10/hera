@@ -1,5 +1,12 @@
-% @doc hera public API.
-% @end
+%%%-------------------------------------------------------------------
+%%% @author Julien Bastin <julien.bastin@student.uclouvain.be>
+%%% @author Guillaume Neirinckx <guillaume.neirinckx@student.uclouvain.be>
+%%% @copyright (C) 2020, <COMPANY>
+%%% @doc
+%%% Hera public api
+%%% @end
+%%%
+%%%-------------------------------------------------------------------
 -module(hera).
 -author("Julien Bastin <julien.bastin@student.uclouvain.be>, Guillaume Neirinckx <guillaume.neirinckx@student.uclouvain.be>").
 
@@ -25,12 +32,14 @@
 
 %--- Callbacks -----------------------------------------------------------------
 
+%% @private
 start(_Type, _Args) ->
   %{ok, _} = application:ensure_all_started(hera),
   %application:start(kernel),
   %application:start(stdlib),
   hera_pool:start_link(). % verif bon appel?
 
+%% @private
 stop(_State) -> ok.
 
 %% ===================================================================
@@ -151,12 +160,13 @@ log_measure(Name, Node, Seqnum, Data) ->
 %% @param Seqnum The sequence number of the calculation result
 %% @param Result The result of the calculation
 %%
-%% @spec log_measure(Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: integer() | float()) -> ok
+%% @spec log_calculation(Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: integer() | float()) -> ok
 %% @end
 %%--------------------------------------------------------------------
 -spec log_calculation(Name :: atom(), Node :: atom(), Seqnum :: integer(), Result :: integer() | float()) -> ok.
 log_calculation(Name, Node, Seqnum, Result) ->
   hera_sensors_data:log_calculation(Name, Node, Seqnum, Result).
 
+%% @private
 fake_sonar_get() ->
   float(rand:uniform(10)).

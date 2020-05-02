@@ -1,8 +1,9 @@
 %%%-------------------------------------------------------------------
-%%% @author Julien Bastin <julien.bastin@student.uclouvain.be>, Guillaume Neirinckx <guillaume.neirinckx@student.uclouvain.be>
+%%% @author Julien Bastin <julien.bastin@student.uclouvain.be>
+%%% @author Guillaume Neirinckx <guillaume.neirinckx@student.uclouvain.be>
 %%% @copyright (C) 2020, <COMPANY>
 %%% @doc
-%%%
+%%% Module called to perform some calculations at a certain frequency
 %%% @end
 %%% Created : 01. May 2020 5:55 PM
 %%%-------------------------------------------------------------------
@@ -44,12 +45,14 @@
 %%% API
 %%%===================================================================
 
+%% @private
 %% @doc Spawns the server and registers the local name (unique)
 -spec(start_link(Name :: atom(), Calc_function :: function(), Args :: list(any()), Delay :: integer()) ->
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start_link(Name, Calc_function, Args, Delay) ->
   gen_server:start_link(?MODULE, {Name, Calc_function, Args, Delay}, []).
 
+%% @private
 stop(Pid) ->
   gen_server:call(Pid, stop).
 

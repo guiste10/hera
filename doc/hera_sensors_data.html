@@ -10,20 +10,25 @@
 <hr>
 
 <h1>Module hera_sensors_data</h1>
-<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>.
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   Module that stores the last measurement of the sensors in order to allow to perform calculation on it.
 <p>Copyright © (C) 2020, &lt;COMPANY&gt;</p>
 
 <p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
-<p><b>Authors:</b> julien.</p>
+<p><b>Authors:</b> Julien Bastin (<a href="mailto:julien.bastin@student.uclouvain.be"><tt>julien.bastin@student.uclouvain.be</tt></a>), Guillaume Neirinckx (<a href="mailto:guillaume.neirinckx@student.uclouvain.be"><tt>guillaume.neirinckx@student.uclouvain.be</tt></a>).</p>
 
 <h2><a name="description">Description</a></h2>
-  
+   Module that stores the last measurement of the sensors in order to allow to perform calculation on it.
+   This module also handles logging of measurements and calculations.
 <h2><a name="index">Function Index</a></h2>
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#get_data-0">get_data/0</a></td><td>
   Retrieve the data of the sensors of all nodes.</td></tr>
-<tr><td valign="top"><a href="#start_link-0">start_link/0</a></td><td>Spawns the server and registers the local name (unique).</td></tr>
-<tr><td valign="top"><a href="#store_data-3">store_data/3</a></td><td>
-  Update the state with a new value of the data.</td></tr>
+<tr><td valign="top"><a href="#log_calculation-4">log_calculation/4</a></td><td>
+  Log the given measure into a file with the same name as the node name.</td></tr>
+<tr><td valign="top"><a href="#log_measure-4">log_measure/4</a></td><td>
+  Log the given measure into a file with the same name as the node name.</td></tr>
+<tr><td valign="top"><a href="#store_data-4">store_data/4</a></td><td>
+  Add a new data for the specified node.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
@@ -35,16 +40,41 @@
   Retrieve the data of the sensors of all nodes
  </p>
 
-<h3 class="function"><a name="start_link-0">start_link/0</a></h3>
+<h3 class="function"><a name="log_calculation-4">log_calculation/4</a></h3>
 <div class="spec">
-<p><tt>start_link() -&gt; {ok, Pid::pid()} | ignore | {error, Reason::term()}</tt><br></p>
-</div><p>Spawns the server and registers the local name (unique)</p>
-
-<h3 class="function"><a name="store_data-3">store_data/3</a></h3>
-<div class="spec">
-<p><tt>store_data(Node::string(), Seqnum::integer(), Data::integer() | float()) -&gt; ok</tt><br></p>
+<p><tt>log_calculation(Name::atom(), Node::atom(), Seqnum::integer(), Data::integer() | float()) -&gt; ok</tt><br></p>
+<p><tt>Name</tt>: The name of the calculation (e.g. position_calculation, temperature_median, ...)<br>
+<tt>Node</tt>: The node who perform the calculation<br>
+<tt>Seqnum</tt>: The sequence number of the calculation result<br>
+</p>
 </div><p>
-  Update the state with a new value of the data
+  Log the given measure into a file with the same name as the node name
+ </p>
+
+<h3 class="function"><a name="log_measure-4">log_measure/4</a></h3>
+<div class="spec">
+<p><tt>log_measure(Name::atom(), Node::atom(), Seqnum::integer(), Data::integer() | float()) -&gt; ok</tt><br></p>
+<p><tt>Name</tt>: The name/type of the measure (e.g. temperature, sonar, humidity, ...)<br>
+<tt>Node</tt>: The node who perform the measurement of the data<br>
+<tt>Seqnum</tt>: The sequence number of the measured data<br>
+<tt>Data</tt>: The data measured by the sensor
+ <br>
+</p>
+</div><p>
+  Log the given measure into a file with the same name as the node name
+ </p>
+
+<h3 class="function"><a name="store_data-4">store_data/4</a></h3>
+<div class="spec">
+<p><tt>store_data(Name::atom(), Node::atom(), Seqnum::integer(), Data::integer() | float()) -&gt; ok</tt><br></p>
+<p><tt>Name</tt>: The name/type of the data (e.g. temperature, sonar, humidity, ...)<br>
+<tt>Node</tt>: The node who perform the measurement of the data<br>
+<tt>Seqnum</tt>: The sequence number of the measured data<br>
+<tt>Data</tt>: The data measured by the sensor
+ <br>
+</p>
+</div><p>
+  Add a new data for the specified node
  </p>
 <hr>
 

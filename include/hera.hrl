@@ -2,7 +2,7 @@
 %% @doc hera constants definitions
 %% @end
 %%====================================================================
-%-export_type([filter_task/0]).
+-export_type([calculation/0, measurement/0]).
 %%====================================================================
 %% Common Macros
 %%====================================================================
@@ -13,5 +13,12 @@
 %% Types
 %%====================================================================
 
+%% @doc
+%% Type of a calculation to be perform by the application
+%% @type calculation() :: {atom(), #{func => function(), args => list(any()), frequency => integer()}}
 -type calculation() :: {atom(), #{func => function(), args => list(any()), frequency => integer()}}.
+
+%% @doc
+%% Type of a measurement to be perform by the application
+%% @type measurement() :: {atom(), #{func => function(), args => list(any()), frequency => integer()}}
 -type measurement() :: {atom(), #{func => function(), args => list(any()), frequency => integer()}}.

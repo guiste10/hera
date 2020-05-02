@@ -1,13 +1,15 @@
 %%%-------------------------------------------------------------------
-%%% @author julien
+%%% @author Julien Bastin <julien.bastin@student.uclouvain.be>
+%%% @author Guillaume Neirinckx <guillaume.neirinckx@student.uclouvain.be>
 %%% @copyright (C) 2020, <COMPANY>
 %%% @doc
-%%%
+%%% Module that stores the last measurement of the sensors in order to allow to perform calculation on it.
+%%% This module also handles logging of measurements and calculations.
 %%% @end
 %%% Created : 09. Feb 2020 5:04 PM
 %%%-------------------------------------------------------------------
 -module(hera_sensors_data).
--author("julien").
+-author("Julien Bastin <julien.bastin@student.uclouvain.be>, Guillaume Neirinckx <guillaume.neirinckx@student.uclouvain.be>").
 
 -behaviour(gen_server).
 
@@ -47,11 +49,16 @@
 %%% API
 %%%===================================================================
 
+%% @private
 %% @doc Spawns the server and registers the local name (unique)
 -spec(start_link() ->
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start_link() ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+
+%% @private
+stop(Pid) ->
+  gen_server:call(Pid, stop).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -105,7 +112,7 @@ log_measure(Name, Node, Seqnum, Data) ->
 %% @param Seqnum The sequence number of the calculation result
 %% @param Result The result of the calculation
 %%
-%% @spec log_measure(Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: integer() | float()) -> ok
+%% @spec log_calculation(Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: integer() | float()) -> ok
 %% @end
 %%--------------------------------------------------------------------
 -spec log_calculation(Name :: atom(), Node :: atom(), Seqnum :: integer(), Result :: integer() | float()) -> ok.

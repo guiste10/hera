@@ -1,13 +1,14 @@
 %%%-------------------------------------------------------------------
-%%% @author julien bastin
+%%% @author Julien Bastin <julien.bastin@student.uclouvain.be>
+%%% @author Guillaume Neirinckx <guillaume.neirinckx@student.uclouvain.be>
 %%% @copyright (C) 2020, <COMPANY>
 %%% @doc
-%%%
+%%% Multicast module that creates a multicast group where we can send and receive sensors data
 %%% @end
 %%% Created : 30. Jan 2020 12:45 PM
 %%%-------------------------------------------------------------------
 -module(hera_multicast).
--author("julien").
+-author("Julien Bastin <julien.bastin@student.uclouvain.be>, Guillaume Neirinckx <guillaume.neirinckx@student.uclouvain.be>").
 
 -behaviour(gen_server).
 
@@ -41,6 +42,7 @@
 %%% API
 %%%===================================================================
 
+%% @private
 %% @doc Spawns the server and registers the local name (unique)
 -spec(start_link() ->
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
@@ -48,13 +50,14 @@ start_link() ->
   io:format("multicast startlink~n"),
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
 
+%% @private
 stop(Pid) ->
   gen_server:call(Pid, stop).
 
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Formation signal call
+%% Initialize the multicast group
 %%
 %% @spec formation() -> ok
 %% @end
@@ -64,16 +67,17 @@ formation() ->
   io:format("Formation of mc cluster~n"),
   gen_server:cast(?SERVER , formation).
 
-%%--------------------------------------------------------------------
+%% -------------------------------------------------------------------
 %% @doc
 %% Send a message over the multicast cluster
 %%
-%% @spec send(Message :: binary()) -> ok
+%% @param Message the message to be send
+%%
+%% @spec send(Message :: term()) -> ok
 %% @end
-%%--------------------------------------------------------------------
+%% -------------------------------------------------------------------
 -spec send(Message :: binary()) -> ok.
 send(Message) ->
-  %io:format("Send a message~n"),
   gen_server:cast(?SERVER, {send_message, Message}).
 
 %%%===================================================================
@@ -110,8 +114,8 @@ handle_call(_Request, _From, State) ->
   {noreply, NewState :: state()} |
   {noreply, NewState :: state(), timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: state()}).
-handle_cast(formation, State) ->
-  Socket = case State#state.socket of
+handle_cast(formation, State = #state{socket = S, controlling_process = Control}) ->
+  Socket = case S of
     undefined ->
       Sock = open(),
       Sock;
@@ -119,7 +123,7 @@ handle_cast(formation, State) ->
       S
   end,
   io:format("socket : ~p~n", [Socket]),
-  ControllingProcess = case State#state.controlling_process of
+  ControllingProcess = case Control of
     {undefined, undefined} ->
       {Pid, Ref} = spawn_opt(?SERVER, receiver, [], [monitor]),
       io:format("~nFirst Pid: ~p~nRef: ~p~n",[Pid, Ref]),
@@ -130,9 +134,9 @@ handle_cast(formation, State) ->
       {Pid, Ref}
   end,
   {noreply, State#state{controlling_process = ControllingProcess, socket = Socket}};
-handle_cast({send_message, Message}, State) ->
+handle_cast({send_message, Message}, State = #state{socket = Socket}) ->
   %io:format("mc handle_cast send message~n"),
-  case State#state.socket of
+  case Socket of
     undefined ->
       io:format("Socket not yet started~n"),
       ok;
@@ -159,7 +163,8 @@ handle_info(_Request, State) ->
 %% with Reason. The return value is ignored.
 -spec(terminate(Reason :: (normal | shutdown | {shutdown, term()} | term()),
     State :: state()) -> term()).
-terminate(_Reason, _State) ->
+terminate(_Reason, _State = #state{socket = Sock}) ->
+  gen_udp:close(Sock),
   ok.
 
 %% @private
@@ -193,10 +198,6 @@ open() ->
     {add_membership, {?MULTICAST_ADDR, OwnAddr}} %join a multicast group and use the specified network interface
   ]),
   Sock.
-
-stop_mc({Sock, Pid}) ->
-  gen_udp:close(Sock),
-  Pid ! stop.
 
 %% @private
 %% @doc Function that handles received udp multicast messages

@@ -1,8 +1,18 @@
+%%%-------------------------------------------------------------------
+%%% @author Julien Bastin <julien.bastin@student.uclouvain.be>
+%%% @author Guillaume Neirinckx <guillaume.neirinckx@student.uclouvain.be>
+%%% @copyright (C) 2020, <COMPANY>
+%%% @doc
+%%% Module which includes all the functions related to our user case.
+%%% Our user case consists in calculating the position of a move person in an empty room in realtime
+%%% using GRiSP boards with Diligent pmod_maxsonar.
+%%% @reference See <a href="https://grisp.org/" target="_blank">GRiSP site</a> and <a href="https://store.digilentinc.com/pmodmaxsonar-maxbotix-ultrasonic-range-finder/" target="_blank">Diligent site</a> for more information
+%%% @end
+%%% Created : 02. May 2020 2:22 AM
+%%%-------------------------------------------------------------------
+
 -module(hera_position).
--behaviour(gen_server).
--export([start_link/2, stop/1]).
--export([init/1, handle_call/3, handle_cast/2,
-handle_info/2, code_change/3, terminate/2]).
+-author("Julien Bastin <julien.bastin@student.uclouvain.be>, Guillaume Neirinckx <guillaume.neirinckx@student.uclouvain.be>").
 
 %%====================================================================
 %% Macros

@@ -1,4 +1,16 @@
+%%%-------------------------------------------------------------------
+%%% @author Julien Bastin <julien.bastin@student.uclouvain.be>
+%%% @author Guillaume Neirinckx <guillaume.neirinckx@student.uclouvain.be>
+%%% @copyright (C) 2020, <COMPANY>
+%%% @doc
+%%% Module called to perform some measurements with a certain frequency
+%%% @end
+%%%
+%%%-------------------------------------------------------------------
+
 -module(hera_measure).
+-author("Julien Bastin <julien.bastin@student.uclouvain.be>, Guillaume Neirinckx <guillaume.neirinckx@student.uclouvain.be>").
+
 -behaviour(gen_server).
 
 -include("hera.hrl").
@@ -30,12 +42,14 @@ handle_info/2, code_change/3, terminate/2]).
 %%% API
 %%%===================================================================
 
+%% @private
 %% @doc Spawns the server and registers the local name (unique)
 -spec(start_link(Name :: atom(), Measurement_func :: function(), Func_args :: list(any()), Delay :: integer()) ->
     {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start_link(Name, Measurement_func, Args, Delay) ->
     gen_server:start_link(?MODULE, {Name, Measurement_func, Args, Delay}, []).
 
+%% @private
 stop(Pid) ->
     gen_server:call(Pid, stop).
 

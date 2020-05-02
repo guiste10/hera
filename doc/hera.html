@@ -10,23 +10,30 @@
 <hr>
 
 <h1>Module hera</h1>
-<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>hera public API.
+<ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>
+   Hera public api.
+<p>Copyright © (C) 2020, &lt;COMPANY&gt;</p>
 
+<p><b>Authors:</b> Julien Bastin (<a href="mailto:julien.bastin@student.uclouvain.be"><tt>julien.bastin@student.uclouvain.be</tt></a>), Guillaume Neirinckx (<a href="mailto:guillaume.neirinckx@student.uclouvain.be"><tt>guillaume.neirinckx@student.uclouvain.be</tt></a>).</p>
 
-<h2><a name="description">Description</a></h2>hera public API.
+<h2><a name="description">Description</a></h2>
+   Hera public api
 <h2><a name="index">Function Index</a></h2>
 <table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#clusterize-0">clusterize/0</a></td><td>
   Start the formation of an udp multicast cluster.</td></tr>
-<tr><td valign="top"><a href="#fake_sonar_get-0">fake_sonar_get/0</a></td><td></td></tr>
 <tr><td valign="top"><a href="#get_data-0">get_data/0</a></td><td>
   Retrieve the data of sensors of all nodes.</td></tr>
-<tr><td valign="top"><a href="#launch_app-4">launch_app/4</a></td><td>
+<tr><td valign="top"><a href="#launch_app-0">launch_app/0</a></td><td>
+  Start only multicast pool.</td></tr>
+<tr><td valign="top"><a href="#launch_app-2">launch_app/2</a></td><td>
   Start all pools.</td></tr>
+<tr><td valign="top"><a href="#log_calculation-4">log_calculation/4</a></td><td>
+  Log the given measure into a file with the same name as the node name.</td></tr>
+<tr><td valign="top"><a href="#log_measure-4">log_measure/4</a></td><td>
+  Log the given measure into a file with the same name as the node name.</td></tr>
 <tr><td valign="top"><a href="#send-1">send/1</a></td><td>
   Send a message over the multicast cluster.</td></tr>
-<tr><td valign="top"><a href="#start-2">start/2</a></td><td></td></tr>
-<tr><td valign="top"><a href="#stop-1">stop/1</a></td><td></td></tr>
-<tr><td valign="top"><a href="#store_data-3">store_data/3</a></td><td>
+<tr><td valign="top"><a href="#store_data-4">store_data/4</a></td><td>
   Add a new data for the specified node.</td></tr>
 </table>
 
@@ -39,11 +46,6 @@
   Start the formation of an udp multicast cluster
  </p>
 
-<h3 class="function"><a name="fake_sonar_get-0">fake_sonar_get/0</a></h3>
-<div class="spec">
-<p><tt>fake_sonar_get() -&gt; any()</tt></p>
-</div>
-
 <h3 class="function"><a name="get_data-0">get_data/0</a></h3>
 <div class="spec">
 <p><tt>get_data() -&gt; <a href="dict.html#type-dict">dict:dict</a>(string(), {integer(), integer() | float()})</tt><br></p>
@@ -51,39 +53,63 @@
   Retrieve the data of sensors of all nodes
  </p>
 
-<h3 class="function"><a name="launch_app-4">launch_app/4</a></h3>
+<h3 class="function"><a name="launch_app-0">launch_app/0</a></h3>
 <div class="spec">
-<p><tt>launch_app(Measurement_func::function(), Measurement_frequency::integer(), Calculation_function::function(), Calculation_frequency::integer()) -&gt; ok</tt><br></p>
-<p><tt>Measurement_func</tt>: function to get measures<br>
-<tt>Measurement_frequency</tt>: frequency at which measurements are taken (in ms)<br>
-<tt>Calculation_function</tt>: function that use the measurements to compute a result<br>
-<tt>Calculation_frequency</tt>: frequency at which the calculation is perform (in ms)
+<p><tt>launch_app() -&gt; ok</tt><br></p>
+</div><p>
+  Start only multicast pool. Function to be called by a shell on a computer
+ </p>
+
+<h3 class="function"><a name="launch_app-2">launch_app/2</a></h3>
+<div class="spec">
+<p><tt>launch_app(Measurements::[<a href="#type-measurement">measurement()</a>], Calculations::[<a href="#type-calculation">calculation()</a>]) -&gt; ok</tt><br></p>
+</div><p>
+  Start all pools. Function to be called by GRiSP boards
+ </p>
+
+<h3 class="function"><a name="log_calculation-4">log_calculation/4</a></h3>
+<div class="spec">
+<p><tt>log_calculation(Name::atom(), Node::atom(), Seqnum::integer(), Data::integer() | float()) -&gt; ok</tt><br></p>
+<p><tt>Name</tt>: The name of the calculation (e.g. position_calculation, temperature_median, ...)<br>
+<tt>Node</tt>: The node who perform the calculation<br>
+<tt>Seqnum</tt>: The sequence number of the calculation result<br>
+</p>
+</div><p>
+  Log the given measure into a file with the same name as the node name
+ </p>
+
+<h3 class="function"><a name="log_measure-4">log_measure/4</a></h3>
+<div class="spec">
+<p><tt>log_measure(Name::atom(), Node::atom(), Seqnum::integer(), Data::integer() | float()) -&gt; ok</tt><br></p>
+<p><tt>Name</tt>: The name/type of the measure (e.g. temperature, sonar, humidity, ...)<br>
+<tt>Node</tt>: The node who perform the measurement of the data<br>
+<tt>Seqnum</tt>: The sequence number of the measured data<br>
+<tt>Data</tt>: The data measured by the sensor
  <br>
 </p>
 </div><p>
-  Start all pools
+  Log the given measure into a file with the same name as the node name
  </p>
 
 <h3 class="function"><a name="send-1">send/1</a></h3>
 <div class="spec">
-<p><tt>send(Message::binary()) -&gt; ok</tt><br></p>
+<p><tt>send(Message::term()) -&gt; ok</tt><br></p>
+<p><tt>Message</tt>: the message to be send
+ <br>
+</p>
 </div><p>
   Send a message over the multicast cluster
  </p>
 
-<h3 class="function"><a name="start-2">start/2</a></h3>
+<h3 class="function"><a name="store_data-4">store_data/4</a></h3>
 <div class="spec">
-<p><tt>start(Type, Args) -&gt; any()</tt></p>
-</div>
-
-<h3 class="function"><a name="stop-1">stop/1</a></h3>
-<div class="spec">
-<p><tt>stop(State) -&gt; any()</tt></p>
-</div>
-
-<h3 class="function"><a name="store_data-3">store_data/3</a></h3>
-<div class="spec">
-<p><tt>store_data(Node::string(), Seqnum::integer(), Data::integer() | float()) -&gt; ok</tt><br></p>
+<p><tt>store_data(Name::atom(), Node::atom(), Seqnum::integer(), Data::integer() | float()) -&gt; ok</tt><br></p>
+<p><tt>Name</tt>: The name/type of the data (e.g. temperature, sonar, humidity, ...)<br>
+<tt>Node</tt>: The node who perform the measurement of the data<br>
+<tt>Seqnum</tt>: The sequence number of the measured data<br>
+<tt>Data</tt>: The data measured by the sensor
+ <br>
+</p>
 </div><p>
   Add a new data for the specified node
  </p>
