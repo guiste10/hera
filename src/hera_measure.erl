@@ -3,7 +3,7 @@
 
 -include("hera.hrl").
 
--export([start_link/2, stop/1]).
+-export([start_link/4, stop/1]).
 -export([init/1, handle_call/3, handle_cast/2,
 handle_info/2, code_change/3, terminate/2]).
 
@@ -18,9 +18,10 @@ handle_info/2, code_change/3, terminate/2]).
 %%====================================================================
 
 -record(state, {
+    name :: atom(),
     measurement_func :: function(),
+    func_args :: list(any()),
     delay :: integer(),
-    id :: {binary(), atom()},
     iter :: integer()
 }).
 -type state() :: #state{}.
@@ -30,10 +31,10 @@ handle_info/2, code_change/3, terminate/2]).
 %%%===================================================================
 
 %% @doc Spawns the server and registers the local name (unique)
--spec(start_link(Measurement_function :: function(), Delay :: integer()) ->
+-spec(start_link(Name :: atom(), Measurement_func :: function(), Func_args :: list(any()), Delay :: integer()) ->
     {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
-start_link(Measurement_function, Delay) ->
-    gen_server:start_link(?MODULE, {Measurement_function, Delay}, []).
+start_link(Name, Measurement_func, Args, Delay) ->
+    gen_server:start_link(?MODULE, {Name, Measurement_func, Args, Delay}, []).
 
 stop(Pid) ->
     gen_server:call(Pid, stop).
@@ -45,13 +46,11 @@ stop(Pid) ->
 
 %% @private
 %% @doc Initializes the server
--spec(init({Measurement_function :: function(), Delay :: integer()}) ->
+-spec(init({Name :: atom(), Measurement_func :: function(), Args :: list(any()), Delay :: integer()}) ->
     {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
     {stop, Reason :: term()} | ignore).
-init({Measurement_function, Delay}) ->
-    Iter = 0,
-    Id = {<<"measurements">>, state_orset},
-    {ok, #state{measurement_func = Measurement_function, delay = Delay, id = Id, iter = Iter}, Delay}. % {ok, state, timeout}
+init({Name, Measurement_func, Args, Delay}) ->
+    {ok, #state{name = Name, measurement_func = Measurement_func, func_args = Args, delay = Delay, iter = 0}, Delay}. % {ok, state, timeout}
 
 %% @private
 %% @doc Handling call messages
@@ -83,32 +82,11 @@ handle_cast(_Msg, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
-handle_info(timeout, State) ->
-    Measure_func = State#state.measurement_func,
-    Measure = Measure_func(),
-    %Measure = pmod_maxsonar:get() * 2.54,
-    %Measure = hera:fake_sonar_get(),
-    Name = node(),
-
-    %with lasp
-%%    {ok, Value} = lasp:query(Id),
-%%    %io:format("set: (~p) ~n", [Value]),
-%%    % S1, the set containing only values for Name
-%%    S1 = sets:filter(fun(_Elem = {_Val, N}) -> N == Name end, Value),
-%%    Length = sets:size(S1),
-%%    if
-%%        Length > 0 ->
-%%            [{R1, Name}] = sets:to_list(S1),
-%%            lasp:update(Id, {rmv, {R1, Name}}, self()),
-%%            lasp:update(Id, {add, {Measure, Name}}, self());
-%%        true ->
-%%            lasp:update(Id, {add, {Measure, Name}}, self())
-%%    end,
-
-    %With udp multicast
-    hera:store_data(Name, State#state.iter, Measure),
-    hera:send(term_to_binary({Name, State#state.iter, Measure})),
-    {noreply, State#state{iter = State#state.iter+1 rem ?MAX_SEQNUM}, State#state.delay}.
+handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_args = Args, iter = Iter, delay = Delay}) ->
+    Measure = erlang:apply(Func, Args),
+    hera:store_data(Name, node(), Iter, Measure),
+    hera:send({measure, Name, {node(), Iter, Measure}}),
+    {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM}, Delay}.
 %% We cannot use handle_info below: if that ever happens,
 %% we cancel the timeouts (Delay) and basically zombify
 %% the entire process. It's better to crash in this case.

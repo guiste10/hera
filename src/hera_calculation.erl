@@ -11,6 +11,8 @@
 
 -behaviour(gen_server).
 
+-include("hera.hrl").
+
 %% API
 -export([start_link/4, stop/1]).
 
@@ -43,7 +45,7 @@
 %%%===================================================================
 
 %% @doc Spawns the server and registers the local name (unique)
--spec(start_link(Name :: atom(), Calc_function :: function(), Func_args :: list(any()), Delay :: integer()) ->
+-spec(start_link(Name :: atom(), Calc_function :: function(), Args :: list(any()), Delay :: integer()) ->
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start_link(Name, Calc_function, Args, Delay) ->
   gen_server:start_link(?MODULE, {Name, Calc_function, Args, Delay}, []).
@@ -57,11 +59,11 @@ stop(Pid) ->
 
 %% @private
 %% @doc Initializes the server
--spec(init({Name :: atom(), Calc_function :: function(), Func_args :: list(any()), Delay :: integer()}) ->
+-spec(init({Name :: atom(), Calc_function :: function(), Args :: list(any()), Delay :: integer()}) ->
   {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
 init({Name, Calc_function, Args, Delay}) ->
-  {ok, #state{name = Name, calc_function = Calc_function, func_args = Args, delay = Delay}, Delay}.
+  {ok, #state{name = Name, calc_function = Calc_function, func_args = Args, delay = Delay, iter = 0}, Delay}.
 
 %% @private
 %% @doc Handling call messages
@@ -93,8 +95,8 @@ handle_cast(_Request, State = #state{}) ->
   {stop, Reason :: term(), NewState :: state()}).
 handle_info(timeout, State = #state{name = Name, calc_function = Func, func_args = Args, iter = Iter, delay = Delay}) ->
   Res = erlang:apply(Func, Args),
-  hera:send({calc, node(), {Name, Iter, Res}}),
-  {noreply, State#state{iter = Iter+1}, Delay};
+  hera:send({calc, Name, {node(), Iter, Res}}),
+  {noreply, State#state{iter = Iter+1 +1 rem ?MAX_SEQNUM}, Delay};
 handle_info(_Info, State = #state{}) ->
   {noreply, State}.
 

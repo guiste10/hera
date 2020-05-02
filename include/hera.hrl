@@ -14,3 +14,4 @@
 %%====================================================================
 
 -type calculation() :: {atom(), #{func => function(), args => list(any()), frequency => integer()}}.
+-type measurement() :: {atom(), #{func => function(), args => list(any()), frequency => integer()}}.

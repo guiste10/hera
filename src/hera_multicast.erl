@@ -204,14 +204,17 @@ receiver() ->
   receive
     {udp, _Sock, _IP, _InPortNo, Packet} ->
       case binary_to_term(Packet) of
-        {Node, Iter, Measure} ->
+        {measure, Name, {Node, Iter, Measure}} ->
           case os:type() of
-            {unix,rtems} -> %% if it is a GRiSP board, don't log the measures, only save the most recent one
-              hera:store_data(Node, Iter, Measure);
-            _ ->
-              hera:log_measure(Node, Iter, Measure),
-              hera:store_data(Node, Iter, Measure)
-          end
+            %% if it is a GRiSP board, don't log the measures, only save the most recent one
+            %% in order to perform a computation
+            {unix,rtems} ->
+              hera:store_data(Name, Node, Iter, Measure);
+            _ -> %% if it is a computer, only log the measures, don't need to
+              hera:log_measure(Name, Node, Iter, Measure)
+          end;
+        {calc, Name, {Node, Iter, Res}} ->
+          hera:log_calculation(Name, Node, Iter, Res)
       end,
       receiver();
     stop -> true;

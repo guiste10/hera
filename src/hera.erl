@@ -8,14 +8,15 @@
 -include("hera.hrl").
 
 %% API
--export([launch_app/3]).
 -export([launch_app/2]).
+-export([launch_app/0]).
 -export([clusterize/0]).
 -export([fake_sonar_get/0]).
 -export([send/1]).
--export([store_data/3]).
+-export([store_data/4]).
 -export([get_data/0]).
--export([log_measure/3]).
+-export([log_measure/4]).
+-export([log_calculation/4]).
 
 % Callbacks
 -export([start/2]).
@@ -40,54 +41,38 @@ stop(_State) -> ok.
 %% @doc
 %% Start all pools. Function to be called by GRiSP boards
 %%
-%% @param Measurement_func function to get measures
-%% @param Measurement_frequency frequency at which measurements are taken (in ms)
-%% @param Calculation_function function that use the measurements to compute a result
-%% @param Calculation_frequency frequency at which the calculation is perform (in ms)
+%% @param Measurements
+%% @param Calculations
 %%
 %% @spec launch_app(
-%%            Measurement_func :: function(),
-%%            Measurement_frequency :: integer(),
-%%            Calculation_function :: function(),
-%%            Calculation_frequency :: integer())
-%%        -> ok
+%%            Measurements :: list(measurement()),
+%%            Calculations :: list(calculation())
+%%       ) -> ok
 %% @end
 %% -------------------------------------------------------------------
--spec launch_app(Measurement_func :: function(), Measurement_frequency :: integer(), Calculations :: list(calculation())) -> ok.
-launch_app(Measurement_func, Measurement_frequency, Calculations) ->
+-spec launch_app(Measurements :: list(measurement()), Calculations :: list(calculation())) -> ok.
+launch_app(Measurements, Calculations) ->
   hera_pool:start_pool(sensor_data_pool, 1, {hera_sensors_data, start_link, []}),
   hera_pool:run(sensor_data_pool, []),
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
-  hera_pool:start_pool(measurement_pool, 1, {hera_measure, start_link, []}),
-  hera_pool:run(measurement_pool, [Measurement_func, Measurement_frequency]),
+  hera_pool:start_pool(measurement_pool, length(Measurements), {hera_measure, start_link, []}),
+  [hera_pool:run(calculation_pool, [Name, maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement)]) || {Name, Measurement} <- Measurements],
   hera_pool:start_pool(calculation_pool, length(Calculations), {hera_calculation, start_link, []}),
   [hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(args, Calculation), maps:get(frequency, Calculation)]) || {Name, Calculation} <- Calculations],
   clusterize().
 
 %% -------------------------------------------------------------------
 %% @doc
-%% Start all pools. Function to be called by a shell on a computer
+%% Start only multicast pool. Function to be called by a shell on a computer
 %%
-%% @param Measurement_func function to get measures
-%% @param Measurement_frequency frequency at which measurements are taken (in ms)
-%% @param Calculation_function function that use the measurements to compute a result
-%% @param Calculation_frequency frequency at which the calculation is perform (in ms)
-%%
-%% @spec launch_app(
-%%            Calculation_function :: function(),
-%%            Calculation_frequency :: integer())
-%%        -> ok
+%% @spec launch_app() -> ok
 %% @end
 %% -------------------------------------------------------------------
--spec launch_app(Calculation_function :: function(), Calculation_frequency :: integer()) -> ok.
-launch_app(Calculation_function, Calculation_frequency) ->
-  hera_pool:start_pool(sensor_data_pool, 1, {hera_sensors_data, start_link, []}),
-  hera_pool:run(sensor_data_pool, []),
+-spec launch_app() -> ok.
+launch_app() ->
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
-  hera_pool:start_pool(pool2, 1, {hera_position, start_link, []}),
-  hera_pool:run(pool2, [Calculation_function, Calculation_frequency]),
   clusterize().
 
 %% -------------------------------------------------------------------
@@ -105,23 +90,30 @@ clusterize() ->
 %% @doc
 %% Send a message over the multicast cluster
 %%
-%% @spec send(Message :: binary()) -> ok
+%% @param Message the message to be send
+%%
+%% @spec send(Message :: term()) -> ok
 %% @end
 %% -------------------------------------------------------------------
--spec send(Message :: binary()) -> ok.
+-spec send(Message :: term()) -> ok.
 send(Message) ->
-  hera_multicast:send(Message).
+  hera_multicast:send(term_to_binary(Message)).
 
 %% -------------------------------------------------------------------
 %% @doc
 %% Add a new data for the specified node
 %%
-%% @spec store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok
+%% @param Name The name/type of the data (e.g. temperature, sonar, humidity, ...)
+%% @param Node The node who perform the measurement of the data
+%% @param Seqnum The sequence number of the measured data
+%% @param Data The data measured by the sensor
+%%
+%% @spec store_data(Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: integer() | float()) -> ok
 %% @end
 %% -------------------------------------------------------------------
--spec store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok.
-store_data(Node, Seqnum, Data) ->
-  hera_sensors_data:store_data(Node, Seqnum, Data).
+-spec store_data(Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: integer() | float()) -> ok.
+store_data(Name, Node, Seqnum, Data) ->
+  hera_sensors_data:store_data(Name, Node, Seqnum, Data).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -138,12 +130,33 @@ get_data() ->
 %% @doc
 %% Log the given measure into a file with the same name as the node name
 %%
-%% @spec store_data(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok
+%% @param Name The name/type of the measure (e.g. temperature, sonar, humidity, ...)
+%% @param Node The node who perform the measurement of the data
+%% @param Seqnum The sequence number of the measured data
+%% @param Data The data measured by the sensor
+%%
+%% @spec log_measure(Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: integer() | float()) -> ok
 %% @end
 %%--------------------------------------------------------------------
--spec log_measure(Node :: string(), Seqnum :: integer(), Data :: integer() | float()) -> ok.
-log_measure(Node, Seqnum, Data) ->
-  hera_sensors_data:log_measure(Node, Seqnum, Data).
+-spec log_measure(Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: integer() | float()) -> ok.
+log_measure(Name, Node, Seqnum, Data) ->
+  hera_sensors_data:log_measure(Name, Node, Seqnum, Data).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Log the given measure into a file with the same name as the node name
+%%
+%% @param Name The name of the calculation (e.g. position_calculation, temperature_median, ...)
+%% @param Node The node who perform the calculation
+%% @param Seqnum The sequence number of the calculation result
+%% @param Result The result of the calculation
+%%
+%% @spec log_measure(Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: integer() | float()) -> ok
+%% @end
+%%--------------------------------------------------------------------
+-spec log_calculation(Name :: atom(), Node :: atom(), Seqnum :: integer(), Result :: integer() | float()) -> ok.
+log_calculation(Name, Node, Seqnum, Result) ->
+  hera_sensors_data:log_calculation(Name, Node, Seqnum, Result).
 
 fake_sonar_get() ->
   float(rand:uniform(10)).
