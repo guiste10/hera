@@ -135,13 +135,13 @@ terminate(_Reason, _State) -> ok.
 -spec perform_sonar_warmup(Measure_func :: function()) -> 
     Default_Measure :: {float(), integer()}.
 perform_sonar_warmup(Measure_func) -> 
-    perform_sonar_warmup_aux(0, 100, 50, Measure_func). % hardcodé
+    perform_sonar_warmup_aux(0, 100, 50, Measure_func). % hardcodé, récup 100ième mesure
 
 % todo: make maxiter/2 unused measures, then return median of next maxiter/2 measures? or osef just send last measure?
 -spec perform_sonar_warmup_aux(Iter :: integer(), Max_iter :: integer(), Delay :: integer(), Measure_func :: function()) ->
     Default_Measure :: {float(), integer()}.
 perform_sonar_warmup_aux(Iter, Max_iter, Delay, Measure_func) -> % todo, selec mediane de toutes les mesures
-    %erlang:display(Iter),
+    erlang:display(Iter),
     if
         Iter < Max_iter-1 ->
             Measure_func(),
@@ -157,6 +157,7 @@ perform_sonar_warmup_aux(Iter, Max_iter, Delay, Measure_func) -> % todo, selec m
 
 -spec make_measures(Iter :: integer(), Max_iter :: integer(), Delay :: integer(), Measure_func :: function(), Do_filter :: boolean(), Default_Measure :: float()) -> ok.
 make_measures(Iter, Max_iter, Delay, Measure_func, Do_filter, Default_Measure) ->
+    erlang:display(Iter),
     Measure = Measure_func(),
     Measure_timestamp = hera:get_timestamp(),
     Measure_str = io_lib:format("~.2f", [Measure]),
