@@ -17,8 +17,6 @@
 -include("hera.hrl").
 
 -export([launch_hera/1]).
--export([sonar_measurement/1]).
--export([calc_position/1]).
 %%====================================================================
 %% Macros
 %%====================================================================
@@ -29,32 +27,14 @@
 %% Records
 %%====================================================================
 
--record(measurement, {
-    name = sonar,
-    measurement = #{
-        func => fun(Inch_to_cm) -> sonar_measurement(Inch_to_cm) end,%% the result of the pmod_maxsonar is given in inch, we transform the value into cm
-        args => [2.54],
-        frequency => 100 %% in ms
-    }
-}).
-
--record(calculation, {
-    name = position,
-    calculation = #{
-        func => fun(Separation) -> calc_position(Separation) end,
-        args => [],
-        frequency => 100
-    }
-}).
 
 %%%===================================================================
 %%% API
 %%%===================================================================
 
 launch_hera(Separation) ->
-    Measurements = [{#measurement.name, #measurement.measurement}],
-    Calculation = #calculation.calculation,
-    Calculations = [{#calculation.name, Calculation#{args => [Separation]}}],
+    Measurements = [{sonar, #{func => fun(Inch_to_cm) -> sonar_measurement(Inch_to_cm) end, args => [2.54], frequency => 100}}],
+    Calculations = [{position, #{func => fun(Sep) -> calc_position(Sep) end, args => [Separation], frequency => 100}}],
     hera:launch_app(Measurements, Calculations).
 
 %%%===================================================================
