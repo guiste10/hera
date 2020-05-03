@@ -253,7 +253,7 @@ configure_handler(Name, Node, Log_Type) ->
       {Node, {fun logger_filters:domain/2, {stop, not_equal, [Log_Type, Node, Name]}}} %% Only allow debug logs for the domain [Log_Type, Node, Name]
     ],
     config => #{  file => File_path}, %% Measures will be logged to file {Log_Type}/{Name}_{Node}
-    formatter => {logger_formatter  , #{single_line => true, max_size => 30, template => [msg, "\n"]}} %% Only log on one line the message
+    formatter => {logger_formatter  , #{single_line => true, max_size => 128, template => [msg, "\n"]}} %% Only log on one line the message
   },
   logger:add_handler(list_to_atom(File_name), logger_disk_log_h, Config), %% add the handler with the provided config
   Config.
