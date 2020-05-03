@@ -60,13 +60,11 @@ calc_position(Separation) ->
     case hera:get_data(sonar) of
         {error, Reason} -> logger:error(Reason);
         {ok, Data} ->
-            Values = dict:to_list(Data),
             Length = dict:size(Data),
 
             if  % assign ready2 to true if set contains 2 measures
                 Length =:= 2 ->
-                    %[{R1, _},{R2, _}] = sets:to_list(Values), % [{measure, name}, ...]
-                    [{_Seqnum1, R1}, {_Seqnum2, R2}] = [dict:fetch(Node, Values) || Node <- dict:fetch_keys(Values)],
+                    [{_Seqnum1, R1}, {_Seqnum2, R2}] = [dict:fetch(Node, Data) || Node <- dict:fetch_keys(Data)],
                     R1Sq = math : pow ( R1 , 2) ,
                     R2Sq = math : pow ( R2 , 2) ,
                     S2 = 2 * Separation ,
