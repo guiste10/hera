@@ -33,8 +33,8 @@
 %%%===================================================================
 
 launch_hera(Separation) ->
-    Measurements = [{sonar, #{func => fun(Inch_to_cm) -> sonar_measurement(Inch_to_cm) end, args => [2.54], frequency => 100}}],
-    Calculations = [{position, #{func => fun(Sep) -> calc_position(Sep) end, args => [Separation], frequency => 100}}],
+    Measurements = [{sonar, #{func => fun(Inch_to_cm) -> sonar_measurement(Inch_to_cm) end, args => [2.54], frequency => 5000}}],
+    Calculations = [{position, #{func => fun(Sep) -> calc_position(Sep) end, args => [Separation], frequency => 5000}}],
     hera:launch_app(Measurements, Calculations).
 
 %%%===================================================================
