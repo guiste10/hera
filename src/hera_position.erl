@@ -17,6 +17,7 @@
 -include("hera.hrl").
 
 -export([launch_hera/1]).
+-export([launch_hera_shell/1]).
 %%====================================================================
 %% Macros
 %%====================================================================
@@ -37,9 +38,17 @@ launch_hera(Separation) ->
     Calculations = [{position, #{func => fun(Sep) -> calc_position(Sep) end, args => [Separation], frequency => 5000}}],
     hera:launch_app(Measurements, Calculations).
 
+launch_hera_shell(Separation) ->
+    Measurements = [{sonar, #{func => fun() -> fake_sonar_m() end, args => [], frequency => 5000}}],
+    Calculations = [{position, #{func => fun(Sep) -> calc_position(Sep) end, args => [Separation], frequency => 5000}}],
+    hera:launch_app(Measurements, Calculations).
+
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+fake_sonar_m() ->
+    {ok, hera:fake_sonar_get()}.
 
 sonar_measurement(Inch_to_cm) ->
     case pmod_maxsonar:get() of
