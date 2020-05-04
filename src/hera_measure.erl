@@ -36,7 +36,7 @@ handle_info/2, code_change/3, terminate/2]).
     func_args :: list(any()),
     delay :: integer(),
     iter :: integer(),
-    default_Measure :: float() | integer(),
+    default_Measure :: {float(), integer()},
     filtering :: boolean()
 }).
 -type state() :: #state{}.
