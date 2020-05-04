@@ -69,12 +69,14 @@ launch_app(Measurements, Calculations, Filtering) ->
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
   hera_pool:start_pool(measurement_pool, length(Measurements), {hera_measure, start_link, []}),
-  [hera_pool:run(measurement_pool, [Name, maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement), Filtering]) || {Name, Measurement} <- Measurements],
+  Measurement_pids = [hera_pool:run(measurement_pool, [Name, maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement), Filtering]) || {Name, Measurement} <- Measurements],
   hera_pool:start_pool(calculation_pool, length(Calculations), {hera_calculation, start_link, []}),
-  [hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(args, Calculation), maps:get(frequency, Calculation)]) || {Name, Calculation} <- Calculations],
+  Calculation_pids = [hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(args, Calculation), maps:get(frequency, Calculation)]) || {Name, Calculation} <- Calculations],
   hera_pool:start_pool(filter_data_pool, 1, {hera_filter, start_link, []}),
   hera_pool:run(filter_data_pool, []),
   clusterize().
+
+%%TODO : create a new module to handle pause and restart
 
 %% -------------------------------------------------------------------
 %% @doc

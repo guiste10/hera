@@ -215,7 +215,12 @@ receiver() ->
               hera:log_measure(Name, Node, Iter, Measure)
           end;
         {calc, Name, {Node, Iter, Res}} ->
-          hera:log_calculation(Name, Node, Iter, Res)
+          case os:type() of
+            {unix, rtems} ->
+              ok;
+            _ ->
+              hera:log_calculation(Name, Node, Iter, Res)
+          end
       end,
       receiver();
     stop -> true;

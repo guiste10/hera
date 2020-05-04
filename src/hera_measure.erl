@@ -17,6 +17,8 @@
 
 -export([start_link/5, stop/1]).
 
+-export([pause/0]).
+
 -export([init/1, handle_call/3, handle_cast/2,
 handle_info/2, code_change/3, terminate/2]).
 
@@ -37,7 +39,8 @@ handle_info/2, code_change/3, terminate/2]).
     delay :: integer(),
     iter :: integer(),
     default_Measure :: {float(), integer()},
-    filtering :: boolean()
+    filtering :: boolean(),
+    warm_up = true :: boolean()
 }).
 -type state() :: #state{}.
  
@@ -58,6 +61,19 @@ start_link(Name, Measurement_func, Args, Delay, Filtering) ->
 stop(Pid) ->
     gen_server:call(Pid, stop).
 
+%%--------------------------------------------------------------------
+%% @doc
+%% Log the given measure into a file with the same name as the node name
+%%
+%% @param Name The name/type of the measure (e.g. temperature, sonar, humidity, ...)
+%%
+%% @spec pause(Name :: atom()) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+-spec pause() -> ok.
+pause() ->
+    gen_server:cast(?SERVER, pause).
+
 %%====================================================================
 %% gen_server callbacks
 %%====================================================================
@@ -68,7 +84,7 @@ stop(Pid) ->
     {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
     {stop, Reason :: term()} | ignore).
 init({Name, Measurement_func, Args, Delay}) ->
-    {ok, #state{name = Name, measurement_func = Measurement_func, func_args = Args, delay = Delay, iter = 0, default_Measure = -1.0}, Delay}. % {ok, state, timeout}
+    {ok, #state{name = Name, measurement_func = Measurement_func, func_args = Args, delay = Delay, iter = 0, default_Measure = {-1.0, -1}}, Delay}. % {ok, state, timeout}
 
 %% @private
 %% @doc Handling call messages
@@ -92,6 +108,8 @@ handle_call(_Msg, _From, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
+handle_cast(pause, State) ->
+    {noreply, State, hibernate};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -101,9 +119,12 @@ handle_cast(_Msg, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
-handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_args = Args, iter = Iter, delay = Delay, filtering = Do_filter}) ->
+handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_args = Args, iter = Iter, delay = Delay, filtering = Do_filter, warm_up = Warm_up, default_Measure = Default_m}) ->
     %%TODO : allow to pause the storing and sending, then restart
-    Default_Measure = perform_sonar_warmup(Func, Args),
+    Default_Measure = case Warm_up of
+                          true -> perform_sonar_warmup(Func, Args);
+                          false -> Default_m
+                      end,
     Measure_timestamp = hera:get_timestamp(),
     case erlang:apply(Func, Args) of
         {error, Reason} -> logger:error(Reason);
@@ -116,7 +137,7 @@ handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_a
                     hera:send({measure, Name, {node(), Iter, Measure}})
             end
     end,
-    {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM, default_Measure = Default_Measure}, Delay};
+    {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM, default_Measure = Default_Measure, warm_up = false}, Delay};
 
 %% We cannot use handle_info below: if that ever happens,
 %% we cancel the timeouts (Delay) and basically zombify
