@@ -15,7 +15,7 @@
 -include("hera.hrl").
 
 %% API
--export([launch_app/2]).
+-export([launch_app/3]).
 -export([launch_app/0]).
 -export([clusterize/0]).
 -export([fake_sonar_get/0]).
@@ -24,6 +24,7 @@
 -export([get_data/1]).
 -export([log_measure/4]).
 -export([log_calculation/4]).
+-export([get_timestamp/0]).
 
 % Callbacks
 -export([start/2]).
@@ -52,23 +53,27 @@ stop(_State) -> ok.
 %%
 %% @param Measurements
 %% @param Calculations
+%% @param Filtering Set to true to filter the measurements before storing and sending it
 %%
 %% @spec launch_app(
 %%            Measurements :: list(measurement()),
-%%            Calculations :: list(calculation())
+%%            Calculations :: list(calculation()),
+%%            Filtering :: boolean()
 %%       ) -> ok
 %% @end
 %% -------------------------------------------------------------------
--spec launch_app(Measurements :: list(measurement()), Calculations :: list(calculation())) -> ok.
-launch_app(Measurements, Calculations) ->
+-spec launch_app(Measurements :: list(measurement()), Calculations :: list(calculation()), Filtering :: boolean()) -> ok.
+launch_app(Measurements, Calculations, Filtering) ->
   hera_pool:start_pool(sensor_data_pool, 1, {hera_sensors_data, start_link, []}),
   hera_pool:run(sensor_data_pool, []),
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
   hera_pool:start_pool(measurement_pool, length(Measurements), {hera_measure, start_link, []}),
-  [hera_pool:run(measurement_pool, [Name, maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement)]) || {Name, Measurement} <- Measurements],
+  [hera_pool:run(measurement_pool, [Name, maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement), Filtering]) || {Name, Measurement} <- Measurements],
   hera_pool:start_pool(calculation_pool, length(Calculations), {hera_calculation, start_link, []}),
   [hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(args, Calculation), maps:get(frequency, Calculation)]) || {Name, Calculation} <- Calculations],
+  hera_pool:start_pool(filter_data_pool, 1, {hera_filter, start_link, []}),
+  hera_pool:run(filter_data_pool, []),
   clusterize().
 
 %% -------------------------------------------------------------------
@@ -168,6 +173,12 @@ log_measure(Name, Node, Seqnum, Data) ->
 -spec log_calculation(Name :: atom(), Node :: atom(), Seqnum :: integer(), Result :: integer() | float()) -> ok.
 log_calculation(Name, Node, Seqnum, Result) ->
   hera_sensors_data:log_calculation(Name, Node, Seqnum, Result).
+
+%% @private
+-spec get_timestamp() -> integer().
+get_timestamp() ->
+  {Mega, Sec, Micro} = os:timestamp(),
+  (Mega*1000000 + Sec)*1000 + round(Micro/1000).
 
 %% @private
 fake_sonar_get() ->
