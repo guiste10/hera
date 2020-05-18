@@ -24,8 +24,9 @@ start(_Type, _Args) ->
   %application:start(kernel),
   %application:start(stdlib),
   erlang:display('start supersup'),
-  _ = hera_supersup:start_link(), % verif bon appel?
-  erlang:display('supersup started').
+  A = hera_supersup:start_link(), % verif bon appel?
+  erlang:display('supersup started'),
+  A.
 
 stop(_State) -> ok.
 
