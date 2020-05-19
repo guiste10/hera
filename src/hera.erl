@@ -19,7 +19,7 @@
 -export([launch_app/0]).
 -export([clusterize/0]).
 -export([fake_sonar_get/0]).
--export([send/1]).
+-export([send/5]).
 -export([store_data/4]).
 -export([get_data/1]).
 -export([log_measure/4]).
@@ -106,16 +106,20 @@ clusterize() ->
 
 %% -------------------------------------------------------------------
 %% @doc
-%% Send a message over the multicast cluster
+%% Send a data over the multicast cluster
 %%
-%% @param Message the message to be send
+%% @param Message_type The type of the message to be sent, either calc or measure
+%% @param Name The name of the sent data
+%% @param Node The node which send the message
+%% @param Seqnum The sequence number of the data
+%% @param Data The data to be sent
 %%
-%% @spec send(Message :: term()) -> ok
+%% @spec send(Message_type :: calc | measure, Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: term()) -> ok
 %% @end
 %% -------------------------------------------------------------------
--spec send(Message :: term()) -> ok.
-send(Message) ->
-  hera_multicast:send(term_to_binary(Message)).
+-spec send(Message_type :: calc | measure, Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: term()) -> ok.
+send(Message_type, Name, Node, Seqnum, Data) ->
+  hera_multicast:send(Message_type, Name, Node, Seqnum, Data).
 
 %% -------------------------------------------------------------------
 %% @doc

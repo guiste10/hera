@@ -134,7 +134,7 @@ handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_a
                     hera_filter:filter({Measure, Measure_timestamp}, Iter, Default_Measure, Name);
                 true ->
                     hera:store_data(Name, node(), Iter, Measure),
-                    hera:send({measure, Name, {node(), Iter, Measure}})
+                    hera:send(measure, Name, node(), Iter, Measure)
             end
     end,
     {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM, default_Measure = Default_Measure, warm_up = false}, Delay};

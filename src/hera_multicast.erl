@@ -13,7 +13,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, stop/1, formation/0, send/1]).
+-export([start_link/0, stop/1, formation/0, send/5]).
 -export([receiver/0]).
 
 %% gen_server callbacks
@@ -69,16 +69,20 @@ formation() ->
 
 %% -------------------------------------------------------------------
 %% @doc
-%% Send a message over the multicast cluster
+%% Send a data over the multicast cluster
 %%
-%% @param Message the message to be send
+%% @param Message_type The type of the message to be sent, either calc or measure
+%% @param Name The name of the sent data
+%% @param Node The node which send the message
+%% @param Seqnum The sequence number of the data
+%% @param Data The data to be sent
 %%
-%% @spec send(Message :: term()) -> ok
+%% @spec send(Message_type :: calc | measure, Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: term()) -> ok
 %% @end
 %% -------------------------------------------------------------------
--spec send(Message :: binary()) -> ok.
-send(Message) ->
-  gen_server:cast(?SERVER, {send_message, Message}).
+-spec send(Message_type :: calc | measure, Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: term()) -> ok.
+send(Message_type, Name, Node, Seqnum, Data) ->
+  gen_server:cast(?SERVER, {send_message, term_to_binary({Message_type, Name, {Node, Seqnum, Data}})}).
 
 %%%===================================================================
 %%% gen_server callbacks

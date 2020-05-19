@@ -148,6 +148,6 @@ filter(Measure, Iter, Default_measure, Name, State)->
         true ->
       %      erlang:display('keep'),
             hera:store_data(Name, node(), Iter, Curr_measure_val),
-            hera:send({measure, Name, {node(), Iter, Curr_measure_val}}),
+            hera:send(measure, Name, node(), Iter, Curr_measure_val),
             State#state{previous_measure = Measure, num_measures = State#state.num_measures+1} % don't increment numfiltered
     end.

@@ -99,7 +99,7 @@ handle_cast(_Request, State = #state{}) ->
 handle_info(timeout, State = #state{name = Name, calc_function = Func, func_args = Args, iter = Iter, delay = Delay}) ->
   case erlang:apply(Func, Args) of
     {error, Reason} -> logger:error(Reason);
-    {ok, Res} -> hera:send({calc, Name, {node(), Iter, Res}});
+    {ok, Res} -> hera:send(calc, Name, node(), Iter, Res);
     Other -> io:format("result : ~p", [Other])
   end,
   {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM}, Delay};
