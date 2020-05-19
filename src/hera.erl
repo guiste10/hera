@@ -15,7 +15,7 @@
 -include("hera.hrl").
 
 %% API
--export([launch_app/3]).
+-export([launch_app/2]).
 -export([launch_app/0]).
 -export([clusterize/0]).
 -export([fake_sonar_get/0]).
@@ -57,19 +57,18 @@ stop(_State) -> ok.
 %%
 %% @spec launch_app(
 %%            Measurements :: list(measurement()),
-%%            Calculations :: list(calculation()),
-%%            Filtering :: boolean()
+%%            Calculations :: list(calculation())
 %%       ) -> ok
 %% @end
 %% -------------------------------------------------------------------
--spec launch_app(Measurements :: list(measurement()), Calculations :: list(calculation()), Filtering :: boolean()) -> ok.
-launch_app(Measurements, Calculations, Filtering) ->
+-spec launch_app(Measurements :: list(measurement()), Calculations :: list(calculation())) -> ok.
+launch_app(Measurements, Calculations) ->
   hera_pool:start_pool(sensor_data_pool, 1, {hera_sensors_data, start_link, []}),
   hera_pool:run(sensor_data_pool, []),
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
   hera_pool:start_pool(measurement_pool, length(Measurements), {hera_measure, start_link, []}),
-  Measurement_pids = [hera_pool:run(measurement_pool, [Name, maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement), Filtering]) || {Name, Measurement} <- Measurements],
+  Measurement_pids = [hera_pool:run(measurement_pool, [Name, maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement), maps:get(filtering, Measurement)]) || {Name, Measurement} <- Measurements],
   hera_pool:start_pool(calculation_pool, length(Calculations), {hera_calculation, start_link, []}),
   Calculation_pids = [hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(args, Calculation), maps:get(frequency, Calculation)]) || {Name, Calculation} <- Calculations],
   hera_pool:start_pool(filter_data_pool, 1, {hera_filter, start_link, []}),

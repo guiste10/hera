@@ -20,5 +20,5 @@
 
 %% @doc
 %% Type of a measurement to be perform by the application
-%% @type measurement() :: {atom(), #{func => function(), args => list(any()), frequency => integer()}}
--type measurement() :: {atom(), #{func => fun((...) -> {ok, term()} | {error, term()}), args => list(any()), frequency => integer()}}.
+%% @type measurement() :: {atom(), #{func => function(), args => list(any()), frequency => integer(), filtering => boolean()}}
+-type measurement() :: {atom(), #{func => fun((...) -> {ok, term()} | {error, term()}), args => list(any()), frequency => integer(), filtering => boolean()}}.

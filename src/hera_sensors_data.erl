@@ -39,7 +39,7 @@
 -record(state, {
   % dictionary contraining the last data of all nodes
   % with the form [{node_name, {seqnum, data}}]
-  data :: #{atom() => dict:dict(atom(), {integer(), integer() | float()})}, %% TODO: modify
+  data :: #{atom() => dict:dict(atom(), {integer(), term()})}, %% TODO: modify
   measures_logger_configs :: ets:tid(),
   calculations_logger_configs :: ets:tid()
 }).
