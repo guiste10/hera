@@ -83,8 +83,8 @@ pause() ->
 -spec(init({Name :: atom(), Measurement_func :: function(), Args :: list(any()), Delay :: integer()}) ->
     {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
     {stop, Reason :: term()} | ignore).
-init({Name, Measurement_func, Args, Delay}) ->
-    {ok, #state{name = Name, measurement_func = Measurement_func, func_args = Args, delay = Delay, iter = 0, default_Measure = {-1.0, -1}}, Delay}. % {ok, state, timeout}
+init({Name, Measurement_func, Args, Delay, Filtering}) ->
+    {ok, #state{name = Name, measurement_func = Measurement_func, func_args = Args, delay = Delay, iter = 0, default_Measure = {-1.0, -1}, filtering = Filtering}, Delay}. % {ok, state, timeout}
 
 %% @private
 %% @doc Handling call messages
