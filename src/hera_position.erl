@@ -74,7 +74,10 @@ calc_position(Node_id) ->
                     if  % assign ready2 to true if set contains 2 measures
                         Length =:= 2 ->
                             [{_Seqnum1, R1}, {_Seqnum2, R2}] = [dict:fetch(Node, Sonar) || Node <- Nodes],
-                            [#{x => Pos_x1, y => Pos_y1, node_id => _Node_id1}, #{x => Pos_x2, y => Pos_y2, node_id => _Node_id2}] = [dict:fetch(Node, Pos) || Node <- Nodes],
+                            [
+                                {_, #{x := Pos_x1, y := Pos_y1, node_id := _Node_id1}},
+                                {_ #{x := Pos_x2, y := Pos_y2, node_id := _Node_id2}}
+                            ] = [dict:fetch(Node, Pos) || Node <- Nodes],
                             Separation = math:sqrt(math:pow(Pos_x2-Pos_x1, 2) + math:pow(Pos_y2-Pos_y1, 2)),
                             R1Sq = math : pow ( R1 , 2) ,
                             R2Sq = math : pow ( R2 , 2) ,
