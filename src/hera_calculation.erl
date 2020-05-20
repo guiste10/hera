@@ -104,7 +104,7 @@ handle_info(timeout, State = #state{name = Name, calc_function = Func, func_args
     Other -> io:format("result : ~p", [Other])
   end,
   case Max_iterations of
-    Iter -> {stop, normal, State};
+    Iter -> {stop, shutdown, State};
     _ -> {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM}, Delay}
   end;
 handle_info(_Info, State = #state{}) ->

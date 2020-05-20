@@ -138,7 +138,7 @@ handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_a
             end
     end,
     case Max_iterations of
-        Iter -> {stop, normal, State};
+        Iter -> {stop, shutdown, State};
         _ -> {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM, default_Measure = Default_Measure, warm_up = false}, Delay}
     end;
 
