@@ -15,7 +15,7 @@
 
 -include("hera.hrl").
 
--export([start_link/5, stop/1]).
+-export([start_link/6, stop/1]).
 
 -export([pause/0]).
 
@@ -40,7 +40,8 @@ handle_info/2, code_change/3, terminate/2]).
     iter :: integer(),
     default_Measure :: {float(), integer()},
     filtering :: boolean(),
-    warm_up = true :: boolean()
+    warm_up = true :: boolean(),
+    max_iterations :: interger() | infinity
 }).
 -type state() :: #state{}.
  
@@ -50,10 +51,10 @@ handle_info/2, code_change/3, terminate/2]).
 
 %% @private
 %% @doc Spawns the server and registers the local name (unique)
--spec(start_link(Name :: atom(), Measurement_func :: function(), Func_args :: list(any()), Delay :: integer(), Filtering :: boolean()) ->
+-spec(start_link(Name :: atom(), Measurement_func :: function(), Func_args :: list(any()), Delay :: integer(), Filtering :: boolean(), Max_iterations :: integer() | infinity) ->
     {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
-start_link(Name, Measurement_func, Args, Delay, Filtering) ->
-    gen_server:start_link(?MODULE, {Name, Measurement_func, Args, Delay, Filtering}, []).
+start_link(Name, Measurement_func, Args, Delay, Filtering, Max_iterations) ->
+    gen_server:start_link(?MODULE, {Name, Measurement_func, Args, Delay, Filtering, Max_iterations}, []).
 
 %% @private
 -spec(stop(Pid :: pid()) ->
@@ -80,11 +81,11 @@ pause() ->
 
 %% @private
 %% @doc Initializes the server
--spec(init({Name :: atom(), Measurement_func :: function(), Args :: list(any()), Delay :: integer()}) ->
+-spec(init({Name :: atom(), Measurement_func :: function(), Args :: list(any()), Delay :: integer(), Max_iterations :: integer() | infinity}) ->
     {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
     {stop, Reason :: term()} | ignore).
-init({Name, Measurement_func, Args, Delay, Filtering}) ->
-    {ok, #state{name = Name, measurement_func = Measurement_func, func_args = Args, delay = Delay, iter = 0, default_Measure = {-1.0, -1}, filtering = Filtering}, Delay}. % {ok, state, timeout}
+init({Name, Measurement_func, Args, Delay, Filtering, Max_iterations}) ->
+    {ok, #state{name = Name, measurement_func = Measurement_func, func_args = Args, delay = Delay, iter = 0, default_Measure = {-1.0, -1}, filtering = Filtering, max_iterations = Max_iterations}, Delay}. % {ok, state, timeout}
 
 %% @private
 %% @doc Handling call messages
@@ -119,8 +120,7 @@ handle_cast(_Msg, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
-handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_args = Args, iter = Iter, delay = Delay, filtering = Do_filter, warm_up = Warm_up, default_Measure = Default_m}) ->
-    %%TODO : allow to pause the storing and sending, then restart
+handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_args = Args, iter = Iter, delay = Delay, filtering = Do_filter, warm_up = Warm_up, default_Measure = Default_m, max_iterations = Max_iterations}) ->
     Default_Measure = case Warm_up of
                           true -> perform_sonar_warmup(Func, Args);
                           false -> Default_m
@@ -137,7 +137,10 @@ handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_a
                     hera:send(measure, Name, node(), Iter, Measure)
             end
     end,
-    {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM, default_Measure = Default_Measure, warm_up = false}, Delay};
+    case Max_iterations of
+        Iter -> {stop, normal, State};
+        _ -> {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM, default_Measure = Default_Measure, warm_up = false}, Delay}
+    end;
 
 %% We cannot use handle_info below: if that ever happens,
 %% we cancel the timeouts (Delay) and basically zombify

@@ -25,6 +25,8 @@
 -export([log_measure/4]).
 -export([log_calculation/4]).
 -export([get_timestamp/0]).
+-export([start_calculations/1]).
+-export([start_measurements/1]).
 
 % Callbacks
 -export([start/2]).
@@ -68,14 +70,12 @@ launch_app(Measurements, Calculations) ->
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
   hera_pool:start_pool(measurement_pool, length(Measurements), {hera_measure, start_link, []}),
-  Measurement_pids = [hera_pool:run(measurement_pool, [Name, maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement), maps:get(filtering, Measurement)]) || {Name, Measurement} <- Measurements],
+  [hera_pool:run(measurement_pool, [Name, maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement), maps:get(filtering, Measurement), maps:get(max_iterations, Measurement)]) || {Name, Measurement} <- Measurements],
   hera_pool:start_pool(calculation_pool, length(Calculations), {hera_calculation, start_link, []}),
-  Calculation_pids = [hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(args, Calculation), maps:get(frequency, Calculation)]) || {Name, Calculation} <- Calculations],
+  [hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(args, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation)]) || {Name, Calculation} <- Calculations],
   hera_pool:start_pool(filter_data_pool, 1, {hera_filter, start_link, []}),
   hera_pool:run(filter_data_pool, []),
   clusterize().
-
-%%TODO : create a new module to handle pause and restart
 
 %% -------------------------------------------------------------------
 %% @doc
@@ -178,6 +178,34 @@ log_measure(Name, Node, Seqnum, Data) ->
 -spec log_calculation(Name :: atom(), Node :: atom(), Seqnum :: integer(), Result :: integer() | float()) -> ok.
 log_calculation(Name, Node, Seqnum, Result) ->
   hera_sensors_data:log_calculation(Name, Node, Seqnum, Result).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Start workers that performs the calculations
+%%
+%% @param Calculations the list of calculations to be done
+%%
+%% @spec start_calculations(Calculations :: list(calculation())) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+-spec start_calculations(Calculations :: list(calculation())) -> ok.
+start_calculations(Calculations) ->
+  [hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(args, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation)]) || {Name, Calculation} <- Calculations],
+  ok.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Start workers that performs the measurements
+%%
+%% @param Calculations the list of calculations to be done
+%%
+%% @spec start_measurements(Measurements :: list(measurement())) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+-spec start_measurements(Measurements :: list(measurement())) -> ok.
+start_measurements(Measurements) ->
+  [hera_pool:run(measurement_pool, [Name, maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement), maps:get(filtering, Measurement), maps:get(max_iterations, Measurement)]) || {Name, Measurement} <- Measurements],
+  ok.
 
 %% @private
 -spec get_timestamp() -> integer().
