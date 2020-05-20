@@ -38,7 +38,7 @@ launch_hera(Pos_x, Pos_y, Node_id) ->
         {sonar, #{func => fun(Inch_to_cm) -> sonar_measurement(Inch_to_cm) end, args => [2.54], frequency => 5000, filtering => true}},
         {pos, #{func => fun() -> {ok, #{x => Pos_x, y => Pos_y, node_id => Node_id}} end, args => [], frequency => 30000, filtering => false}}
     ],
-    Calculations = [{position, #{func => fun(X, Y, Id) -> calc_position(Id) end, args => [Pos_x, Pos_y, Node_id], frequency => 5000}}],
+    Calculations = [{position, #{func => fun(Id) -> calc_position(Id) end, args => [Node_id], frequency => 5000}}],
     hera:launch_app(Measurements, Calculations).
 
 launch_hera_shell() ->
@@ -76,7 +76,7 @@ calc_position(Node_id) ->
                             [{_Seqnum1, R1}, {_Seqnum2, R2}] = [dict:fetch(Node, Sonar) || Node <- Nodes],
                             [
                                 {_, #{x := Pos_x1, y := Pos_y1, node_id := _Node_id1}},
-                                {_ #{x := Pos_x2, y := Pos_y2, node_id := _Node_id2}}
+                                {_, #{x := Pos_x2, y := Pos_y2, node_id := _Node_id2}}
                             ] = [dict:fetch(Node, Pos) || Node <- Nodes],
                             Separation = math:sqrt(math:pow(Pos_x2-Pos_x1, 2) + math:pow(Pos_y2-Pos_y1, 2)),
                             R1Sq = math : pow ( R1 , 2) ,
