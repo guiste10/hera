@@ -41,7 +41,7 @@ handle_info/2, code_change/3, terminate/2]).
     default_Measure :: {float(), integer()},
     filtering :: boolean(),
     warm_up = true :: boolean(),
-    max_iterations :: interger() | infinity
+    max_iterations :: integer() | infinity
 }).
 -type state() :: #state{}.
  
