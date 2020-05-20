@@ -16,7 +16,12 @@ start_link(MFA = {_,_,_}) ->
 init({M,F,A}) ->
     MaxRestart = 5,
     MaxTime = 3600,
+    Restart = case M of
+                  hera_calculation -> temporary;
+                  hera_measure -> temporary;
+                  _ -> permanent
+              end,
     {ok, {{simple_one_for_one, MaxRestart, MaxTime},
         [{ppool_worker, % child id, used to identify the child specification internally by the supervisor heraworkersup
         {M,F,A},
-        permanent, 5000, worker, [M]}]}}.
+        Restart, 5000, worker, [M]}]}}.
