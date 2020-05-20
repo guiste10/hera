@@ -17,7 +17,7 @@
 -include("hera.hrl").
 
 -export([launch_hera/3]).
--export([launch_hera_shell/1]).
+-export([launch_hera_shell/0]).
 %%====================================================================
 %% Macros
 %%====================================================================
@@ -41,10 +41,8 @@ launch_hera(Pos_x, Pos_y, Node_id) ->
     Calculations = [{position, #{func => fun(X, Y, Id) -> calc_position(Id) end, args => [Pos_x, Pos_y, Node_id], frequency => 5000}}],
     hera:launch_app(Measurements, Calculations).
 
-launch_hera_shell(Separation) ->
-    Measurements = [{sonar, #{func => fun() -> fake_sonar_m() end, args => [], frequency => 5000}}],
-    Calculations = [{position, #{func => fun(Sep) -> calc_position(Sep) end, args => [Separation], frequency => 5000}}],
-    hera:launch_app(Measurements, Calculations).
+launch_hera_shell() ->
+    hera:launch_app().
 
 %%%===================================================================
 %%% Internal functions
@@ -90,11 +88,51 @@ calc_position(Node_id) ->
                                 true ->
                                     Y1 = math : sqrt ( Helper ) ,
                                     Y2 = - Y1,
-                                    Result = io_lib:format("position: (~.2f, ~.2f) or (~.2f, ~.2f)", [X, Y1, X, Y2]),
+                                    Result = io_lib:format("x1, ~.2f, y1, ~.2f, x2, ~.2f, y2, ~.2f)", [X, Y1, X, Y2]),
                                     {ok, Result}
                             end;
+                        Length =:= 3 ->
+                            [{_Seq1, V1}, {_Seq2, V2}, {_Seq3, V3}] = [dict:fetch(Node, Sonar) || Node <- Nodes],
+                            [
+                                {_, #{x := Pos_x1, y := Pos_y1, node_id := _Node_id1}},
+                                {_, #{x := Pos_x2, y := Pos_y2, node_id := _Node_id2}},
+                                {_, #{x := Pos_x3, y := Pos_y3, node_id := _Node_id3}}
+                            ] = [dict:fetch(Node, Pos) || Node <- Nodes],
+                            {X_p, Y_p} = trilateration({V1, Pos_x1, Pos_y1}, {V2, Pos_x2, Pos_y2}, {V3, Pos_x3, Pos_y3}),
+                            Result = io_lib:format("x, ~.2f, y, ~.2f)", [X_p, Y_p]),
+                            {ok, Result};
+                        Length =:= 4 ->
+                            Neighbors = [Node || Node <- Nodes, neighbors(Node_id, dict:fetch(Node, Pos))],
+                            [{_Seq1, V1}, {_Seq2, V2}, {_Seq3, V3}] = [dict:fetch(Node, Sonar) || Node <- Neighbors],
+                            [
+                                {_, #{x := Pos_x1, y := Pos_y1, node_id := _Node_id1}},
+                                {_, #{x := Pos_x2, y := Pos_y2, node_id := _Node_id2}},
+                                {_, #{x := Pos_x3, y := Pos_y3, node_id := _Node_id3}}
+                            ] = [dict:fetch(Node, Pos) || Node <- Neighbors],
+                            {X_p, Y_p} = trilateration({V1, Pos_x1, Pos_y1}, {V2, Pos_x2, Pos_y2}, {V3, Pos_x3, Pos_y3}),
+                            Result = io_lib:format("x, ~.2f, y, ~.2f)", [X_p, Y_p]),
+                            {ok, Result};
                         true ->
                             {error, "Not two mesurements available"}
                     end
             end
+    end.
+
+trilateration({V1, X1, Y1}, {V2, X2, Y2}, {V3, X3, Y3}) ->
+    A = 2*X2 - 2*X1,
+    B = 2*Y2 - 2*Y1,
+    C = math:pow(V1, 2) - math:pow(V2, 2) - math:pow(X1, 2) + math:pow(X2, 2) - math:pow(Y1, 2) + math:pow(Y2, 2),
+    D = 2*X3 - 2*X2,
+    E = 2*Y3 - 2*Y2,
+    F = math:pow(V2, 2) - math:pow(V3, 2) - math:pow(X2, 2) + math:pow(X3, 2) - math:pow(Y2, 2) + math:pow(Y3, 2),
+    X_p = (C*E - F*B) / (E*A - B*D),
+    Y_p = (C*D - A*F) / (B*D - A*E),
+    {X_p, Y_p}.
+
+neighbors(Node_id, {_, #{node_id := Id}}) ->
+    if
+        Id =:= Node_id -> true;
+        Id =:= (Node_id + 4 + 1) rem 4 -> true;
+        Id =:= (Node_id + 4 - 1) rem 4 -> true;
+        true -> false
     end.
