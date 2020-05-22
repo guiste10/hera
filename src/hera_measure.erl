@@ -137,7 +137,7 @@ handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_a
                     hera:send(measure, Name, node(), Iter, {Measure, Measure_timestamp})
             end
     end,
-    case Max_iterations of
+    case Max_iterations+1 of %  maxiterations 5 -> 5 measures
         Iter -> {stop, shutdown, State};
         _ -> {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM, default_Measure = Default_Measure, warm_up = false}, Delay}
     end;
