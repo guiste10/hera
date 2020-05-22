@@ -17,6 +17,7 @@
 %% API
 -export([launch_app/2]).
 -export([launch_app/0]).
+-export([measure_and_log/1]).
 -export([clusterize/0]).
 -export([fake_sonar_get/0]).
 -export([send/5]).
@@ -90,6 +91,18 @@ launch_app() ->
   hera_pool:run(sensor_data_pool, []),
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
+  clusterize().
+
+
+measure_and_log(Measurements) ->
+  hera_pool:start_pool(sensor_data_pool, 1, {hera_sensors_data, start_link, []}),
+  hera_pool:run(sensor_data_pool, []),
+  hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
+  hera_pool:run(multicastPool, []),
+  hera_pool:start_pool(measurement_pool, length(Measurements), {hera_measure, start_link, []}),
+  [hera_pool:run(measurement_pool, [Name, maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement), maps:get(filtering, Measurement), maps:get(max_iterations, Measurement)]) || {Name, Measurement} <- Measurements],
+  hera_pool:start_pool(filter_data_pool, 1, {hera_filter, start_link, []}),
+  hera_pool:run(filter_data_pool, []),
   clusterize().
 
 %% -------------------------------------------------------------------
