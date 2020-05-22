@@ -288,10 +288,10 @@ restart_measurement(Name, Frequency, Max_iterations, Filtering) ->
 %%
 %% @param Name The name of the measurement
 %%
-%% @spec pause_calculation(Name :: atom()) -> ok.
+%% @spec pause_measurement(Name :: atom()) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec pause_calculation(Name :: atom()) -> ok.
+-spec pause_measurement(Name :: atom()) -> ok.
 pause_measurement(Name) ->
   hera_measure:pause_measurement(Name),
   ok.
