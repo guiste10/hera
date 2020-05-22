@@ -15,7 +15,7 @@
 -include("hera.hrl").
 
 %% API
--export([start_link/5, stop/1]).
+-export([start_link/5, stop/1, restart_calculations/1, restart_calculation/1, restart_calculation/3, pause_calculation/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
@@ -57,6 +57,59 @@ start_link(Name, Calc_function, Args, Delay, Max_iterations) ->
 stop(Pid) ->
   gen_server:call(Pid, stop).
 
+%%--------------------------------------------------------------------
+%% @doc
+%% Restart workers that performs the calculations
+%%
+%% @param Calculations the list of calculations to be done
+%%
+%% @spec restart_calculations(Calculations :: list(calculation())) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+-spec restart_calculations(Calculations :: list(calculation())) -> ok.
+restart_calculations(Calculations) ->
+  [gen_server:cast(Name, {restart, {maps:get(func, Calculation), maps:get(args, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation)}}) || {Name, Calculation} <- Calculations].
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Restart worker that performs the calculation <Name>
+%%
+%% @param Name The name of the calculation
+%%
+%% @spec restart_calculation(Name :: atom()) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+-spec restart_calculation(Name :: atom()) -> ok.
+restart_calculation(Name) ->
+  gen_server:cast(Name, restart).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Restart worker that performs the calculation <Name>
+%%
+%% @param Name The name of the calculation
+%% @param Frequency The frequency of the calculation
+%% @param Max_iterations The number of iterations to be done
+%%
+%% @spec restart_calculation(Name :: atom(), Frequency :: integer(), Max_iterations :: integer() | infinity) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+-spec restart_calculation(Name :: atom(), Frequency :: integer(), Max_iterations :: integer() | infinity) -> ok.
+restart_calculation(Name, Frequency, Max_iterations) ->
+  gen_server:cast(Name, {restart, {Frequency, Max_iterations}}).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Pause the worker that performs the calculation <Name>
+%%
+%% @param Name The name of the calculation
+%%
+%% @spec pause_calculation(Name :: atom()) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+pause_calculation(Name) ->
+  gen_server:cast(Name, pause).
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -88,6 +141,14 @@ handle_call(_Request, _From, State = #state{}) ->
   {noreply, NewState :: state()} |
   {noreply, NewState :: state(), timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: state()}).
+handle_cast(restart, State = #state{delay = Delay}) ->
+  {noreply, State, Delay};
+handle_cast({restart, {Frequency, Max_iterations}}, State) ->
+  {noreply, State#state{iter = 0, max_iterations = Max_iterations, delay = Frequency}};
+handle_cast({restart, {Func, Args, Delay, Max_iter}}, State) ->
+  {noreply, State#state{iter = 0, calc_function = Func, func_args = Args, max_iterations = Max_iter, delay = Delay}, Delay};
+handle_cast(pause, State) ->
+  {noreply, State, hibernate};
 handle_cast(_Request, State = #state{}) ->
   {noreply, State}.
 
@@ -104,7 +165,7 @@ handle_info(timeout, State = #state{name = Name, calc_function = Func, func_args
     Other -> io:format("result : ~p", [Other])
   end,
   case Max_iterations of
-    Iter -> {stop, shutdown, State};
+    Iter -> {noreply, State#state{iter = 0}, hibernate};
     _ -> {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM}, Delay}
   end;
 handle_info(_Info, State = #state{}) ->

@@ -17,7 +17,7 @@
 
 -export([start_link/6, stop/1]).
 
--export([pause/0]).
+-export([pause_measurement/1, restart_measurement/1, restart_measurement/4, restart_measurements/1]).
 
 -export([init/1, handle_call/3, handle_cast/2,
 handle_info/2, code_change/3, terminate/2]).
@@ -64,16 +64,57 @@ stop(Pid) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Log the given measure into a file with the same name as the node name
+%% Restart workers that performs the measurements
 %%
-%% @param Name The name/type of the measure (e.g. temperature, sonar, humidity, ...)
+%% @param Measurements the list of measurements to be done
 %%
-%% @spec pause(Name :: atom()) -> ok.
+%% @spec restart_measurements(Measurements :: list(measurement())) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec pause() -> ok.
-pause() ->
-    gen_server:cast(?SERVER, pause).
+-spec restart_measurements(Measurements :: list(measurement())) -> ok.
+restart_measurements(Measurements) ->
+    [gen_server:cast(Name, {restart, {maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement), maps:get(max_iterations, Measurement)}, maps:get(filtering, Measurement)}) || {Name, Measurement} <- Measurements].
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Restart worker that performs the measurement <Name>
+%%
+%% @param Name The name of the measurement
+%%
+%% @spec restart_measurement(Name :: atom()) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+-spec restart_measurement(Name :: atom()) -> ok.
+restart_measurement(Name) ->
+    gen_server:cast(Name, restart).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Restart worker that performs the measurement <Name>
+%%
+%% @param Name The name of the measurement
+%% @param Frequency The frequency of the measurement
+%% @param Max_iterations The number of iterations to be done
+%% @param Filtering boolean which indicates the need to filter the data
+%%
+%% @spec restart_measurement(Name :: atom(), Frequency :: integer(), Max_iterations :: integer() | infinity, Filtering :: boolean()) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+-spec restart_measurement(Name :: atom(), Frequency :: integer(), Max_iterations :: integer() | infinity, Filtering :: boolean()) -> ok.
+restart_measurement(Name, Frequency, Max_iterations, Filtering) ->
+    gen_server:cast(Name, {restart, {Frequency, Max_iterations, Filtering}}).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Pause the worker that performs the measurement <Name>
+%%
+%% @param Name The name of the measurement
+%%
+%% @spec pause_measurement(Name :: atom()) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+pause_measurement(Name) ->
+    gen_server:cast(Name, pause).
 
 %%====================================================================
 %% gen_server callbacks
@@ -109,6 +150,12 @@ handle_call(_Msg, _From, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
+handle_cast(restart, State = #state{delay = Delay}) ->
+    {noreply, State, Delay};
+handle_cast({restart, {Frequency, Max_iterations, Filtering}}, State) ->
+    {noreply, State#state{iter = 0, max_iterations = Max_iterations, delay = Frequency, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}};
+handle_cast({restart, {Func, Args, Delay, Max_iter, Filtering}}, State) ->
+    {noreply, State#state{iter = 0, measurement_func = Func, func_args = Args, max_iterations = Max_iter, delay = Delay, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}, Delay};
 handle_cast(pause, State) ->
     {noreply, State, hibernate};
 handle_cast(_Msg, State) ->
@@ -138,7 +185,7 @@ handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_a
             end
     end,
     case Max_iterations of
-        Iter -> {stop, shutdown, State};
+        Iter -> {noreply, State, hibernate};
         _ -> {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM, default_Measure = Default_Measure, warm_up = false}, Delay}
     end;
 
