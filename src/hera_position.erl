@@ -111,7 +111,7 @@ calc_position(Node_id) ->
                                 true ->
                                     Y1 = math : sqrt ( Helper ) ,
                                     Y2 = - Y1,
-                                    Result = io_lib:format("x1, ~.2f, y1, ~.2f, x2, ~.2f, y2, ~.2f)", [X, Y1, X, Y2]),
+                                    Result = io_lib:format("x1, ~.2f, y1, ~.2f, x2, ~.2f, y2, ~.2f", [X, Y1, X, Y2]),
                                     {ok, Result}
                             end;
                         [{_Seq1, V1}, {_Seq2, V2}, {_Seq3, V3}] ->
@@ -121,7 +121,7 @@ calc_position(Node_id) ->
                                 {_, #{x := Pos_x3, y := Pos_y3, node_id := _Node_id3}}
                             ] = [dict:fetch(Node, Pos) || Node <- Nodes],
                             {X_p, Y_p} = trilateration({V1, Pos_x1, Pos_y1}, {V2, Pos_x2, Pos_y2}, {V3, Pos_x3, Pos_y3}),
-                            Result = io_lib:format("x, ~.2f, y, ~.2f)", [X_p, Y_p]),
+                            Result = io_lib:format("x, ~.2f, y, ~.2f", [X_p, Y_p]),
                             {ok, Result};
                         [{_, _}, {_, _}, {_, _}, {_, _}] ->
                             Neighbors = lists:filter(fun(N) -> neighbors(Node_id, dict:fetch(N, Pos)) end, Nodes),
@@ -132,7 +132,7 @@ calc_position(Node_id) ->
                                 {_, #{x := Pos_x3, y := Pos_y3, node_id := _Node_id3}}
                             ] = [dict:fetch(Node, Pos) || Node <- Neighbors],
                             {X_p, Y_p} = trilateration({V1, Pos_x1, Pos_y1}, {V2, Pos_x2, Pos_y2}, {V3, Pos_x3, Pos_y3}),
-                            Result = io_lib:format("x, ~.2f, y, ~.2f)", [X_p, Y_p]),
+                            Result = io_lib:format("x, ~.2f, y, ~.2f", [X_p, Y_p]),
                             {ok, Result};
                         _ ->
                             {error, "Not two mesurements available"}
