@@ -124,7 +124,7 @@ is_default_measure(Measure, Default_measure)->
     State :: state()).
 filter(Measure, Iter, Default_measure, Name, State)->
     {Default_measure_val, _} = Default_measure,
-    %erlang:display('filterNow'),
+    erlang:display('filterNow'),
     if
         Iter == 0 -> % first performed measure after warmup
             Previous_measure = Default_measure; % use measured val + timestamp
