@@ -19,8 +19,9 @@
 -export([launch_hera/3]).
 -export([launch_hera/5]).
 -export([launch_hera_shell/0]).
--export([start_new_calculation/3]).
--export([start_new_measurement/2]).
+-export([restart_calculation/2]).
+-export([restart_measurement/2]).
+-export([restart/2]).
 %%====================================================================
 %% Macros
 %%====================================================================
@@ -55,11 +56,15 @@ launch_hera(Pos_x, Pos_y, Node_id, Frequency, Max_iteration) ->
 launch_hera_shell() ->
     hera:launch_app().
 
-start_new_calculation(Frequency, Max_iterations, Node_id) ->
-    hera:start_calculations([{position, #{func => fun(Id) -> calc_position(Id) end, args => [Node_id], frequency => Frequency, max_iterations => Max_iterations}}]).
+restart(Frequency, Max_iterations) ->
+    restart_measurement(Frequency, Max_iterations),
+    restart_calculation(Frequency, Max_iterations).
 
-start_new_measurement(Frequency, Max_iterations) ->
-    hera:start_measurements([{sonar, #{func => fun(Inch_to_cm) -> sonar_measurement(Inch_to_cm) end, args => [2.54], frequency => Frequency, filtering => true, max_iterations => Max_iterations}}]).
+restart_calculation(Frequency, Max_iterations) ->
+    hera:restart_calculation(position, Frequency, Max_iterations).
+
+restart_measurement(Frequency, Max_iterations) ->
+    hera:restart_measurement(sonar, Frequency, Max_iterations, true).
 
 %%%===================================================================
 %%% Internal functions
