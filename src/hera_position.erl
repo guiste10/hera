@@ -85,12 +85,10 @@ calc_position(Node_id) ->
                     logger:error(Reason),
                     error;
                 {ok, Pos} ->
-                    Nodes = [N  || N <- [Node || Node <- dict:fetch_keys(Sonar)], dict:is_key(N, Pos)],
-                    Length = length(Nodes),
-
-                    if  % assign ready2 to true if set contains 2 measures
-                        Length =:= 2 ->
-                            [{_Seqnum1, R1}, {_Seqnum2, R2}] = [dict:fetch(Node, Sonar) || Node <- Nodes],
+                    Nodes = lists:filter(fun(N) -> dict:is_key(N, Pos) end, dict:fetch_keys(Sonar)),
+                    Values = [dict:fetch(Node, Sonar) || Node <- Nodes],
+                    case Values of
+                        [{_Seq1, R1}, {_Seq2, R2}] ->
                             [
                                 {_, #{x := Pos_x1, y := Pos_y1, node_id := _Node_id1}},
                                 {_, #{x := Pos_x2, y := Pos_y2, node_id := _Node_id2}}
@@ -111,8 +109,7 @@ calc_position(Node_id) ->
                                     Result = io_lib:format("x1, ~.2f, y1, ~.2f, x2, ~.2f, y2, ~.2f)", [X, Y1, X, Y2]),
                                     {ok, Result}
                             end;
-                        Length =:= 3 ->
-                            [{_Seq1, V1}, {_Seq2, V2}, {_Seq3, V3}] = [dict:fetch(Node, Sonar) || Node <- Nodes],
+                        [{_Seq1, V1}, {_Seq2, V2}, {_Seq3, V3}] ->
                             [
                                 {_, #{x := Pos_x1, y := Pos_y1, node_id := _Node_id1}},
                                 {_, #{x := Pos_x2, y := Pos_y2, node_id := _Node_id2}},
@@ -121,8 +118,8 @@ calc_position(Node_id) ->
                             {X_p, Y_p} = trilateration({V1, Pos_x1, Pos_y1}, {V2, Pos_x2, Pos_y2}, {V3, Pos_x3, Pos_y3}),
                             Result = io_lib:format("x, ~.2f, y, ~.2f)", [X_p, Y_p]),
                             {ok, Result};
-                        Length =:= 4 ->
-                            Neighbors = [Node || Node <- Nodes, neighbors(Node_id, dict:fetch(Node, Pos))],
+                        [{_, _}, {_, _}, {_, _}, {_, _}] ->
+                            Neighbors = lists:filter(fun(N) -> neighbors(Node_id, dict:fetch(N, Pos)) end, Nodes),
                             [{_Seq1, V1}, {_Seq2, V2}, {_Seq3, V3}] = [dict:fetch(Node, Sonar) || Node <- Neighbors],
                             [
                                 {_, #{x := Pos_x1, y := Pos_y1, node_id := _Node_id1}},
@@ -132,7 +129,7 @@ calc_position(Node_id) ->
                             {X_p, Y_p} = trilateration({V1, Pos_x1, Pos_y1}, {V2, Pos_x2, Pos_y2}, {V3, Pos_x3, Pos_y3}),
                             Result = io_lib:format("x, ~.2f, y, ~.2f)", [X_p, Y_p]),
                             {ok, Result};
-                        true ->
+                        _ ->
                             {error, "Not two mesurements available"}
                     end
             end
