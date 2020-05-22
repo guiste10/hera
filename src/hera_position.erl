@@ -18,7 +18,6 @@
 
 -export([launch_hera/3]).
 -export([launch_hera/5]).
--export([launch_hera_measures/3]).
 -export([launch_hera_shell/0]).
 -export([start_new_calculation/3]).
 -export([start_new_measurement/3]).
@@ -52,12 +51,6 @@ launch_hera(Pos_x, Pos_y, Node_id, Frequency, Max_iteration) ->
     ],
     Calculations = [{position, #{func => fun(Id) -> calc_position(Id) end, args => [Node_id], frequency => Frequency, max_iterations => Max_iteration}}],
     hera:launch_app(Measurements, Calculations).
-
-launch_hera_measures(Frequency, Max_iteration, Do_filter) ->
-    Measurements = [
-        {sonar, #{func => fun(Inch_to_cm) -> sonar_measurement(Inch_to_cm) end, args => [2.54], frequency => Frequency, filtering => Do_filter, max_iterations => Max_iteration}}
-    ],
-    hera:measure_and_log(Measurements).
 
 launch_hera_shell() ->
     hera:launch_app().
