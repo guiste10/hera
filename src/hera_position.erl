@@ -73,8 +73,8 @@ start_new_measurement(Frequency, Max_iterations) ->
 %%%===================================================================
 
 sonar_measurement(Inch_to_cm) ->
-    %case pmod_maxsonar:get() of
-    case hera:fake_sonar_get() of
+    case pmod_maxsonar:get() of
+    %case hera:fake_sonar_get() of
         undefined -> {error, "pmod_maxsonar not set up correctly"};
         Value -> {ok, Value*Inch_to_cm}
     end.
