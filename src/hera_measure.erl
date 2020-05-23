@@ -153,7 +153,7 @@ handle_call(_Msg, _From, State) ->
 handle_cast(restart, State = #state{delay = Delay}) ->
     {noreply, State, Delay};
 handle_cast({restart, {Frequency, Max_iterations, Filtering}}, State) ->
-    {noreply, State#state{iter = 0, max_iterations = Max_iterations, delay = Frequency, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}};
+    {noreply, State#state{iter = 0, max_iterations = Max_iterations, delay = Frequency, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}, Frequency};
 handle_cast({restart, {Func, Args, Delay, Max_iter, Filtering}}, State) ->
     {noreply, State#state{iter = 0, measurement_func = Func, func_args = Args, max_iterations = Max_iter, delay = Delay, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}, Delay};
 handle_cast(pause, State) ->
@@ -185,7 +185,7 @@ handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_a
             end
     end,
     case Max_iterations of
-        Iter -> {noreply, State, hibernate};
+        Iter -> {noreply, State#state{iter = 0}, hibernate};
         _ -> {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM, default_Measure = Default_Measure, warm_up = false}, Delay}
     end;
 

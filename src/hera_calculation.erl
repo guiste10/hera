@@ -144,7 +144,7 @@ handle_call(_Request, _From, State = #state{}) ->
 handle_cast(restart, State = #state{delay = Delay}) ->
   {noreply, State, Delay};
 handle_cast({restart, {Frequency, Max_iterations}}, State) ->
-  {noreply, State#state{iter = 0, max_iterations = Max_iterations, delay = Frequency}};
+  {noreply, State#state{iter = 0, max_iterations = Max_iterations, delay = Frequency}, Frequency};
 handle_cast({restart, {Func, Args, Delay, Max_iter}}, State) ->
   {noreply, State#state{iter = 0, calc_function = Func, func_args = Args, max_iterations = Max_iter, delay = Delay}, Delay};
 handle_cast(pause, State) ->
