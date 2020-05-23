@@ -177,9 +177,9 @@ handle_cast({store_data, {Name, {Node, Seqnum, Measure}}}, State = #state{data =
               dict:store(Node, {Seqnum, Measure}, Dict)
           end,
   {noreply, State#state{data = New_data#{Name => Dict2}}};
-handle_cast({log_measure, {Name, {Node, Seqnum, Data}}}, State = #state{measures_logger_configs = Log_Conf}) ->
+handle_cast({log_measure, {Name, {Node, Seqnum, {Data, TimeStamp}}}}, State = #state{measures_logger_configs = Log_Conf}) ->
   check_handlers(Name, Node, Log_Conf, measures),
-  logger:debug("~p, ~p", [Seqnum, Data], #{domain => [measures, Node, Name]}), %% Log data to file
+  logger:debug("~p, ~p, ~p", [Seqnum, Data, TimeStamp], #{domain => [measures, Node, Name]}), %% Log data to file
   {noreply, State};
 handle_cast({log_calculation, {Name, {Node, Seqnum, Data}}}, State = #state{calculations_logger_configs = Log_Conf}) ->
   check_handlers(Name, Node, Log_Conf, calculations),

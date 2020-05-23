@@ -184,10 +184,10 @@ handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_a
                     hera_filter:filter({Measure, Measure_timestamp}, Iter, Default_Measure, Name);
                 true ->
                     hera:store_data(Name, node(), Iter, Measure),
-                    hera:send(measure, Name, node(), Iter, Measure)
+                    hera:send(measure, Name, node(), Iter, {Measure, Measure_timestamp})
             end
     end,
-    case Max_iterations of
+    case Max_iterations-1 of
         Iter -> {noreply, State#state{iter = 0}, hibernate};
         _ -> {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM, default_Measure = Default_Measure, warm_up = false}, Delay}
     end;
@@ -237,5 +237,7 @@ perform_sonar_warmup_aux(Iter, Max_iter, Delay, Measure_func, Args) -> % todo, s
         Iter == Max_iter-1 ->
             {ok, Measure} = erlang:apply(Measure_func, Args),
             Measure_timestamp = hera:get_timestamp(),
+            erlang:display({'warmup', Measure, Measure_timestamp}),
+            hera:send(measure, sonar, node(), -1, {Measure, Measure_timestamp}),
             {Measure, Measure_timestamp}
     end.
