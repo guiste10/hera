@@ -25,8 +25,8 @@
 -export([log_measure/4]).
 -export([log_calculation/4]).
 -export([get_timestamp/0]).
--export([pause_calculation/1, restart_calculations/1, restart_calculation/1, restart_calculation/3]).
--export([restart_measurements/1, restart_measurement/1, restart_measurement/4, pause_measurement/1]).
+-export([pause_calculation/1, restart_calculation/5, restart_calculation/1, restart_calculation/3]).
+-export([restart_measurement/6, restart_measurement/1, restart_measurement/3, pause_measurement/1]).
 
 % Callbacks
 -export([start/2]).
@@ -183,21 +183,25 @@ log_calculation(Name, Node, Seqnum, Result) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart workers that performs the calculations
+%% Restart worker that performs the calculation <Name> from zero with a new function
 %%
-%% @param Calculations the list of calculations to be done
+%% @param Name The name of the measurement
+%% @param Func The calculation function to be executed
+%% @param Args The arguments of the function
+%% @param Frequency The frequency of the calculation
+%% @param Max_iterations The number of iterations to be done
 %%
-%% @spec restart_calculations(Calculations :: list(calculation())) -> ok.
+%% @spec restart_calculation(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), Max_iterations :: integer()) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec restart_calculations(Calculations :: list(calculation())) -> ok.
-restart_calculations(Calculations) ->
-  hera_calculation:restart_calculation(Calculations),
+-spec restart_calculation(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), Max_iterations :: integer()) -> ok.
+restart_calculation(Name, Func, Args, Frequency, Max_iterations) ->
+  hera_calculation:restart_calculation(Name, Func, Args, Frequency, Max_iterations),
   ok.
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart worker that performs the calculation <Name>
+%% Restart worker that performs the calculation <Name> from zero if the previous calculation has terminated, or from the previous state if it is pause.
 %%
 %% @param Name The name of the calculation
 %%
@@ -211,7 +215,7 @@ restart_calculation(Name) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart worker that performs the calculation <Name>
+%% Restart worker that performs the calculation <Name> from zero with new frequency and number of iterations
 %%
 %% @param Name The name of the calculation
 %% @param Frequency The frequency of the calculation
@@ -241,21 +245,26 @@ pause_calculation(Name) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart workers that performs the measurements
+%% Restart worker that performs the measurement <Name> from zero with a new function
 %%
-%% @param Measurements the list of measurements to be done
+%% @param Name The name of the measurement
+%% @param Func The measurement function to be executed
+%% @param Args The arguments of the function
+%% @param Frequency The frequency of the measurement
+%% @param Max_iterations The number of iterations to be done
+%% @param Filtering Boolean that indicates if a filtering must be done to the data output by the function
 %%
-%% @spec restart_measurements(Measurements :: list(measurement())) -> ok.
+%% @spec restart_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), Max_iterations :: integer(), Filtering :: boolean()) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec restart_measurements(Measurements :: list(measurement())) -> ok.
-restart_measurements(Measurements) ->
-  hera_measure:restart_measurements(Measurements),
+-spec restart_measurement(Name :: atom(), Func ::fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), Max_iterations :: integer(), Filtering :: boolean()) -> ok.
+restart_measurement(Name, Func, Args, Frequency, Max_iterations, Filtering) ->
+  hera_measure:restart_measurement(Name, Func, Args, Frequency, Max_iterations, Filtering),
   ok.
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart worker that performs the measurement <Name>
+%% Restart worker that performs the measurement <Name> from zero if the previous calculation has terminated, or from the previous state if it is pause.
 %%
 %% @param Name The name of the measurement
 %%
@@ -269,19 +278,18 @@ restart_measurement(Name) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart worker that performs the measurement <Name>
+%% Restart worker that performs the measurement <Name> from zero with new frequency and number of iterations
 %%
 %% @param Name The name of the measurement
 %% @param Frequency The frequency of the measurement
 %% @param Max_iterations The number of iterations to be done
-%% @param Filtering boolean which indicates the need to filter the data
 %%
-%% @spec restart_measurement(Name :: atom(), Frequency :: integer(), Max_iterations :: integer() | infinity, Filtering :: boolean()) -> ok.
+%% @spec restart_measurement(Name :: atom(), Frequency :: integer(), Max_iterations :: integer() | infinity) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec restart_measurement(Name :: atom(), Frequency :: integer(), Max_iterations :: integer(), Filtering :: boolean()) -> ok.
-restart_measurement(Name, Frequency, Max_iterations, Filtering) ->
-  hera_measure:restart_measurement(Name, Frequency, Max_iterations, Filtering),
+-spec restart_measurement(Name :: atom(), Frequency :: integer(), Max_iterations :: integer()) -> ok.
+restart_measurement(Name, Frequency, Max_iterations) ->
+  hera_measure:restart_measurement(Name, Frequency, Max_iterations),
   ok.
 
 %%--------------------------------------------------------------------

@@ -64,7 +64,7 @@ restart_calculation(Frequency, Max_iterations) ->
     hera:restart_calculation(position, Frequency, Max_iterations).
 
 restart_measurement(Frequency, Max_iterations) ->
-    hera:restart_measurement(sonar, Frequency, Max_iterations, true).
+    hera:restart_measurement(sonar, Frequency, Max_iterations).
 
 %%%===================================================================
 %%% Internal functions

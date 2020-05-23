@@ -15,7 +15,7 @@
 -include("hera.hrl").
 
 %% API
--export([start_link/5, stop/1, restart_calculations/1, restart_calculation/1, restart_calculation/3, pause_calculation/1]).
+-export([start_link/5, stop/1, restart_calculation/5, restart_calculation/1, restart_calculation/3, pause_calculation/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
@@ -61,14 +61,18 @@ stop(Pid) ->
 %% @doc
 %% Restart workers that performs the calculations
 %%
-%% @param Calculations the list of calculations to be done
+%% @param Name The name of the measurement
+%% @param Func The calculation function to be executed
+%% @param Args The arguments of the function
+%% @param Frequency The frequency of the calculation
+%% @param Max_iterations The number of iterations to be done
 %%
-%% @spec restart_calculations(Calculations :: list(calculation())) -> ok.
+%% @spec restart_calculation(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), Max_iterations :: integer()) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec restart_calculations(Calculations :: list(calculation())) -> ok.
-restart_calculations(Calculations) ->
-  [gen_server:cast(Name, {restart, {maps:get(func, Calculation), maps:get(args, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation)}}) || {Name, Calculation} <- Calculations].
+-spec restart_calculation(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), Max_iterations :: integer()) -> ok.
+restart_calculation(Name, Func, Args, Frequency, Max_iterations) ->
+  gen_server:cast(Name, {restart, {Func, Args, Frequency, Max_iterations}}).
 
 %%--------------------------------------------------------------------
 %% @doc

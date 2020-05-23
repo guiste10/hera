@@ -17,7 +17,7 @@
 
 -export([start_link/6, stop/1]).
 
--export([pause_measurement/1, restart_measurement/1, restart_measurement/4, restart_measurements/1]).
+-export([pause_measurement/1, restart_measurement/1, restart_measurement/3, restart_measurement/6]).
 
 -export([init/1, handle_call/3, handle_cast/2,
 handle_info/2, code_change/3, terminate/2]).
@@ -66,15 +66,19 @@ stop(Pid) ->
 %% @doc
 %% Restart workers that performs the measurements
 %%
-%% @param Measurements the list of measurements to be done
+%% @param Name The name of the measurement
+%% @param Func The measurement function to be executed
+%% @param Args The arguments of the function
+%% @param Frequency The frequency of the measurement
+%% @param Max_iterations The number of iterations to be done
+%% @param Filtering Boolean that indicates if a filtering must be done to the data output by the function
 %%
-%% @spec restart_measurements(Measurements :: list(measurement())) -> ok.
+%% @spec restart_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), Max_iterations :: integer(), Filtering :: boolean()) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec restart_measurements(Measurements :: list(measurement())) -> ok.
-restart_measurements(Measurements) ->
-    [gen_server:cast(Name, {restart, {maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement), maps:get(max_iterations, Measurement)}, maps:get(filtering, Measurement)}) || {Name, Measurement} <- Measurements].
-
+-spec restart_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), Max_iterations :: integer(), Filtering :: boolean()) -> ok.
+restart_measurement(Name, Func, Args, Frequency, Max_iterations, Filtering) ->
+    gen_server:cast(Name, {restart, {Func, Args, Frequency, Max_iterations, Filtering}}).
 %%--------------------------------------------------------------------
 %% @doc
 %% Restart worker that performs the measurement <Name>
@@ -95,14 +99,13 @@ restart_measurement(Name) ->
 %% @param Name The name of the measurement
 %% @param Frequency The frequency of the measurement
 %% @param Max_iterations The number of iterations to be done
-%% @param Filtering boolean which indicates the need to filter the data
 %%
-%% @spec restart_measurement(Name :: atom(), Frequency :: integer(), Max_iterations :: integer() | infinity, Filtering :: boolean()) -> ok.
+%% @spec restart_measurement(Name :: atom(), Frequency :: integer(), Max_iterations :: integer() | infinity) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec restart_measurement(Name :: atom(), Frequency :: integer(), Max_iterations :: integer() | infinity, Filtering :: boolean()) -> ok.
-restart_measurement(Name, Frequency, Max_iterations, Filtering) ->
-    gen_server:cast(Name, {restart, {Frequency, Max_iterations, Filtering}}).
+-spec restart_measurement(Name :: atom(), Frequency :: integer(), Max_iterations :: integer() | infinity) -> ok.
+restart_measurement(Name, Frequency, Max_iterations) ->
+    gen_server:cast(Name, {restart, {Frequency, Max_iterations}}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -152,8 +155,8 @@ handle_call(_Msg, _From, State) ->
     {stop, Reason :: term(), NewState :: state()}).
 handle_cast(restart, State = #state{delay = Delay}) ->
     {noreply, State, Delay};
-handle_cast({restart, {Frequency, Max_iterations, Filtering}}, State) ->
-    {noreply, State#state{iter = 0, max_iterations = Max_iterations, delay = Frequency, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}, Frequency};
+handle_cast({restart, {Frequency, Max_iterations}}, State) ->
+    {noreply, State#state{iter = 0, max_iterations = Max_iterations, delay = Frequency, warm_up = true, default_Measure = {-1.0, -1}}, Frequency};
 handle_cast({restart, {Func, Args, Delay, Max_iter, Filtering}}, State) ->
     {noreply, State#state{iter = 0, measurement_func = Func, func_args = Args, max_iterations = Max_iter, delay = Delay, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}, Delay};
 handle_cast(pause, State) ->
@@ -232,7 +235,7 @@ perform_sonar_warmup_aux(Iter, Max_iter, Delay, Measure_func, Args) -> % todo, s
             timer:sleep(Delay),
             perform_sonar_warmup_aux(Iter+1, Max_iter, Delay, Measure_func, Args);
         Iter == Max_iter-1 ->
-            Measure = erlang:apply(Measure_func, Args),
+            {ok, Measure} = erlang:apply(Measure_func, Args),
             Measure_timestamp = hera:get_timestamp(),
             {Measure, Measure_timestamp}
     end.
