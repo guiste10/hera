@@ -39,7 +39,7 @@
 
 launch_hera(Pos_x, Pos_y, Node_id) ->
     Measurements = [
-        {sonar, #{func => fun(Inch_to_cm) -> sonar_measurement(Inch_to_cm) end, args => [2.54], frequency => 500, filtering => false, max_iterations => 300}},
+        {sonar, #{func => fun(Inch_to_cm) -> sonar_measurement(Inch_to_cm) end, args => [2.54], frequency => 500, filtering => true, max_iterations => 300}},
         {pos, #{func => fun() -> {ok, #{x => Pos_x, y => Pos_y, node_id => Node_id}} end, args => [], frequency => 30000, filtering => false, max_iterations => 2}}
     ],
     Calculations = [{position, #{func => fun(Id) -> calc_position(Id) end, args => [Node_id], frequency => 500, max_iterations => 300}}],
@@ -50,8 +50,8 @@ launch_hera(Pos_x, Pos_y, Node_id, Frequency, Max_iteration) ->
         {sonar, #{func => fun(Inch_to_cm) -> sonar_measurement(Inch_to_cm) end, args => [2.54], frequency => Frequency, filtering => true, max_iterations => Max_iteration}},
         {pos, #{func => fun() -> {ok, #{x => Pos_x, y => Pos_y, node_id => Node_id}} end, args => [], frequency => 30000, filtering => false, max_iterations => 2}}
     ],
-    %Calculations = [{position, #{func => fun(Id) -> calc_position(Id) end, args => [Node_id], frequency => Frequency, max_iterations => Max_iteration}}],
-    Calculations = [],
+    Calculations = [{position, #{func => fun(Id) -> calc_position(Id) end, args => [Node_id], frequency => Frequency, max_iterations => Max_iteration}}],
+    %Calculations = [],
     hera:launch_app(Measurements, Calculations).
 
 launch_hera_shell() ->
@@ -73,7 +73,6 @@ restart_measurement(Frequency, Max_iterations) ->
 
 sonar_measurement(Inch_to_cm) ->
     case pmod_maxsonar:get() of
-    %case hera:fake_sonar_get() of
         undefined -> {error, "pmod_maxsonar not set up correctly"};
         Value -> {ok, Value*Inch_to_cm}
     end.
