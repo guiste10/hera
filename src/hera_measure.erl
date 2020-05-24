@@ -237,6 +237,6 @@ perform_sonar_warmup_aux(Iter, Max_iter, Delay, Measure_func, Args, Name) -> % t
         Iter == Max_iter-1 ->
             {ok, Measure} = erlang:apply(Measure_func, Args),
             Measure_timestamp = hera:get_timestamp(),
-            hera:send(Name, sonar, node(), -1, {Measure, Measure_timestamp}),
+            hera:send(measure, Name, node(), -1, {Measure, Measure_timestamp}),
             {Measure, Measure_timestamp}
     end.
