@@ -172,7 +172,7 @@ handle_cast(_Msg, State) ->
     {stop, Reason :: term(), NewState :: state()}).
 handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_args = Args, iter = Iter, delay = Delay, filtering = Do_filter, warm_up = Warm_up, default_Measure = Default_m, max_iterations = Max_iterations}) ->
     Default_Measure = case Warm_up of
-                          true -> perform_sonar_warmup(Func, Args);
+                          true -> perform_sonar_warmup(Func, Args, Name);
                           false -> Default_m
                       end,
     Measure_timestamp = hera:get_timestamp(),
@@ -221,22 +221,22 @@ terminate(_Reason, _State) -> ok.
 
 %% @private
 %% @doc only perform warmup when using real sonar
--spec perform_sonar_warmup(Measure_func :: function(), Args :: list(any())) ->
+-spec perform_sonar_warmup(Measure_func :: function(), Args :: list(any()), Name :: atom()) ->
     Default_Measure :: {float(), integer()}.
-perform_sonar_warmup(Measure_func, Args) ->
-    perform_sonar_warmup_aux(0, 100, 50, Measure_func, Args). % hardcodé, récup 100ième mesure
+perform_sonar_warmup(Measure_func, Args, Name) ->
+    perform_sonar_warmup_aux(0, 100, 50, Measure_func, Args, Name). % hardcodé, récup 100ième mesure
 
 % todo: make maxiter/2 unused measures, then return median of next maxiter/2 measures? or osef just send last measure?
--spec perform_sonar_warmup_aux(Iter :: integer(), Max_iter :: integer(), Delay :: integer(), Measure_func :: function(), Args :: list(any())) ->
+-spec perform_sonar_warmup_aux(Iter :: integer(), Max_iter :: integer(), Delay :: integer(), Measure_func :: function(), Args :: list(any()), Name :: atom()) ->
     Default_Measure :: {float(), integer()}.
-perform_sonar_warmup_aux(Iter, Max_iter, Delay, Measure_func, Args) -> % todo, selec mediane de toutes les mesures
+perform_sonar_warmup_aux(Iter, Max_iter, Delay, Measure_func, Args, Name) -> % todo, selec mediane de toutes les mesures
     if
         Iter < Max_iter-1 ->
             timer:sleep(Delay),
-            perform_sonar_warmup_aux(Iter+1, Max_iter, Delay, Measure_func, Args);
+            perform_sonar_warmup_aux(Iter+1, Max_iter, Delay, Measure_func, Args, Name);
         Iter == Max_iter-1 ->
             {ok, Measure} = erlang:apply(Measure_func, Args),
             Measure_timestamp = hera:get_timestamp(),
-            hera:send(measure, sonar, node(), -1, {Measure, Measure_timestamp}),
+            hera:send(measure, Name, node(), -1, {Measure, Measure_timestamp}),
             {Measure, Measure_timestamp}
     end.
