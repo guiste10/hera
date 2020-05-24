@@ -15,7 +15,7 @@
 
 -include("hera.hrl").
 
--export([start_link/6, stop/1]).
+-export([start_link/7, stop/1]).
 
 -export([pause_measurement/1, restart_measurement/1, restart_measurement/3, restart_measurement/6]).
 
@@ -41,7 +41,8 @@ handle_info/2, code_change/3, terminate/2]).
     default_Measure :: {float(), integer()},
     filtering :: boolean(),
     warm_up = true :: boolean(),
-    max_iterations :: integer() | infinity
+    max_iterations :: integer() | infinity,
+    upperBound :: float()
 }).
 -type state() :: #state{}.
  
@@ -51,10 +52,10 @@ handle_info/2, code_change/3, terminate/2]).
 
 %% @private
 %% @doc Spawns the server and registers the local name (unique)
--spec(start_link(Name :: atom(), Measurement_func :: function(), Func_args :: list(any()), Delay :: integer(), Filtering :: boolean(), Max_iterations :: integer() | infinity) ->
+-spec(start_link(Name :: atom(), Measurement_func :: function(), Func_args :: list(any()), Delay :: integer(), Filtering :: boolean(), Max_iterations :: integer() | infinity, UpperBound :: float()) ->
     {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
-start_link(Name, Measurement_func, Args, Delay, Filtering, Max_iterations) ->
-    gen_server:start_link(?MODULE, {Name, Measurement_func, Args, Delay, Filtering, Max_iterations}, []).
+start_link(Name, Measurement_func, Args, Delay, Filtering, Max_iterations, UpperBound) ->
+    gen_server:start_link(?MODULE, {Name, Measurement_func, Args, Delay, Filtering, Max_iterations, UpperBound}, []).
 
 %% @private
 -spec(stop(Pid :: pid()) ->
@@ -125,11 +126,11 @@ pause_measurement(Name) ->
 
 %% @private
 %% @doc Initializes the server
--spec(init({Name :: atom(), Measurement_func :: function(), Args :: list(any()), Delay :: integer(), Max_iterations :: integer() | infinity}) ->
+-spec(init({Name :: atom(), Measurement_func :: function(), Args :: list(any()), Delay :: integer(), Max_iterations :: integer() | infinity, UpperBound :: float()}) ->
     {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
     {stop, Reason :: term()} | ignore).
-init({Name, Measurement_func, Args, Delay, Filtering, Max_iterations}) ->
-    {ok, #state{name = Name, measurement_func = Measurement_func, func_args = Args, delay = Delay, iter = 0, default_Measure = {-1.0, -1}, filtering = Filtering, max_iterations = Max_iterations}, Delay}. % {ok, state, timeout}
+init({Name, Measurement_func, Args, Delay, Filtering, Max_iterations, UpperBound}) ->
+    {ok, #state{name = Name, measurement_func = Measurement_func, func_args = Args, delay = Delay, iter = 0, default_Measure = {-1.0, -1}, filtering = Filtering, max_iterations = Max_iterations, upperBound = UpperBound}, Delay}. % {ok, state, timeout}
 
 %% @private
 %% @doc Handling call messages
@@ -170,7 +171,7 @@ handle_cast(_Msg, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
-handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_args = Args, iter = Iter, delay = Delay, filtering = Do_filter, warm_up = Warm_up, default_Measure = Default_m, max_iterations = Max_iterations}) ->
+handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_args = Args, iter = Iter, delay = Delay, filtering = Do_filter, warm_up = Warm_up, default_Measure = Default_m, max_iterations = Max_iterations, upperBound = UpperBound}) ->
     Default_Measure = case Warm_up of
                           true -> perform_sonar_warmup(Func, Args, Name);
                           false -> Default_m
@@ -181,7 +182,7 @@ handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_a
         {ok, Measure} ->
             if
                 Do_filter == true ->
-                    hera_filter:filter({Measure, Measure_timestamp}, Iter, Default_Measure, Name);
+                    hera_filter:filter({Measure, Measure_timestamp}, Iter, Default_Measure, Name, UpperBound);
                 true ->
                     hera:store_data(Name, node(), Iter, Measure),
                     hera:send(measure, Name, node(), Iter, {Measure, Measure_timestamp})

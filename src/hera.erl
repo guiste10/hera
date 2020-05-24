@@ -70,7 +70,7 @@ launch_app(Measurements, Calculations) ->
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
   hera_pool:start_pool(measurement_pool, length(Measurements), {hera_measure, start_link, []}),
-  Measurements_pids = [{Name, hera_pool:run(measurement_pool, [Name, maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement), maps:get(filtering, Measurement), maps:get(max_iterations, Measurement)])} || {Name, Measurement} <- Measurements],
+  Measurements_pids = [{Name, hera_pool:run(measurement_pool, [Name, maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement), maps:get(filtering, Measurement), maps:get(max_iterations, Measurement), maps:get(upperBound, Measurement)])} || {Name, Measurement} <- Measurements],
   [register(Name, Pid) || {Name, {ok, Pid}} <- Measurements_pids],
   hera_pool:start_pool(calculation_pool, length(Calculations), {hera_calculation, start_link, []}),
   Calculations_pids = [{Name, hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(args, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation)])} || {Name, Calculation} <- Calculations],
