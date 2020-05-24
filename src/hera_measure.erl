@@ -52,10 +52,10 @@ handle_info/2, code_change/3, terminate/2]).
 
 %% @private
 %% @doc Spawns the server and registers the local name (unique)
--spec(start_link(Name :: atom(), Measurement_func :: function(), Func_args :: list(any()), Delay :: integer(), Filtering :: boolean(), Max_iterations :: integer() | infinity, UpperBound :: float()) ->
+-spec(start_link(Name :: atom(), MeasurementFunc :: function(), Func_args :: list(any()), Delay :: integer(), Filtering :: boolean(), MaxIterations :: integer() | infinity, UpperBound :: float()) ->
     {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
-start_link(Name, Measurement_func, Args, Delay, Filtering, Max_iterations, UpperBound) ->
-    gen_server:start_link(?MODULE, {Name, Measurement_func, Args, Delay, Filtering, Max_iterations, UpperBound}, []).
+start_link(Name, MeasurementFunc, Args, Delay, Filtering, MaxIterations, UpperBound) ->
+    gen_server:start_link(?MODULE, {Name, MeasurementFunc, Args, Delay, Filtering, MaxIterations, UpperBound}, []).
 
 %% @private
 -spec(stop(Pid :: pid()) ->
@@ -71,15 +71,15 @@ stop(Pid) ->
 %% @param Func The measurement function to be executed
 %% @param Args The arguments of the function
 %% @param Frequency The frequency of the measurement
-%% @param Max_iterations The number of iterations to be done
+%% @param MaxIterations The number of iterations to be done
 %% @param Filtering Boolean that indicates if a filtering must be done to the data output by the function
 %%
-%% @spec restart_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), Max_iterations :: integer(), Filtering :: boolean()) -> ok.
+%% @spec restart_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec restart_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), Max_iterations :: integer(), Filtering :: boolean()) -> ok.
-restart_measurement(Name, Func, Args, Frequency, Max_iterations, Filtering) ->
-    gen_server:cast(Name, {restart, {Func, Args, Frequency, Max_iterations, Filtering}}).
+-spec restart_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
+restart_measurement(Name, Func, Args, Frequency, MaxIterations, Filtering) ->
+    gen_server:cast(Name, {restart, {Func, Args, Frequency, MaxIterations, Filtering}}).
 %%--------------------------------------------------------------------
 %% @doc
 %% Restart worker that performs the measurement <Name>
@@ -99,14 +99,14 @@ restart_measurement(Name) ->
 %%
 %% @param Name The name of the measurement
 %% @param Frequency The frequency of the measurement
-%% @param Max_iterations The number of iterations to be done
+%% @param MaxIterations The number of iterations to be done
 %%
-%% @spec restart_measurement(Name :: atom(), Frequency :: integer(), Max_iterations :: integer() | infinity) -> ok.
+%% @spec restart_measurement(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec restart_measurement(Name :: atom(), Frequency :: integer(), Max_iterations :: integer() | infinity) -> ok.
-restart_measurement(Name, Frequency, Max_iterations) ->
-    gen_server:cast(Name, {restart, {Frequency, Max_iterations}}).
+-spec restart_measurement(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity) -> ok.
+restart_measurement(Name, Frequency, MaxIterations) ->
+    gen_server:cast(Name, {restart, {Frequency, MaxIterations}}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -126,11 +126,11 @@ pause_measurement(Name) ->
 
 %% @private
 %% @doc Initializes the server
--spec(init({Name :: atom(), Measurement_func :: function(), Args :: list(any()), Delay :: integer(), Max_iterations :: integer() | infinity, UpperBound :: float()}) ->
+-spec(init({Name :: atom(), MeasurementFunc :: function(), Args :: list(any()), Delay :: integer(), MaxIterations :: integer() | infinity, UpperBound :: float()}) ->
     {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
     {stop, Reason :: term()} | ignore).
-init({Name, Measurement_func, Args, Delay, Filtering, Max_iterations, UpperBound}) ->
-    {ok, #state{name = Name, measurement_func = Measurement_func, func_args = Args, delay = Delay, iter = 0, default_Measure = {-1.0, -1}, filtering = Filtering, max_iterations = Max_iterations, upperBound = UpperBound}, Delay}. % {ok, state, timeout}
+init({Name, MeasurementFunc, Args, Delay, Filtering, MaxIterations, UpperBound}) ->
+    {ok, #state{name = Name, measurement_func = MeasurementFunc, func_args = Args, delay = Delay, iter = 0, default_Measure = {-1.0, -1}, filtering = Filtering, max_iterations = MaxIterations, upperBound = UpperBound}, Delay}. % {ok, state, timeout}
 
 %% @private
 %% @doc Handling call messages
@@ -156,10 +156,10 @@ handle_call(_Msg, _From, State) ->
     {stop, Reason :: term(), NewState :: state()}).
 handle_cast(restart, State = #state{delay = Delay}) ->
     {noreply, State, Delay};
-handle_cast({restart, {Frequency, Max_iterations}}, State) ->
-    {noreply, State#state{iter = 0, max_iterations = Max_iterations, delay = Frequency, warm_up = true, default_Measure = {-1.0, -1}}, Frequency};
-handle_cast({restart, {Func, Args, Delay, Max_iter, Filtering}}, State) ->
-    {noreply, State#state{iter = 0, measurement_func = Func, func_args = Args, max_iterations = Max_iter, delay = Delay, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}, Delay};
+handle_cast({restart, {Frequency, MaxIterations}}, State) ->
+    {noreply, State#state{iter = 0, max_iterations = MaxIterations, delay = Frequency, warm_up = true, default_Measure = {-1.0, -1}}, Frequency};
+handle_cast({restart, {Func, Args, Delay, MaxIter, Filtering}}, State) ->
+    {noreply, State#state{iter = 0, measurement_func = Func, func_args = Args, max_iterations = MaxIter, delay = Delay, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}, Delay};
 handle_cast(pause, State) ->
     {noreply, State, hibernate};
 handle_cast(_Msg, State) ->
@@ -171,26 +171,26 @@ handle_cast(_Msg, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
-handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_args = Args, iter = Iter, delay = Delay, filtering = Do_filter, warm_up = Warm_up, default_Measure = Default_m, max_iterations = Max_iterations, upperBound = UpperBound}) ->
-    Default_Measure = case Warm_up of
+handle_info(timeout, State = #state{name = Name, measurement_func = Func, func_args = Args, iter = Iter, delay = Delay, filtering = Do_filter, warm_up = WarmUp, default_Measure = DefaultM, max_iterations = MaxIterations, upperBound = UpperBound}) ->
+    DefaultMeasure = case WarmUp of
                           true -> perform_sonar_warmup(Func, Args, Name);
-                          false -> Default_m
+                          false -> DefaultM
                       end,
-    Measure_timestamp = hera:get_timestamp(),
+    MeasureTimestamp = hera:get_timestamp(),
     case erlang:apply(Func, Args) of
         {error, Reason} -> logger:error(Reason);
         {ok, Measure} ->
             if
                 Do_filter == true ->
-                    hera_filter:filter({Measure, Measure_timestamp}, Iter, Default_Measure, Name, UpperBound);
+                    hera_filter:filter({Measure, MeasureTimestamp}, Iter, DefaultMeasure, Name, UpperBound);
                 true ->
                     hera:store_data(Name, node(), Iter, Measure),
-                    hera:send(measure, Name, node(), Iter, {Measure, Measure_timestamp})
+                    hera:send(measure, Name, node(), Iter, {Measure, MeasureTimestamp})
             end
     end,
-    case Max_iterations-1 of
+    case MaxIterations-1 of
         Iter -> {noreply, State#state{iter = 0}, hibernate};
-        _ -> {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM, default_Measure = Default_Measure, warm_up = false}, Delay}
+        _ -> {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM, default_Measure = DefaultMeasure, warm_up = false}, Delay}
     end;
 
 %% We cannot use handle_info below: if that ever happens,
@@ -222,22 +222,22 @@ terminate(_Reason, _State) -> ok.
 
 %% @private
 %% @doc only perform warmup when using real sonar
--spec perform_sonar_warmup(Measure_func :: function(), Args :: list(any()), Name :: atom()) ->
-    Default_Measure :: {float(), integer()}.
-perform_sonar_warmup(Measure_func, Args, Name) ->
-    perform_sonar_warmup_aux(0, 100, 50, Measure_func, Args, Name). % hardcodé, récup 100ième mesure
+-spec perform_sonar_warmup(MeasureFunc :: function(), Args :: list(any()), Name :: atom()) ->
+    DefaultMeasure :: {float(), integer()}.
+perform_sonar_warmup(MeasureFunc, Args, Name) ->
+    perform_sonar_warmup_aux(0, 100, 50, MeasureFunc, Args, Name). % hardcodé, récup 100ième mesure
 
 % todo: make maxiter/2 unused measures, then return median of next maxiter/2 measures? or osef just send last measure?
--spec perform_sonar_warmup_aux(Iter :: integer(), Max_iter :: integer(), Delay :: integer(), Measure_func :: function(), Args :: list(any()), Name :: atom()) ->
-    Default_Measure :: {float(), integer()}.
-perform_sonar_warmup_aux(Iter, Max_iter, Delay, Measure_func, Args, Name) -> % todo, selec mediane de toutes les mesures
+-spec perform_sonar_warmup_aux(Iter :: integer(), MaxIter :: integer(), Delay :: integer(), MeasureFunc :: function(), Args :: list(any()), Name :: atom()) ->
+    DefaultMeasure :: {float(), integer()}.
+perform_sonar_warmup_aux(Iter, MaxIter, Delay, MeasureFunc, Args, Name) -> % todo, selec mediane de toutes les mesures
     if
-        Iter < Max_iter-1 ->
+        Iter < MaxIter-1 ->
             timer:sleep(Delay),
-            perform_sonar_warmup_aux(Iter+1, Max_iter, Delay, Measure_func, Args, Name);
-        Iter == Max_iter-1 ->
-            {ok, Measure} = erlang:apply(Measure_func, Args),
-            Measure_timestamp = hera:get_timestamp(),
-            hera:send(measure, Name, node(), -1, {Measure, Measure_timestamp}),
-            {Measure, Measure_timestamp}
+            perform_sonar_warmup_aux(Iter+1, MaxIter, Delay, MeasureFunc, Args, Name);
+        Iter == MaxIter-1 ->
+            {ok, Measure} = erlang:apply(MeasureFunc, Args),
+            MeasureTimestamp = hera:get_timestamp(),
+            hera:send(measure, Name, node(), -1, {Measure, MeasureTimestamp}),
+            {Measure, MeasureTimestamp}
     end.

@@ -34,10 +34,10 @@ start_link() ->
 stop(Pid) ->
     gen_server:call(Pid, stop).
 
--spec(filter(Measure :: {float(), integer()}, Iter :: integer(), Default_measure :: {float(), integer()}, Name :: atom(), UpperBound :: float()) ->
+-spec(filter(Measure :: {float(), integer()}, Iter :: integer(), DefaultMeasure :: {float(), integer()}, Name :: atom(), UpperBound :: float()) ->
     ok).
-filter(Measure, Iter, Default_measure, Name, UpperBound)->
-    gen_server:cast(?SERVER, {filter, Measure, Iter, Default_measure, Name, UpperBound}),
+filter(Measure, Iter, DefaultMeasure, Name, UpperBound)->
+    gen_server:cast(?SERVER, {filter, Measure, Iter, DefaultMeasure, Name, UpperBound}),
     ok.
 
 %%====================================================================
@@ -73,8 +73,8 @@ handle_call(_Msg, _From, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
-handle_cast({filter, Measure, Iter, Default_measure, Name, UpperBound}, State) ->
-    State2 = filter_measure(Measure, Iter, Default_measure, Name, UpperBound, State),
+handle_cast({filter, Measure, Iter, DefaultMeasure, Name, UpperBound}, State) ->
+    State2 = filter_measure(Measure, Iter, DefaultMeasure, Name, UpperBound, State),
     {noreply, State2};
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -112,30 +112,30 @@ terminate(_Reason, _State) -> ok.
 
 
 % suppose at first call that previous_measure = default distance as in hera_measure:perform_sonar_warmup_aux()
--spec(filter_measure(Measure :: {float(), integer}, Iter :: integer(), Default_measure :: {float(), integer()}, Name :: atom(), State :: state(), UpperBound :: float())->
+-spec(filter_measure(Measure :: {float(), integer}, Iter :: integer(), DefaultMeasure :: {float(), integer()}, Name :: atom(), State :: state(), UpperBound :: float())->
     State :: state()).
-filter_measure({Curr_measure_val, Measure_timestamp} = Measure, Iter, {Default_measure_val, _} = Default_measure, Name, UpperBound, State)->
-    {Prev_measure_val, Prev_measure_timestamp} = get_previous_measure(Iter, Default_measure, State#state.previous_measure),
-    Time_diff = abs(Measure_timestamp - Prev_measure_timestamp),
+filter_measure({CurrMeasureVal, MeasureTimestamp} = Measure, Iter, {DefaultMeasureVal, _} = DefaultMeasure, Name, UpperBound, State)->
+    {PrevMeasureVal, PrevMeasureTimestamp} = get_previous_measure(Iter, DefaultMeasure, State#state.previous_measure),
+    TimeDiff = abs(MeasureTimestamp - PrevMeasureTimestamp),
     DoFilter = case Name of 
-        sonar -> filter_sonar(Prev_measure_val, Curr_measure_val, Default_measure_val, UpperBound, Time_diff);  %UpperBound = 0.28, % = 10.0(km/h)/35.714 cm/ms
-        _ -> abs(Curr_measure_val - Prev_measure_val) > UpperBound*Time_diff
+        sonar -> filter_sonar(PrevMeasureVal, CurrMeasureVal, DefaultMeasureVal, UpperBound, TimeDiff);  %UpperBound = 0.28, % = 10.0(km/h)/35.714 cm/ms
+        _ -> abs(CurrMeasureVal - PrevMeasureVal) > UpperBound*TimeDiff
     end,
     if % if true then filter
         DoFilter == true ->
             State#state{num_measures = State#state.num_measures+1, num_filtered = State#state.num_filtered+1}; % keep old previous measure
         true ->
             % don't filter out
-            hera:store_data(Name, node(), Iter, Curr_measure_val),
-            hera:send(measure, Name, node(), Iter, {Curr_measure_val, Measure_timestamp}),
+            hera:store_data(Name, node(), Iter, CurrMeasureVal),
+            hera:send(measure, Name, node(), Iter, {CurrMeasureVal, MeasureTimestamp}),
             State#state{previous_measure = Measure, num_measures = State#state.num_measures+1} % don't increment numfiltered
     end.
 
--spec(is_default_measure(Measure :: float(), Default_measure :: {float(), integer()})->
+-spec(is_default_measure(Measure :: float(), DefaultMeasure :: {float(), integer()})->
     boolean()).
-is_default_measure(Measure, Default_measure)->
+is_default_measure(Measure, DefaultMeasure)->
     if
-        Default_measure - 2.54 =< Measure andalso Measure =< Default_measure + 2.54 ->
+        DefaultMeasure - 2.54 =< Measure andalso Measure =< DefaultMeasure + 2.54 ->
             true;
         true ->
             false
@@ -147,9 +147,9 @@ get_previous_measure(Iter, DefaultMeasure, PreviousMeasure) ->
         _ -> PreviousMeasure
     end.
 
-filter_sonar(Prev_measure_val, Curr_measure_val, Default_measure_val, UpperBound, Time_diff) ->
-    Prev_is_def_dist = is_default_measure(Prev_measure_val, Default_measure_val),
-    Is_def_dist = is_default_measure(Curr_measure_val, Default_measure_val),
-    Curr_measure_val > Default_measure_val + 2.54 orelse 
-    (Prev_is_def_dist == false andalso Is_def_dist == false andalso
-    abs(Curr_measure_val - Prev_measure_val) > UpperBound*Time_diff). % 0.28*(100=Time_diff) = 0.28*Time_diff cm/Time_diff ms
+filter_sonar(PrevMeasureVal, CurrMeasureVal, DefaultMeasureVal, UpperBound, TimeDiff) ->
+    PrevIsDefDist = is_default_measure(PrevMeasureVal, DefaultMeasureVal),
+    IsDefDist = is_default_measure(CurrMeasureVal, DefaultMeasureVal),
+    CurrMeasureVal > DefaultMeasureVal + 2.54 orelse 
+    (PrevIsDefDist == false andalso IsDefDist == false andalso
+    abs(CurrMeasureVal - PrevMeasureVal) > UpperBound*TimeDiff). % 0.28*(100=TimeDiff) = 0.28*TimeDiff cm/TimeDiff ms
