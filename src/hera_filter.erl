@@ -140,12 +140,8 @@ filter(Measure, Iter, Default_measure, Name, State)->
         (Prev_is_def_dist == false andalso 
         Is_def_dist == false andalso
         abs(Curr_measure_val - Prev_measure_val) > (10.0/35.714*Time_diff)) -> % diff in cm > max diff in cm between 2 intervals
-     %       erlang:display('filterOut'),
-
-        %    io:format("filter measure out ~n", []),
             State#state{num_measures = State#state.num_measures+1, num_filtered = State#state.num_filtered+1}; % keep old previous measure
         true ->
-      %      erlang:display('keep'),
             hera:store_data(Name, node(), Iter, Curr_measure_val),
             hera:send(measure, Name, node(), Iter, {Curr_measure_val, Measure_timestamp}),
             State#state{previous_measure = Measure, num_measures = State#state.num_measures+1} % don't increment numfiltered
