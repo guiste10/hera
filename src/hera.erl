@@ -309,8 +309,9 @@ pause_measurement(Name) ->
 %% @private
 -spec get_timestamp() -> integer().
 get_timestamp() ->
-  {Mega, Sec, Micro} = os:timestamp(),
-  (Mega*1000000 + Sec)*1000 + round(Micro/1000).
+  erlang:monotonic_time(millisecond).
+  %{Mega, Sec, Micro} = os:timestamp(),
+  %(Mega*1000000 + Sec)*1000 + round(Micro/1000).
 
 %% @private
 fake_sonar_get() ->

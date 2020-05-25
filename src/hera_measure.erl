@@ -225,19 +225,22 @@ terminate(_Reason, _State) -> ok.
 -spec perform_sonar_warmup(MeasureFunc :: function(), Args :: list(any()), Name :: atom()) ->
     DefaultMeasure :: {float(), integer()}.
 perform_sonar_warmup(MeasureFunc, Args, Name) ->
-    perform_sonar_warmup_aux(0, 100, 50, MeasureFunc, Args, Name). % hardcodé, récup 100ième mesure
+    perform_sonar_warmup_aux(0, 100, 50, MeasureFunc, Args, Name, []). % hardcodé, récup 100ième mesure
 
 % todo: make maxiter/2 unused measures, then return median of next maxiter/2 measures? or osef just send last measure?
--spec perform_sonar_warmup_aux(Iter :: integer(), MaxIter :: integer(), Delay :: integer(), MeasureFunc :: function(), Args :: list(any()), Name :: atom()) ->
+-spec perform_sonar_warmup_aux(Iter :: integer(), MaxNumIter :: integer(), Delay :: integer(), MeasureFunc :: function(), Args :: list(any()), Name :: atom(), Measures :: list(float())) ->
     DefaultMeasure :: {float(), integer()}.
-perform_sonar_warmup_aux(Iter, MaxIter, Delay, MeasureFunc, Args, Name) -> % todo, selec mediane de toutes les mesures
+perform_sonar_warmup_aux(Iter, MaxNumIter, Delay, MeasureFunc, Args, Name, Measures) -> % todo, selec mediane de toutes les mesures
     if
-        Iter < MaxIter-1 ->
-            timer:sleep(Delay),
-            perform_sonar_warmup_aux(Iter+1, MaxIter, Delay, MeasureFunc, Args, Name);
-        Iter == MaxIter-1 ->
+        Iter < MaxNumIter ->
             {ok, Measure} = erlang:apply(MeasureFunc, Args),
+            Measures2 = Measures ++ [Measure],
+            timer:sleep(Delay),
+            perform_sonar_warmup_aux(Iter+1, MaxNumIter, Delay, MeasureFunc, Args, Name, Measures2);
+        Iter == MaxNumIter ->
+            Measures2 = lists:sort(Measures),
+            Median = lists:nth(MaxNumIter div 2 + 1, Measures2),
             MeasureTimestamp = hera:get_timestamp(),
-            hera:send(measure, Name, node(), -1, {Measure, MeasureTimestamp}),
-            {Measure, MeasureTimestamp}
+            hera:send(measure, Name, node(), -1, {Median, MeasureTimestamp}),
+            {Median, MeasureTimestamp}
     end.
