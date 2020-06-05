@@ -131,11 +131,11 @@ filter_measure({CurrMeasureVal, MeasureTimestamp} = Measure, Iter, {DefaultMeasu
             State#state{previous_measure = Measure, num_measures = State#state.num_measures+1} % don't increment numfiltered
     end.
 
--spec(is_default_measure(Measure :: float(), DefaultMeasure :: {float(), integer()})->
+-spec(is_background_dist(Measure :: float(), DefaultMeasure :: {float(), integer()})->
     boolean()).
-is_default_measure(Measure, DefaultMeasure)->
+is_background_dist(Measure, DefaultMeasure)->
     if
-        DefaultMeasure - 2.54 =< Measure andalso Measure =< DefaultMeasure + 2.54 ->
+        DefaultMeasure - 2.54 =< Measure ->  % or 90%?
             true;
         true ->
             false
@@ -147,9 +147,9 @@ get_previous_measure(Iter, DefaultMeasure, PreviousMeasure) ->
         _ -> PreviousMeasure
     end.
 
-filter_sonar(PrevMeasureVal, CurrMeasureVal, DefaultMeasureVal, UpperBound, TimeDiff) ->
-    PrevIsDefDist = is_default_measure(PrevMeasureVal, DefaultMeasureVal),
-    IsDefDist = is_default_measure(CurrMeasureVal, DefaultMeasureVal),
-    CurrMeasureVal > DefaultMeasureVal + 2.54 orelse 
-    (PrevIsDefDist == false andalso IsDefDist == false andalso
+filter_sonar(PrevMeasureVal, CurrMeasureVal, DefaultMeasureVal, UpperBound, TimeDiff) -> % assuming valid measures are never > defaultmeasure+2.54
+    PrevIsBackDist = is_background_dist(PrevMeasureVal, DefaultMeasureVal),
+    IsDefDist = is_background_dist(CurrMeasureVal, DefaultMeasureVal),
+    IsDefDist orelse
+    (PrevIsBackDist == false andalso IsDefDist == false andalso
     abs(CurrMeasureVal - PrevMeasureVal) > UpperBound*TimeDiff). % 0.28*(100=TimeDiff) = 0.28*TimeDiff cm/TimeDiff ms
