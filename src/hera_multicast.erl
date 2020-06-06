@@ -33,7 +33,7 @@
 %%====================================================================
 
 -record(state, {
-  controlling_process :: {pid(), reference()},
+  controlling_process :: pid(),
   socket :: gen_udp:socket()
 }).
 -type state() :: #state{}.
@@ -95,7 +95,7 @@ send(Message_type, Name, Node, Seqnum, Data) ->
   {stop, Reason :: term()} | ignore).
 init([]) ->
   {ok, #state{
-    controlling_process = {undefined, undefined},
+    controlling_process = undefined,
     socket = undefined
   }}.
 
@@ -128,14 +128,14 @@ handle_cast(formation, State = #state{socket = S, controlling_process = Control}
   end,
   io:format("socket : ~p~n", [Socket]),
   ControllingProcess = case Control of
-    {undefined, undefined} ->
-      {Pid, Ref} = spawn_opt(?SERVER, receiver, [], [monitor]),
-      io:format("~nFirst Pid: ~p~nRef: ~p~n",[Pid, Ref]),
+    undefined ->
+      Pid = whereis(hera_communications),
       ok = gen_udp:controlling_process(Socket, Pid),
-      {Pid, Ref};
-    {Pid, Ref} ->
-      io:format("~nPid: ~p~nRef: ~p~n",[Pid, Ref]),
-      {Pid, Ref}
+      Pid;
+    Pid when is_pid(Pid) ->
+      Pid;
+    _ ->
+      logger:error("wrong controlling process")
   end,
   {noreply, State#state{controlling_process = ControllingProcess, socket = Socket}};
 handle_cast({send_message, Message}, State = #state{socket = Socket}) ->
