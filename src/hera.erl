@@ -159,7 +159,7 @@ get_data(Name) ->
 %%--------------------------------------------------------------------
 -spec get_recent_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float()}).
 get_recent_data(Name) ->
-  hera_sensors_data:get_data(Name).
+  hera_sensors_data:get_recent_data(Name).
 
 %%--------------------------------------------------------------------
 %% @doc
