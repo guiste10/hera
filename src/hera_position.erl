@@ -83,7 +83,7 @@ sonar_measurement(InchToCm) ->
 
 
 calc_position(NodeId) ->
-    case hera:get_data(sonar) of
+    case hera:get_recent_data(sonar) of
         {error, Reason} ->
             logger:error(Reason),
             error;
@@ -93,10 +93,10 @@ calc_position(NodeId) ->
                     logger:error(Reason),
                     error;
                 {ok, Pos} ->
-                    Nodes = lists:filter(fun(N) -> dict:is_key(N, Pos) end, dict:fetch_keys(Sonar)),
+                    Nodes = lists:filter(fun(N) -> dict:is_key(N, Pos) end, dict:fetch_keys(Sonar)), % fetch all nodes from the sonar measurements of who we received the position
                     Values = [dict:fetch(Node, Sonar) || Node <- Nodes],
                     case Values of
-                        [{_Seq1, R1}, {_Seq2, R2}] ->
+                        [{_Seq1, R1, _T1}, {_Seq2, R2, _T2}] ->
                             [
                                 {_, #{x := PosX1, y := PosY1, node_id := _NodeId1}},
                                 {_, #{x := PosX2, y := PosY2, node_id := _NodeId2}}
@@ -117,7 +117,7 @@ calc_position(NodeId) ->
                                     Result = io_lib:format("x1, ~.2f, y1, ~.2f, x2, ~.2f, y2, ~.2f", [X, Y1, X, Y2]),
                                     {ok, Result}
                             end;
-                        [{_Seq1, V1}, {_Seq2, V2}, {_Seq3, V3}] ->
+                        [{_Seq1, V1, _T1}, {_Seq2, V2, _T2}, {_Seq3, V3, _T3}] ->
                             [
                                 {_, #{x := PosX1, y := PosY1, node_id := _NodeId1}},
                                 {_, #{x := PosX2, y := PosY2, node_id := _NodeId2}},
@@ -126,7 +126,7 @@ calc_position(NodeId) ->
                             {X_p, Y_p} = trilateration({V1, PosX1, PosY1}, {V2, PosX2, PosY2}, {V3, PosX3, PosY3}),
                             Result = io_lib:format("x, ~.2f, y, ~.2f", [X_p, Y_p]),
                             {ok, Result};
-                        [{_, _}, {_, _}, {_, _}, {_, _}] ->
+                        [{_, _, _}, {_, _, _}, {_, _, _}, {_, _, _}] ->
                             Neighbors = lists:filter(fun(N) -> neighbors(NodeId, dict:fetch(N, Pos)) end, Nodes),
                             [{_Seq1, V1}, {_Seq2, V2}, {_Seq3, V3}] = [dict:fetch(Node, Sonar) || Node <- Neighbors],
                             [

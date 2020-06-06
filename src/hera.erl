@@ -22,6 +22,7 @@
 -export([send/5]).
 -export([store_data/4]).
 -export([get_data/1]).
+-export([get_recent_data/1]).
 -export([log_measure/4]).
 -export([log_calculation/4]).
 -export([get_timestamp/0]).
@@ -147,6 +148,17 @@ store_data(Name, Node, Seqnum, Data) ->
 %%--------------------------------------------------------------------
 -spec get_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float()}).
 get_data(Name) ->
+  hera_sensors_data:get_data(Name).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Retrieve the recent (+-500ms or less) data of the sensors of all nodes
+%%
+%% @spec get_data() -> dict:dict(string(), {integer(), integer() | float()})
+%% @end
+%%--------------------------------------------------------------------
+-spec get_recent_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float()}).
+get_recent_data(Name) ->
   hera_sensors_data:get_data(Name).
 
 %%--------------------------------------------------------------------
