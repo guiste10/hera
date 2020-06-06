@@ -67,7 +67,8 @@ stop(_State) -> ok.
 launch_app(Measurements, Calculations) ->
   hera_pool:start_pool(sensor_data_pool, 1, {hera_sensors_data, start_link, []}),
   hera_pool:run(sensor_data_pool, []),
-  {ok, CommPid} = hera_pool:start_pool(communicationsPool, 1, {hera_communications, start_link, []}),
+  hera_pool:start_pool(communicationsPool, 1, {hera_communications, start_link, []}),
+  {ok, CommPid} = hera_pool:run(communicationsPool, []),
   register(hera_communications, CommPid),
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
