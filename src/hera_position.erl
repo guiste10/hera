@@ -100,8 +100,8 @@ calc_position(NodeId) ->
                     case Values of
                         [{_Seq1, R1, _T1}, {_Seq2, R2, _T2}] ->
                             [
-                                {_, #{x := PosX1, y := PosY1, node_id := _NodeId1}},
-                                {_, #{x := PosX2, y := PosY2, node_id := _NodeId2}}
+                                {_, #{x := PosX1, y := PosY1, node_id := _NodeId1},_},
+                                {_, #{x := PosX2, y := PosY2, node_id := _NodeId2},_}
                             ] = [dict:fetch(Node, Pos) || Node <- Nodes],
                             Separation = math:sqrt(math:pow(PosX2-PosX1, 2) + math:pow(PosY2-PosY1, 2)),
                             R1Sq = math : pow ( R1 , 2) ,
@@ -121,9 +121,9 @@ calc_position(NodeId) ->
                             end;
                         [{_Seq1, V1, _T1}, {_Seq2, V2, _T2}, {_Seq3, V3, _T3}] ->
                             [
-                                {_, #{x := PosX1, y := PosY1, node_id := _NodeId1}},
-                                {_, #{x := PosX2, y := PosY2, node_id := _NodeId2}},
-                                {_, #{x := PosX3, y := PosY3, node_id := _NodeId3}}
+                                {_, #{x := PosX1, y := PosY1, node_id := _NodeId1},_},
+                                {_, #{x := PosX2, y := PosY2, node_id := _NodeId2},_},
+                                {_, #{x := PosX3, y := PosY3, node_id := _NodeId3},_}
                             ] = [dict:fetch(Node, Pos) || Node <- Nodes],
                             {X_p, Y_p} = trilateration({V1, PosX1, PosY1}, {V2, PosX2, PosY2}, {V3, PosX3, PosY3}),
                             Result = io_lib:format("x, ~.2f, y, ~.2f", [X_p, Y_p]),
@@ -132,9 +132,9 @@ calc_position(NodeId) ->
                             Neighbors = lists:filter(fun(N) -> neighbors(NodeId, dict:fetch(N, Pos)) end, Nodes),
                             [{_Seq1, V1}, {_Seq2, V2}, {_Seq3, V3}] = [dict:fetch(Node, Sonar) || Node <- Neighbors],
                             [
-                                {_, #{x := PosX1, y := PosY1, node_id := _NodeId1}},
-                                {_, #{x := PosX2, y := PosY2, node_id := _NodeId2}},
-                                {_, #{x := PosX3, y := PosY3, node_id := _NodeId3}}
+                                {_, #{x := PosX1, y := PosY1, node_id := _NodeId1},_},
+                                {_, #{x := PosX2, y := PosY2, node_id := _NodeId2},_},
+                                {_, #{x := PosX3, y := PosY3, node_id := _NodeId3},_}
                             ] = [dict:fetch(Node, Pos) || Node <- Neighbors],
                             {X_p, Y_p} = trilateration({V1, PosX1, PosY1}, {V2, PosX2, PosY2}, {V3, PosX3, PosY3}),
                             Result = io_lib:format("x, ~.2f, y, ~.2f", [X_p, Y_p]),
