@@ -27,6 +27,7 @@
 -export([get_timestamp/0]).
 -export([pause_calculation/1, restart_calculation/5, restart_calculation/1, restart_calculation/3]).
 -export([restart_measurement/6, restart_measurement/1, restart_measurement/3, pause_measurement/1]).
+-export([get_registered_name/2]).
 
 % Callbacks
 -export([start/2]).
@@ -69,11 +70,15 @@ launch_app(Measurements, Calculations) ->
   hera_pool:run(sensor_data_pool, []),
   hera_pool:start_pool(communicationsPool, 1, {hera_communications, start_link, []}),
   hera_pool:run(communicationsPool, []),
+  SynchronizationPoolLength = lists:foldl(fun(E, Acc) -> B = maps:get(synchronization, E), if B -> Acc+1; true -> Acc end end, 0, Measurements),
+  hera_pool:start_pool(synchronizationPool, SynchronizationPoolLength, {hera_synchronization, start_link, []}),
+  SynchronizationPids = [{Name, hera_pool:run(synchronizationPool, [Name])} || {Name, _Measurement} <- Measurements],
+  [register_process(Name, "syn", Pid) || {Name, {ok, Pid}} <- SynchronizationPids],
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
   hera_pool:start_pool(measurement_pool, length(Measurements), {hera_measure, start_link, []}),
   MeasurementsPids = [{Name, hera_pool:run(measurement_pool, [Name, maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement), maps:get(filtering, Measurement), maps:get(max_iterations, Measurement), maps:get(upperBound, Measurement)])} || {Name, Measurement} <- Measurements],
-  [register(Name, Pid) || {Name, {ok, Pid}} <- MeasurementsPids],
+  [register_process(Name, "measure", Pid) || {Name, {ok, Pid}} <- MeasurementsPids],
   hera_pool:start_pool(calculation_pool, length(Calculations), {hera_calculation, start_link, []}),
   CalculationsPids = [{Name, hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(args, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation)])} || {Name, Calculation} <- Calculations],
   [register(Name, Pid) || {Name, {ok, Pid}} <- CalculationsPids],
@@ -318,3 +323,11 @@ get_timestamp() ->
 %% @private
 fake_sonar_get() ->
   float(rand:uniform(10)).
+
+%% @private
+register_process(Name, Type, Pid) ->
+  NewName = list_to_atom(string:concat(atom_to_list(Name), Type)),
+  register(NewName, Pid).
+
+get_registered_name(Name, Type) ->
+  list_to_atom(string:concat(atom_to_list(Name), Type)).

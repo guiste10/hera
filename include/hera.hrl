@@ -34,6 +34,7 @@
       args => list(any()),
       frequency => integer(),
       filtering => boolean(),
-      max_iterations => integer() | infinity
+      max_iterations => integer() | infinity,
+      synchronization => boolean()
     }
   }.
