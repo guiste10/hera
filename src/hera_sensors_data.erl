@@ -164,7 +164,7 @@ handle_call({get_recent_data, Name}, _From, State = #state{data = Data}) ->
   Dict = case maps:is_key(Name, Data) of
           true -> 
             Dict0 =  maps:get(Name, Data),
-            dict:filter(fun(_Node, {_Seqnum, _MeasureVal, MeasureTime}) -> abs(MeasureTime - hera:get_timestamp()) =< 1000 end, Dict0); % only keep values that were stored less than 1000ms ago
+            dict:filter(fun(_Node, {_Seqnum, _MeasureVal, MeasureTime}) -> abs(MeasureTime - hera:get_timestamp()) =< 100000 end, Dict0); % only keep values that were stored less than 100sec ago
           false -> {error, "Not yet values for this name"}
   end,
   {reply, Dict, State};
