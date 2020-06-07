@@ -41,10 +41,10 @@ launch_hera(PosX, PosY, NodeId) ->
     Measurements = [
         {sonar, #{func => fun(InchToCm) -> sonar_measurement(InchToCm) end, args => [2.54], frequency => 100, 
         filtering => true, upperBound => 0.28,
-         max_iterations => 150}},
+         max_iterations => 100}},
         {pos, #{func => fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, args => [], frequency => 50, filtering => false, upperBound => 0.28, max_iterations => 3}}
     ],
-    %Calculations = [{position, #{func => fun(Id) -> calc_position(Id) end, args => [NodeId], frequency => 100, max_iterations => 400}}],
+    %Calculations = [{position, #{func => fun(Id) -> calc_position(Id) end, args => [NodeId], frequency => 100, max_iterations => 150}}],
     Calculations = [], % no calculation
     hera:launch_app(Measurements, Calculations).
 
@@ -84,8 +84,8 @@ sonar_measurement(InchToCm) ->
 
 
 calc_position(NodeId) ->
-    case hera:get_data(sonar) of
-    %case hera:get_recent_data(sonar) of
+    %case hera:get_data(sonar) of
+    case hera:get_recent_data(sonar) of
         {error, Reason} ->
             logger:error(Reason),
             error;
