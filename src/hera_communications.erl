@@ -103,29 +103,47 @@ code_change(_OldVsn, State = #state{}, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
-
+%% @private
+%% @doc handles the messages received by udp multicast
+%% measurements
+handle_message({measure, Name, {Node, Iter, Measure}}) when os:type == {unix, rtems} ->
+  %% if it is a GRiSP board, don't log the measures, only save the most recent one
+  %% in order to perform a computation
+  hera:store_data(Name, Node, Iter, element(1, Measure));
 handle_message({measure, Name, {Node, Iter, Measure}}) ->
-  case os:type() of
-    %% if it is a GRiSP board, don't log the measures, only save the most recent one
-    %% in order to perform a computation
-    {unix,rtems} ->
-      hera:store_data(Name, Node, Iter, element(1, Measure));
-    _ -> %% if it is a computer, only log the measures, don't need to
-      hera:log_measure(Name, Node, Iter, Measure)
+  %% if it is a computer, only log the measures, don't need to
+  hera:log_measure(Name, Node, Iter, Measure);
+handle_message({measure, Name, {Node, Iter, Measure}, Order}) when os:type == {unix, rtems} ->
+  {{value, Item}, Q} = queue:out_r(Order), %% pop front item
+  NewOrder = queue:in_r(Item, Q), %% add the front item to the end of the queue
+  hera_synchronization:update_order(Name, NewOrder),
+  hera:store_data(Name, Node, Iter, element(1, Measure)),
+  ThisNode = node(),
+  case Item of
+    %% if we are the front item, its our turn to trigger the measurement
+    ThisNode -> hera_measure:trigger_measurement(Name);
+    _ -> ok
   end;
-handle_message({calc, Name, {Node, Iter, Res}}) ->
-  case os:type() of
-    {unix, rtems} ->
-      ok;
-    _ ->
-      hera:log_calculation(Name, Node, Iter, Res)
-  end;
+
+handle_message({measure, Name, {Node, Iter, Measure}, _Order}) ->
+  hera:log_measure(Name, Node, Iter, Measure);
+
+%% calculations
+handle_message({calc, Name, {Node, Iter, Res}}) when os:type =/= {unix, rtems}->
+  hera:log_calculation(Name, Node, Iter, Res);
+
+%% keep_alive messages
 handle_message({keep_alive, Node}) ->
   ets:insert(alive_nodes, {Node, hera:get_timestamp()});
+
+%% measurement phase messages
 handle_message({measurement_phase, Name, Phase, Node}) ->
   ets:insert(measurement_phase_nodes, {{Name, Node}, Phase}),
-  update_sync_phase(Name).
-
+  update_sync_phase(Name);
+handle_message({measurement_phase, Name, Phase, Node, Order}) ->
+  ets:insert(measurement_phase_nodes, {{Name, Node}, Phase}),
+  update_sync_phase(Name),
+  hera_synchronization:update_order(Name, Order).
 
 
 %% @private

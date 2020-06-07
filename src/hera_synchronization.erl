@@ -19,11 +19,13 @@
   code_change/3]).
 
 -export([send_measurement_phase_information/2, send_measurement_phase/1]).
+-export([update_order/2, get_order/1]).
 
 -define(SERVER, ?MODULE).
 
 -record(state, {
-  name :: atom()
+  name :: atom(),
+  node_order :: queue:queue()
 }).
 
 %%%===================================================================
@@ -39,6 +41,12 @@ start_link(Name) ->
 send_measurement_phase_information(Name, Phase) ->
   gen_server:call(hera:get_registered_name(Name, "syn"), {send_meas_phase, Phase}).
 
+get_order(Name) ->
+  gen_server:call(hera:get_registered_name(Name, "syn"), get_order).
+
+update_order(Name, Order) ->
+  gen_server:call(hera:get_registered_name(Name, "syn"), {update_order, Order}).
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -50,7 +58,7 @@ send_measurement_phase_information(Name, Phase) ->
   {stop, Reason :: term()} | ignore).
 init(Name) ->
   {_Pid, _Ref} = spawn_opt(?SERVER, send_measurement_phase, [Name], [monitor]),
-  {ok, #state{name = Name}}.
+  {ok, #state{name = Name, node_order = queue:new()}}.
 
 %% @private
 %% @doc Handling call messages
@@ -62,9 +70,13 @@ init(Name) ->
   {noreply, NewState :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term(), Reply :: term(), NewState :: #state{}} |
   {stop, Reason :: term(), NewState :: #state{}}).
-handle_call({send_meas_phase, Phase}, _From, State = #state{name = Name}) ->
-  hera_multicast:send({measurement_phase, Name, Phase, node()}),
+handle_call({send_meas_phase, Phase}, _From, State = #state{name = Name, node_order = Order}) ->
+  hera_multicast:send({measurement_phase, Name, Phase, node(), Order}),
   {reply, ok, State};
+handle_call(get_order, _From, State = #state{node_order = Order}) ->
+  {reply, Order, State};
+handle_call({update_order, Order}, _From, State) ->
+  {reply, ok, State#state{node_order = Order}};
 handle_call(_Request, _From, State = #state{}) ->
   {reply, ok, State}.
 

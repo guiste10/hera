@@ -192,6 +192,9 @@ handle_call(is_in_measurement, _From, State = #state{measurement_phase = MP}) ->
     {reply, MP, State};
 handle_call({sync_phase, Phase}, _From, State) ->
     {reply, ok, State#state{synchronization_phase = Phase}};
+handle_call(trigger, _From, State) ->
+    measure(State),
+    {reply, ok, State};
 handle_call(_Msg, _From, State) ->
     {noreply, State}.
 
@@ -301,10 +304,13 @@ measure(State = #state{name = Name
                     hera_filter:filter({Measure, MeasureTimestamp}, Iter, DefaultMeasure, Name, UpperBound);
                 true ->
                     hera:store_data(Name, node(), Iter, Measure),
-                    hera:send(measure, Name, node(), Iter, {Measure, MeasureTimestamp})
+                    hera_multicast:send({measure, Name, {node(), Iter, {Measure, MeasureTimestamp}}, hera_synchronization:get_order(Name)})
             end
     end,
     case MaxIterations-1 of
-        Iter -> {noreply, State#state{iter = 0, measurement_phase = false}, hibernate};
+        Iter ->
+            NewQueue = queue:filter(fun(Item) -> Item =/= node() end, hera_synchronization:get_order(Name)),
+            hera_synchronization:update_order(Name, NewQueue),
+            {noreply, State#state{iter = 0, measurement_phase = false}, hibernate};
         _ -> {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM, default_Measure = DefaultMeasure, warm_up = false}, Delay}
     end.
