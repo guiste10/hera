@@ -225,7 +225,7 @@ terminate(_Reason, _State) -> ok.
 -spec perform_sonar_warmup(MeasureFunc :: function(), Args :: list(any()), Name :: atom()) ->
     DefaultMeasure :: {float(), integer()}.
 perform_sonar_warmup(MeasureFunc, Args, Name) ->
-    perform_sonar_warmup_aux(0, 200, 50, MeasureFunc, Args, Name, []). % hardcodé, récup 100ième mesure
+    perform_sonar_warmup_aux(0, 200, 50, MeasureFunc, Args, Name, []). % hardcodé
 
 % todo: make maxiter/2 unused measures, then return median of next maxiter/2 measures? or osef just send last measure?
 -spec perform_sonar_warmup_aux(Iter :: integer(), MaxNumIter :: integer(), Delay :: integer(), MeasureFunc :: function(), Args :: list(any()), Name :: atom(), Measures :: list(float())) ->
