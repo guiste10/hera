@@ -45,7 +45,8 @@ start_link() ->
 init([]) ->
   ets:new(alive_nodes, [named_table, public, ordered_set]),
   ets:new(measurement_phase_nodes, [public, ordered_set, named_table]),
-  {_Pid, _Ref} = spawn_opt(?SERVER, check_alive_nodes, [], [monitor]),
+  {Pid, _Ref} = spawn_opt(?SERVER, check_alive_nodes, [], [monitor]),
+  register(check_alive_nodes, Pid),
   {ok, #state{}}.
 
 %% @private

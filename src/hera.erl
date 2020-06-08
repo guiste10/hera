@@ -66,25 +66,41 @@ stop(_State) -> ok.
 %% -------------------------------------------------------------------
 -spec launch_app(Measurements :: list(measurement()), Calculations :: list(calculation())) -> ok.
 launch_app(Measurements, Calculations) ->
+  %% starts hera_sensors_data
   hera_pool:start_pool(sensor_data_pool, 1, {hera_sensors_data, start_link, []}),
   hera_pool:run(sensor_data_pool, []),
+
+  %% starts hera_communications
   hera_pool:start_pool(communicationsPool, 1, {hera_communications, start_link, []}),
   hera_pool:run(communicationsPool, []),
+
+  %% starts hera_multicast
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
+  %%starts multicast
+  clusterize(),
+
+  %% starts hera_synchronization
   SynchronizationPoolLength = lists:foldl(fun({_Name, E}, Acc) -> B = maps:get(synchronization, E), if B -> Acc+1; true -> Acc end end, 0, Measurements),
   hera_pool:start_pool(synchronizationPool, SynchronizationPoolLength, {hera_synchronization, start_link, []}),
   SynchronizationPids = [{Name, hera_pool:run(synchronizationPool, [Name])} || {Name, _Measurement} <- Measurements],
   [register_process(Name, "syn", Pid) || {Name, {ok, Pid}} <- SynchronizationPids],
+
+  %% starts hera_filter
+  FilterDataPoolLength = lists:foldl(fun({_Name, E}, Acc) -> B = maps:get(filtering, E), if B -> Acc+1; true -> Acc end end, 0, Measurements),
+  hera_pool:start_pool(filter_data_pool, FilterDataPoolLength, {hera_filter, start_link, []}),
+  FilterDataPids = [{Name, hera_pool:run(filter_data_pool, [])} || {Name, _} <- Measurements],
+  [register_process(Name, "filter", Pid) || {Name, {ok, Pid}} <- FilterDataPids],
+
+  %% starts hera_measure
   hera_pool:start_pool(measurement_pool, length(Measurements), {hera_measure, start_link, []}),
   MeasurementsPids = [{Name, hera_pool:run(measurement_pool, [Name, maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement), maps:get(filtering, Measurement), maps:get(max_iterations, Measurement), maps:get(upperBound, Measurement), maps:get(synchronization, Measurement)])} || {Name, Measurement} <- Measurements],
   [register_process(Name, "measure", Pid) || {Name, {ok, Pid}} <- MeasurementsPids],
+
+  %% start hera_calculation
   hera_pool:start_pool(calculation_pool, length(Calculations), {hera_calculation, start_link, []}),
   CalculationsPids = [{Name, hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(args, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation)])} || {Name, Calculation} <- Calculations],
-  [register(Name, Pid) || {Name, {ok, Pid}} <- CalculationsPids],
-  hera_pool:start_pool(filter_data_pool, 1, {hera_filter, start_link, []}),
-  hera_pool:run(filter_data_pool, []),
-  clusterize().
+  [register(Name, Pid) || {Name, {ok, Pid}} <- CalculationsPids].
 
 %% -------------------------------------------------------------------
 %% @doc
@@ -330,4 +346,4 @@ register_process(Name, Type, Pid) ->
   register(NewName, Pid).
 
 get_registered_name(Name, Type) ->
-  list_to_atom(string:concat(atom_to_list(Name), Type)).
+  list_to_atom(string:concat(string:concat(atom_to_list(Name), "_"), Type)).

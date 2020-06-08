@@ -75,7 +75,8 @@ update_measurement_phase(Name, Phase) ->
   {ok, State :: #state{}} | {ok, State :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
 init(Name) ->
-  {_Pid, _Ref} = spawn_opt(?SERVER, send_measurement_phase, [Name], [monitor]),
+  {Pid, _Ref} = spawn_opt(?SERVER, send_measurement_phase, [Name], [monitor]),
+  register(hera:get_registered_name(Name, "mp"), Pid),
   {ok, #state{name = Name, node_order = queue:new(), measurement_phase = false}}.
 
 %% @private

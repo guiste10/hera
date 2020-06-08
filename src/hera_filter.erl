@@ -37,7 +37,7 @@ stop(Pid) ->
 -spec(filter(Measure :: {float(), integer()}, Iter :: integer(), DefaultMeasure :: {float(), integer()}, Name :: atom(), UpperBound :: float(), Synchronization :: boolean()) ->
     ok).
 filter(Measure, Iter, DefaultMeasure, Name, UpperBound, Synchronization)->
-    gen_server:cast(?SERVER, {filter, Measure, Iter, DefaultMeasure, Name, UpperBound, Synchronization}),
+    gen_server:cast(hera:get_registered_name(Name, "filter"), {filter, Measure, Iter, DefaultMeasure, Name, UpperBound, Synchronization}),
     ok.
 
 %%====================================================================
