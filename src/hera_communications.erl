@@ -106,18 +106,18 @@ code_change(_OldVsn, State = #state{}, _Extra) ->
 %% @private
 %% @doc handles the messages received by udp multicast
 %% measurements
-handle_message({measure, Name, {Node, Iter, Measure}}, OsType) when OsType == {unix, rtems} ->
+handle_message({measure, Name, {Node, Iter, {Measure, _Timestamp}}}, OsType) when OsType == {unix, rtems} ->
   %% if it is a GRiSP board, don't log the measures, only save the most recent one
   %% in order to perform a computation
-  hera:store_data(Name, Node, Iter, element(1, Measure));
+  hera:store_data(Name, Node, Iter, Measure);
 handle_message({measure, Name, {Node, Iter, Measure}}, _OsType) ->
   %% if it is a computer, only log the measures, don't need to
   hera:log_measure(Name, Node, Iter, Measure);
-handle_message({measure, Name, {Node, Iter, Measure}, Order}, OsType) when OsType == {unix, rtems} ->
+handle_message({measure, Name, {Node, Iter, {Measure, _Timestamp}}, Order}, OsType) when OsType == {unix, rtems} ->
   {{value, Item}, Q} = queue:out_r(Order), %% pop front item
   NewOrder = queue:in_r(Item, Q), %% add the front item to the end of the queue
   hera_synchronization:update_order(Name, NewOrder),
-  hera:store_data(Name, Node, Iter, element(1, Measure)),
+  hera:store_data(Name, Node, Iter, Measure),
   ThisNode = node(),
   case Item of
     %% if we are the front item, its our turn to trigger the measurement

@@ -128,7 +128,7 @@ filter_measure({CurrMeasureVal, MeasureTimestamp} = Measure, Iter, {DefaultMeasu
             % don't filter out
             hera:store_data(Name, node(), Iter, CurrMeasureVal),
             if
-                Synchronization -> hera_multicast:send({measure, Name, {node(), Iter, {Measure, MeasureTimestamp}}, hera_synchronization:get_order(Name)});
+                Synchronization -> hera_multicast:send({measure, Name, {node(), Iter, {CurrMeasureVal, MeasureTimestamp}}, hera_synchronization:get_order(Name)});
                 true -> hera:send(measure, Name, node(), Iter, {CurrMeasureVal, MeasureTimestamp})
             end,
             State#state{previous_measure = Measure, num_measures = State#state.num_measures+1} % don't increment numfiltered
