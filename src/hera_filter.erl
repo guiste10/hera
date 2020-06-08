@@ -29,7 +29,7 @@ handle_info/2, code_change/3, terminate/2]).
 -spec(start_link() ->
     {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+    gen_server:start_link(?MODULE, [], []).
 
 stop(Pid) ->
     gen_server:call(Pid, stop).
