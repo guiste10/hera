@@ -76,9 +76,12 @@ restart_measurement(Frequency, MaxIterations) ->
 %%%===================================================================
 
 sonar_measurement(InchToCm) ->
+    grisp_led:color(1, blue),
     case pmod_maxsonar:get() of
         undefined -> {error, "pmod_maxsonar not set up correctly"};
-        Value -> {ok, Value*InchToCm}
+        Value ->
+            grisp_led:color(1, red),
+            {ok, Value*InchToCm}
     end.
 
 
