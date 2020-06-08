@@ -45,6 +45,7 @@ launch_hera(PosX, PosY, NodeId, DoFilter) ->
         {pos, #{func => fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, args => [], frequency => 50, filtering => false, upperBound => 0.28, max_iterations => 3, synchronization => false}}
     ],
     Calculations = [{position, #{func => fun(Id) -> calc_position(Id) end, args => [NodeId], frequency => 100, max_iterations => 400}}],
+    pmod_maxsonar:set_mode(single),
     hera:launch_app(Measurements, Calculations).
 
 launch_hera(PosX, PosY, NodeId, Frequency, MaxIteration) ->
@@ -56,6 +57,7 @@ launch_hera(PosX, PosY, NodeId, Frequency, MaxIteration) ->
     ],
     Calculations = [{position, #{func => fun(Id) -> calc_position(Id) end, args => [NodeId], frequency => Frequency, max_iterations => MaxIteration}}],
     %Calculations = [], % no calculation
+    pmod_maxsonar:set_mode(single),
     hera:launch_app(Measurements, Calculations).
 
 launch_hera_shell() ->
