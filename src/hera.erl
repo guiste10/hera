@@ -81,15 +81,15 @@ launch_app(Measurements, Calculations) ->
   clusterize(),
 
   %% starts hera_synchronization
-  SynchronizationPoolLength = lists:foldl(fun({_Name, E}, Acc) -> B = maps:get(synchronization, E), if B -> Acc+1; true -> Acc end end, 0, Measurements),
-  hera_pool:start_pool(synchronizationPool, SynchronizationPoolLength, {hera_synchronization, start_link, []}),
-  SynchronizationPids = [{Name, hera_pool:run(synchronizationPool, [Name])} || {Name, _Measurement} <- Measurements],
+  SyncProcesses = lists:filter(fun({_Name, E}) -> maps:get(synchronization, E) end, Measurements),
+  hera_pool:start_pool(synchronizationPool, length(SyncProcesses), {hera_synchronization, start_link, []}),
+  SynchronizationPids = [{Name, hera_pool:run(synchronizationPool, [Name])} || {Name, _Measurement} <- SyncProcesses],
   [register_process(Name, "syn", Pid) || {Name, {ok, Pid}} <- SynchronizationPids],
 
   %% starts hera_filter
-  FilterDataPoolLength = lists:foldl(fun({_Name, E}, Acc) -> B = maps:get(filtering, E), if B -> Acc+1; true -> Acc end end, 0, Measurements),
-  hera_pool:start_pool(filter_data_pool, FilterDataPoolLength, {hera_filter, start_link, []}),
-  FilterDataPids = [{Name, hera_pool:run(filter_data_pool, [])} || {Name, _} <- Measurements],
+  FilterDataProcesses = lists:filter(fun({_Name, E}) -> maps:get(filtering, E) end, Measurements),,
+  hera_pool:start_pool(filter_data_pool, length(FilterDataProcesses), {hera_filter, start_link, []}),
+  FilterDataPids = [{Name, hera_pool:run(filter_data_pool, [])} || {Name, _Measurement} <- FilterDataProcesses],
   [register_process(Name, "filter", Pid) || {Name, {ok, Pid}} <- FilterDataPids],
 
   %% starts hera_measure
@@ -342,7 +342,7 @@ fake_sonar_get() ->
 
 %% @private
 register_process(Name, Type, Pid) ->
-  NewName = list_to_atom(string:concat(atom_to_list(Name), Type)),
+  NewName = list_to_atom(string:concat(string:concat(atom_to_list(Name), "_"), Type)),
   register(NewName, Pid).
 
 get_registered_name(Name, Type) ->
