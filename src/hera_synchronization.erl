@@ -59,11 +59,11 @@ update_order(Name, Order) ->
 %%--------------------------------------------------------------------
 -spec is_in_measurement_phase(Name :: atom()) -> boolean().
 is_in_measurement_phase(Name) ->
-  gen_server:call(hera:get_registered_name(Name, "measure"), is_in_measurement).
+  gen_server:call(hera:get_registered_name(Name, "syn"), is_in_measurement).
 
 -spec update_measurement_phase(Name :: atom(), Phase :: boolean()) -> any().
 update_measurement_phase(Name, Phase) ->
-  gen_server:call(Name, {update_meas_phase, Phase}).
+  gen_server:call(hera:get_registered_name(Name, "syn"), {update_meas_phase, Phase}).
 
 %%%===================================================================
 %%% gen_server callbacks
