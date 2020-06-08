@@ -185,7 +185,7 @@ handle_call(stop, _From, State) ->
 handle_call({sync_phase, Phase}, _From, State) ->
     {reply, ok, State#state{synchronization_phase = Phase}};
 handle_call(trigger, _From, State) ->
-    measure(State, true),
+    measure(State),
     {reply, ok, State};
 handle_call(_Msg, _From, State) ->
     {noreply, State}.
@@ -228,10 +228,8 @@ handle_cast(_Msg, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
-handle_info(timeout, State = #state{synchronization = false}) ->
-    measure(State, false);
-handle_info(timeout, State = #state{synchronization_phase = false, synchronization = true}) ->
-    measure(State, true);
+handle_info(timeout, State = #state{synchronization_phase = false}) ->
+    measure(State);
 
 %% We cannot use handle_info below: if that ever happens,
 %% we cancel the timeouts (Delay) and basically zombify
@@ -294,7 +292,8 @@ measure(State = #state{name = Name
     , warm_up = WarmUp
     , default_Measure = DefaultM
     , max_iterations = MaxIterations
-    , upperBound = UpperBound}, true) ->
+    , upperBound = UpperBound
+    , synchronization = true}) ->
     DefaultMeasure = case WarmUp of
                          true -> perform_sonar_warmup(Func, Args, Name);
                          false -> DefaultM
@@ -305,7 +304,7 @@ measure(State = #state{name = Name
         {ok, Measure} ->
             if
                 Do_filter == true ->
-                    hera_filter:filter({Measure, MeasureTimestamp}, Iter, DefaultMeasure, Name, UpperBound);
+                    hera_filter:filter({Measure, MeasureTimestamp}, Iter, DefaultMeasure, Name, UpperBound, true);
                 true ->
                     hera:store_data(Name, node(), Iter, Measure),
                     hera_multicast:send({measure, Name, {node(), Iter, {Measure, MeasureTimestamp}}, hera_synchronization:get_order(Name)})
@@ -328,7 +327,8 @@ measure(State = #state{name = Name
     , warm_up = WarmUp
     , default_Measure = DefaultM
     , max_iterations = MaxIterations
-    , upperBound = UpperBound}, false) ->
+    , upperBound = UpperBound
+    , synchronization = false}) ->
     DefaultMeasure = case WarmUp of
                          true -> perform_sonar_warmup(Func, Args, Name);
                          false -> DefaultM
@@ -339,7 +339,7 @@ measure(State = #state{name = Name
         {ok, Measure} ->
             if
                 Do_filter == true ->
-                    hera_filter:filter({Measure, MeasureTimestamp}, Iter, DefaultMeasure, Name, UpperBound);
+                    hera_filter:filter({Measure, MeasureTimestamp}, Iter, DefaultMeasure, Name, UpperBound, false);
                 true ->
                     hera:store_data(Name, node(), Iter, Measure),
                     hera_multicast:send({measure, Name, {node(), Iter, {Measure, MeasureTimestamp}}})

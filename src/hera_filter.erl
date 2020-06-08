@@ -1,6 +1,6 @@
 -module(hera_filter).
 -behaviour(gen_server).
--export([start_link/0, stop/1, filter/5]).
+-export([start_link/0, stop/1, filter/6]).
 -export([init/1, handle_call/3, handle_cast/2,
 handle_info/2, code_change/3, terminate/2]).
 
@@ -34,10 +34,10 @@ start_link() ->
 stop(Pid) ->
     gen_server:call(Pid, stop).
 
--spec(filter(Measure :: {float(), integer()}, Iter :: integer(), DefaultMeasure :: {float(), integer()}, Name :: atom(), UpperBound :: float()) ->
+-spec(filter(Measure :: {float(), integer()}, Iter :: integer(), DefaultMeasure :: {float(), integer()}, Name :: atom(), UpperBound :: float(), Synchronization :: boolean()) ->
     ok).
-filter(Measure, Iter, DefaultMeasure, Name, UpperBound)->
-    gen_server:cast(?SERVER, {filter, Measure, Iter, DefaultMeasure, Name, UpperBound}),
+filter(Measure, Iter, DefaultMeasure, Name, UpperBound, Synchronization)->
+    gen_server:cast(?SERVER, {filter, Measure, Iter, DefaultMeasure, Name, UpperBound, Synchronization}),
     ok.
 
 %%====================================================================
@@ -73,8 +73,8 @@ handle_call(_Msg, _From, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
-handle_cast({filter, Measure, Iter, DefaultMeasure, Name, UpperBound}, State) ->
-    State2 = filter_measure(Measure, Iter, DefaultMeasure, Name, UpperBound, State),
+handle_cast({filter, Measure, Iter, DefaultMeasure, Name, UpperBound, Synchronization}, State) ->
+    State2 = filter_measure(Measure, Iter, DefaultMeasure, Name, UpperBound, Synchronization, State),
     {noreply, State2};
 handle_cast(_Msg, State) ->
     {noreply, State}.
@@ -112,9 +112,9 @@ terminate(_Reason, _State) -> ok.
 
 
 % suppose at first call that previous_measure = default distance as in hera_measure:perform_sonar_warmup_aux()
--spec(filter_measure(Measure :: {float(), integer}, Iter :: integer(), DefaultMeasure :: {float(), integer()}, Name :: atom(), State :: state(), UpperBound :: float())->
+-spec(filter_measure(Measure :: {float(), integer}, Iter :: integer(), DefaultMeasure :: {float(), integer()}, Name :: atom(), State :: state(), UpperBound :: float(), Synchronization :: boolean())->
     State :: state()).
-filter_measure({CurrMeasureVal, MeasureTimestamp} = Measure, Iter, {DefaultMeasureVal, _} = DefaultMeasure, Name, UpperBound, State)->
+filter_measure({CurrMeasureVal, MeasureTimestamp} = Measure, Iter, {DefaultMeasureVal, _} = DefaultMeasure, Name, UpperBound, Synchronization, State)->
     {PrevMeasureVal, PrevMeasureTimestamp} = get_previous_measure(Iter, DefaultMeasure, State#state.previous_measure),
     TimeDiff = abs(MeasureTimestamp - PrevMeasureTimestamp),
     DoFilter = case Name of 
@@ -127,7 +127,10 @@ filter_measure({CurrMeasureVal, MeasureTimestamp} = Measure, Iter, {DefaultMeasu
         true ->
             % don't filter out
             hera:store_data(Name, node(), Iter, CurrMeasureVal),
-            hera:send(measure, Name, node(), Iter, {CurrMeasureVal, MeasureTimestamp}),
+            if
+                Synchronization -> hera_multicast:send({measure, Name, {node(), Iter, {Measure, MeasureTimestamp}}, hera_synchronization:get_order(Name)});
+                true -> hera:send(measure, Name, node(), Iter, {CurrMeasureVal, MeasureTimestamp})
+            end,
             State#state{previous_measure = Measure, num_measures = State#state.num_measures+1} % don't increment numfiltered
     end.
 
