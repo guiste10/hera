@@ -234,9 +234,9 @@ handle_cast(_Msg, State) ->
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
 handle_info(timeout, State = #state{synchronization = false}) ->
-    measure(State);
+    measure(State, false);
 handle_info(timeout, State = #state{synchronization_phase = false, synchronization = true}) ->
-    measure(State);
+    measure(State, true);
 
 %% We cannot use handle_info below: if that ever happens,
 %% we cancel the timeouts (Delay) and basically zombify
@@ -299,7 +299,7 @@ measure(State = #state{name = Name
     , warm_up = WarmUp
     , default_Measure = DefaultM
     , max_iterations = MaxIterations
-    , upperBound = UpperBound}) ->
+    , upperBound = UpperBound}, true) ->
     DefaultMeasure = case WarmUp of
                          true -> perform_sonar_warmup(Func, Args, Name);
                          false -> DefaultM
@@ -321,6 +321,37 @@ measure(State = #state{name = Name
             NewQueue = queue:filter(fun(Item) -> Item =/= node() end, hera_synchronization:get_order(Name)),
             hera_synchronization:update_order(Name, NewQueue),
             hera_synchronization:update_measurement_phase(Name, false),
+            {noreply, State#state{iter = 0}, hibernate};
+        _ -> {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM, default_Measure = DefaultMeasure, warm_up = false}, Delay}
+    end;
+measure(State = #state{name = Name
+    , measurement_func = Func
+    , func_args = Args
+    , iter = Iter
+    , delay = Delay
+    , filtering = Do_filter
+    , warm_up = WarmUp
+    , default_Measure = DefaultM
+    , max_iterations = MaxIterations
+    , upperBound = UpperBound}, false) ->
+    DefaultMeasure = case WarmUp of
+                         true -> perform_sonar_warmup(Func, Args, Name);
+                         false -> DefaultM
+                     end,
+    MeasureTimestamp = hera:get_timestamp(),
+    case erlang:apply(Func, Args) of
+        {error, Reason} -> logger:error(Reason);
+        {ok, Measure} ->
+            if
+                Do_filter == true ->
+                    hera_filter:filter({Measure, MeasureTimestamp}, Iter, DefaultMeasure, Name, UpperBound);
+                true ->
+                    hera:store_data(Name, node(), Iter, Measure),
+                    hera_multicast:send({measure, Name, {node(), Iter, {Measure, MeasureTimestamp}}})
+            end
+    end,
+    case MaxIterations-1 of
+        Iter ->
             {noreply, State#state{iter = 0}, hibernate};
         _ -> {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM, default_Measure = DefaultMeasure, warm_up = false}, Delay}
     end.
