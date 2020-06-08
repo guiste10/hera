@@ -151,9 +151,9 @@ handle_message({measurement_phase, Name, Phase, Node, Order}, _OsType) ->
 check_alive_nodes() ->
   %% If we have not receive a keep_alive message from a node during the past 500 ms,
   %% the node is removed from the alive_nodes list
-  [Dead_Nodes] = [ets:take(alive_nodes, N) || {N, T} <- ets:tab2list(alive_nodes), hera:get_timestamp()-T > 500],
+  Dead_Nodes = [ets:take(alive_nodes, N) || {N, T} <- ets:tab2list(alive_nodes), hera:get_timestamp()-T > 500],
   %% remove dead nodes from the measurement_phase_node table
-  [ets:match_delete(measurement_phase_nodes, {{'_', N}, '_'}) || N <- Dead_Nodes],
+  [ets:match_delete(measurement_phase_nodes, {{'_', N}, '_'}) || {N, _} <- lists:flatten(Dead_Nodes)],
   timer:sleep(500),
   check_alive_nodes().
 
