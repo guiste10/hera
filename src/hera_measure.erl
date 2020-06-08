@@ -220,7 +220,7 @@ handle_cast(pause, State = #state{name = Name, synchronization = true}) ->
 handle_cast(pause, State = #state{synchronization = false}) ->
     {noreply, State, hibernate};
 handle_cast(trigger, State) ->
-    case measure(State) of
+    case measure(State, true) of
         {noreply, State, hibernate} -> {reply, ok, State, hibernate};
         {noreply, State} -> {reply, ok, State}
     end;
