@@ -185,7 +185,7 @@ handle_call(stop, _From, State) ->
 handle_call({sync_phase, Phase}, _From, State) ->
     {reply, ok, State#state{synchronization_phase = Phase}};
 handle_call(trigger, _From, State) ->
-    measure(State),
+    measure(State, true),
     {reply, ok, State};
 handle_call(_Msg, _From, State) ->
     {noreply, State}.
@@ -219,11 +219,6 @@ handle_cast(pause, State = #state{name = Name, synchronization = true}) ->
     {noreply, State, hibernate};
 handle_cast(pause, State = #state{synchronization = false}) ->
     {noreply, State, hibernate};
-handle_cast(trigger, State) ->
-    case measure(State, true) of
-        {noreply, State, hibernate} -> {reply, ok, State, hibernate};
-        {noreply, State} -> {reply, ok, State}
-    end;
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
