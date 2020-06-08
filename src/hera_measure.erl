@@ -15,7 +15,7 @@
 
 -include("hera.hrl").
 
--export([start_link/7, stop/1]).
+-export([start_link/8, stop/1]).
 
 -export([pause_measurement/1, restart_measurement/1, restart_measurement/3, restart_measurement/6]).
 -export([trigger_measurement/1]).
@@ -45,6 +45,7 @@ handle_info/2, code_change/3, terminate/2]).
     warm_up = true :: boolean(),
     max_iterations :: integer() | infinity,
     upperBound :: float(),
+    synchronization :: boolean(),
     synchronization_phase :: boolean()
 }).
 -type state() :: #state{}.
@@ -55,10 +56,10 @@ handle_info/2, code_change/3, terminate/2]).
 
 %% @private
 %% @doc Spawns the server and registers the local name (unique)
--spec(start_link(Name :: atom(), MeasurementFunc :: function(), Func_args :: list(any()), Delay :: integer(), Filtering :: boolean(), MaxIterations :: integer() | infinity, UpperBound :: float()) ->
+-spec(start_link(Name :: atom(), MeasurementFunc :: function(), Func_args :: list(any()), Delay :: integer(), Filtering :: boolean(), MaxIterations :: integer() | infinity, UpperBound :: float(), Synchronization :: boolean()) ->
     {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
-start_link(Name, MeasurementFunc, Args, Delay, Filtering, MaxIterations, UpperBound) ->
-    gen_server:start_link(?MODULE, {Name, MeasurementFunc, Args, Delay, Filtering, MaxIterations, UpperBound}, []).
+start_link(Name, MeasurementFunc, Args, Delay, Filtering, MaxIterations, UpperBound, Synchronization) ->
+    gen_server:start_link(?MODULE, {Name, MeasurementFunc, Args, Delay, Filtering, MaxIterations, UpperBound, Synchronization}, []).
 
 %% @private
 -spec(stop(Pid :: pid()) ->
@@ -145,12 +146,17 @@ update_sync_phase(Name, Phase) ->
 
 %% @private
 %% @doc Initializes the server
--spec(init({Name :: atom(), MeasurementFunc :: function(), Args :: list(any()), Delay :: integer(), MaxIterations :: integer() | infinity, UpperBound :: float()}) ->
+-spec(init({Name :: atom(), MeasurementFunc :: function(), Args :: list(any()), Delay :: integer(), MaxIterations :: integer() | infinity, UpperBound :: float(), Synchronization :: boolean()}) ->
     {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
     {stop, Reason :: term()} | ignore).
-init({Name, MeasurementFunc, Args, Delay, Filtering, MaxIterations, UpperBound}) ->
-    hera_synchronization:update_order(Name, queue:in_r(node(), hera_synchronization:get_order(Name))),
-    hera_synchronization:update_measurement_phase(Name, true),
+init({Name, MeasurementFunc, Args, Delay, Filtering, MaxIterations, UpperBound, Synchronization}) ->
+    case Synchronization of
+        true ->
+            hera_synchronization:update_order(Name, queue:in_r(node(), hera_synchronization:get_order(Name))),
+            hera_synchronization:update_measurement_phase(Name, true);
+        false ->
+            ok
+    end,
     {ok, #state{name = Name
         , measurement_func = MeasurementFunc
         , func_args = Args
@@ -160,6 +166,7 @@ init({Name, MeasurementFunc, Args, Delay, Filtering, MaxIterations, UpperBound})
         , filtering = Filtering
         , max_iterations = MaxIterations
         , upperBound = UpperBound
+        , synchronization = Synchronization
         , synchronization_phase = false}, Delay}.
 
 %% @private
@@ -189,20 +196,28 @@ handle_call(_Msg, _From, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
-handle_cast(restart, State = #state{delay = Delay, name = Name}) ->
+handle_cast(restart, State = #state{delay = Delay, name = Name, synchronization = true}) ->
     hera_synchronization:update_order(Name, queue:in_r(node(), hera_synchronization:get_order(Name))),
     hera_synchronization:update_measurement_phase(Name, true),
     {noreply, State, Delay};
-handle_cast({restart, {Frequency, MaxIterations}}, State = #state{name = Name}) ->
+handle_cast(restart, State = #state{delay = Delay, synchronization = false}) ->
+    {noreply, State, Delay};
+handle_cast({restart, {Frequency, MaxIterations}}, State = #state{name = Name, synchronization = true}) ->
     hera_synchronization:update_order(Name, queue:in_r(node(), hera_synchronization:get_order(Name))),
     hera_synchronization:update_measurement_phase(Name, true),
     {noreply, State#state{iter = 0, max_iterations = MaxIterations, delay = Frequency, warm_up = true, default_Measure = {-1.0, -1}}, Frequency};
-handle_cast({restart, {Func, Args, Delay, MaxIter, Filtering}}, State = #state{name = Name}) ->
+handle_cast({restart, {Frequency, MaxIterations}}, State = #state{synchronization = false}) ->
+    {noreply, State#state{iter = 0, max_iterations = MaxIterations, delay = Frequency, warm_up = true, default_Measure = {-1.0, -1}}, Frequency};
+handle_cast({restart, {Func, Args, Delay, MaxIter, Filtering}}, State = #state{name = Name, synchronization = true}) ->
     hera_synchronization:update_order(Name, queue:in_r(node(), hera_synchronization:get_order(Name))),
     hera_synchronization:update_measurement_phase(Name, true),
     {noreply, State#state{iter = 0, measurement_func = Func, func_args = Args, max_iterations = MaxIter, delay = Delay, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}, Delay};
-handle_cast(pause, State = #state{name = Name}) ->
+handle_cast({restart, {Func, Args, Delay, MaxIter, Filtering}}, State = #state{synchronization = false}) ->
+    {noreply, State#state{iter = 0, measurement_func = Func, func_args = Args, max_iterations = MaxIter, delay = Delay, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}, Delay};
+handle_cast(pause, State = #state{name = Name, synchronization = true}) ->
     hera_synchronization:update_measurement_phase(Name, false),
+    {noreply, State, hibernate};
+handle_cast(pause, State = #state{synchronization = false}) ->
     {noreply, State, hibernate};
 handle_cast(trigger, State) ->
     case measure(State) of
@@ -218,7 +233,9 @@ handle_cast(_Msg, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
-handle_info(timeout, State = #state{synchronization_phase = false}) ->
+handle_info(timeout, State = #state{synchronization = false}) ->
+    measure(State);
+handle_info(timeout, State = #state{synchronization_phase = false, synchronization = true}) ->
     measure(State);
 
 %% We cannot use handle_info below: if that ever happens,
