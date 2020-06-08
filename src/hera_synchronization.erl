@@ -18,14 +18,15 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
   code_change/3]).
 
--export([send_measurement_phase_information/2, send_measurement_phase/1]).
+-export([send_measurement_phase_information/2, send_measurement_phase/1, is_in_measurement_phase/1, update_measurement_phase/2]).
 -export([update_order/2, get_order/1]).
 
 -define(SERVER, ?MODULE).
 
 -record(state, {
   name :: atom(),
-  node_order :: queue:queue()
+  node_order :: queue:queue(),
+  measurement_phase :: boolean()
 }).
 
 %%%===================================================================
@@ -47,6 +48,23 @@ get_order(Name) ->
 update_order(Name, Order) ->
   gen_server:call(hera:get_registered_name(Name, "syn"), {update_order, Order}).
 
+%%--------------------------------------------------------------------
+%% @doc
+%% Return true if the node is in measurement phase for measurement <Name>
+%%
+%% @param Name The name of the measurement
+%%
+%% @spec is_in_measurement_phase(Name :: atom()) -> boolean().
+%% @end
+%%--------------------------------------------------------------------
+-spec is_in_measurement_phase(Name :: atom()) -> boolean().
+is_in_measurement_phase(Name) ->
+  gen_server:call(hera:get_registered_name(Name, "measure"), is_in_measurement).
+
+-spec update_measurement_phase(Name :: atom(), Phase :: boolean()) -> any().
+update_measurement_phase(Name, Phase) ->
+  gen_server:call(Name, {update_meas_phase, Phase}).
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -58,7 +76,7 @@ update_order(Name, Order) ->
   {stop, Reason :: term()} | ignore).
 init(Name) ->
   {_Pid, _Ref} = spawn_opt(?SERVER, send_measurement_phase, [Name], [monitor]),
-  {ok, #state{name = Name, node_order = queue:new()}}.
+  {ok, #state{name = Name, node_order = queue:new(), measurement_phase = false}}.
 
 %% @private
 %% @doc Handling call messages
@@ -77,6 +95,10 @@ handle_call(get_order, _From, State = #state{node_order = Order}) ->
   {reply, Order, State};
 handle_call({update_order, Order}, _From, State) ->
   {reply, ok, State#state{node_order = Order}};
+handle_call(is_in_measurement, _From, State = #state{measurement_phase = MP}) ->
+  {reply, MP, State};
+handle_call({update_meas_phase, Phase}, _From, State) ->
+  {reply, ok, State#state{measurement_phase = Phase}};
 handle_call(_Request, _From, State = #state{}) ->
   {reply, ok, State}.
 
@@ -123,10 +145,6 @@ code_change(_OldVsn, State = #state{}, _Extra) ->
 %% @private
 %% @doc send every 40ms if the node is in measurement phase or not
 send_measurement_phase(Name) ->
-  try hera_measure:is_in_measurement_phase(Name) of
-       Phase -> send_measurement_phase_information(Name, Phase)
-  catch
-      _  -> ok
-  end,
+  hera_synchronization:send_measurement_phase_information(Name, hera_synchronization:is_in_measurement_phase(Name)),
   timer:sleep(40),
   send_measurement_phase(Name).

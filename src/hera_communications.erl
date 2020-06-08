@@ -50,7 +50,7 @@ init([]) ->
 
 %% @private
 %% @doc Handling call messages
--spec(handle_call(Request :: term(), From :: {pid(), Tag :: ter()},
+-spec(handle_call(Request :: term(), From :: {pid(), Tag :: term()},
     State :: #state{}) ->
   {reply, Reply :: term(), NewState :: #state{}} |
   {reply, Reply :: term(), NewState :: #state{}, timeout() | hibernate} |
@@ -77,7 +77,7 @@ handle_cast(_Request, State = #state{}) ->
   {noreply, NewState :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: #state{}}).
 handle_info({udp, _Sock, _IP, _InPortNo, Packet}, State) ->
-  handle_message(binary_to_term(Packet)),
+  handle_message(binary_to_term(Packet), os:type()),
   {noreply, State};
 handle_info(_Info, State) ->
   {noreply, State}.
@@ -106,14 +106,14 @@ code_change(_OldVsn, State = #state{}, _Extra) ->
 %% @private
 %% @doc handles the messages received by udp multicast
 %% measurements
-handle_message({measure, Name, {Node, Iter, Measure}}) when os:type == {unix, rtems} ->
+handle_message({measure, Name, {Node, Iter, Measure}}, OsType) when OsType == {unix, rtems} ->
   %% if it is a GRiSP board, don't log the measures, only save the most recent one
   %% in order to perform a computation
   hera:store_data(Name, Node, Iter, element(1, Measure));
-handle_message({measure, Name, {Node, Iter, Measure}}) ->
+handle_message({measure, Name, {Node, Iter, Measure}}, _OsType) ->
   %% if it is a computer, only log the measures, don't need to
   hera:log_measure(Name, Node, Iter, Measure);
-handle_message({measure, Name, {Node, Iter, Measure}, Order}) when os:type == {unix, rtems} ->
+handle_message({measure, Name, {Node, Iter, Measure}, Order}, OsType) when OsType == {unix, rtems} ->
   {{value, Item}, Q} = queue:out_r(Order), %% pop front item
   NewOrder = queue:in_r(Item, Q), %% add the front item to the end of the queue
   hera_synchronization:update_order(Name, NewOrder),
@@ -125,22 +125,22 @@ handle_message({measure, Name, {Node, Iter, Measure}, Order}) when os:type == {u
     _ -> ok
   end;
 
-handle_message({measure, Name, {Node, Iter, Measure}, _Order}) ->
+handle_message({measure, Name, {Node, Iter, Measure}, _Order}, _OsType) ->
   hera:log_measure(Name, Node, Iter, Measure);
 
 %% calculations
-handle_message({calc, Name, {Node, Iter, Res}}) when os:type =/= {unix, rtems}->
+handle_message({calc, Name, {Node, Iter, Res}}, OsType) when OsType =/= {unix, rtems}->
   hera:log_calculation(Name, Node, Iter, Res);
 
 %% keep_alive messages
-handle_message({keep_alive, Node}) ->
+handle_message({keep_alive, Node}, _OsType) ->
   ets:insert(alive_nodes, {Node, hera:get_timestamp()});
 
 %% measurement phase messages
-handle_message({measurement_phase, Name, Phase, Node}) ->
+handle_message({measurement_phase, Name, Phase, Node}, _OsType) ->
   ets:insert(measurement_phase_nodes, {{Name, Node}, Phase}),
   update_sync_phase(Name);
-handle_message({measurement_phase, Name, Phase, Node, Order}) ->
+handle_message({measurement_phase, Name, Phase, Node, Order}, _OsType) ->
   ets:insert(measurement_phase_nodes, {{Name, Node}, Phase}),
   update_sync_phase(Name),
   hera_synchronization:update_order(Name, Order).

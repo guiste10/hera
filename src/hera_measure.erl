@@ -19,7 +19,7 @@
 
 -export([pause_measurement/1, restart_measurement/1, restart_measurement/3, restart_measurement/6]).
 -export([trigger_measurement/1]).
--export([is_in_measurement_phase/1, update_sync_phase/2]).
+-export([update_sync_phase/2]).
 
 -export([init/1, handle_call/3, handle_cast/2,
 handle_info/2, code_change/3, terminate/2]).
@@ -45,7 +45,6 @@ handle_info/2, code_change/3, terminate/2]).
     warm_up = true :: boolean(),
     max_iterations :: integer() | infinity,
     upperBound :: float(),
-    measurement_phase :: boolean(),
     synchronization_phase :: boolean()
 }).
 -type state() :: #state{}.
@@ -138,19 +137,6 @@ pause_measurement(Name) ->
 trigger_measurement(Name) ->
     gen_server:call(hera:get_registered_name(Name, "measure"), trigger).
 
-%%--------------------------------------------------------------------
-%% @doc
-%% Return true if the node is in measurement phase for measurement <Name>
-%%
-%% @param Name The name of the measurement
-%%
-%% @spec is_in_measurement_phase(Name :: atom()) -> boolean().
-%% @end
-%%--------------------------------------------------------------------
--spec is_in_measurement_phase(Name :: atom()) -> boolean().
-is_in_measurement_phase(Name) ->
-    gen_server:call(hera:get_registered_name(Name, "measure"), is_in_measurement).
-
 update_sync_phase(Name, Phase) ->
     gen_server:call(hera:get_registered_name(Name, "measure"), {sync_phase, Phase}).
 %%====================================================================
@@ -163,6 +149,8 @@ update_sync_phase(Name, Phase) ->
     {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
     {stop, Reason :: term()} | ignore).
 init({Name, MeasurementFunc, Args, Delay, Filtering, MaxIterations, UpperBound}) ->
+    hera_synchronization:update_order(Name, queue:in_r(node(), hera_synchronization:get_order(Name))),
+    hera_synchronization:update_measurement_phase(Name, true),
     {ok, #state{name = Name
         , measurement_func = MeasurementFunc
         , func_args = Args
@@ -172,7 +160,6 @@ init({Name, MeasurementFunc, Args, Delay, Filtering, MaxIterations, UpperBound})
         , filtering = Filtering
         , max_iterations = MaxIterations
         , upperBound = UpperBound
-        , measurement_phase = true
         , synchronization_phase = false}, Delay}.
 
 %% @private
@@ -188,8 +175,6 @@ handle_call(get_default_measure, _From, State) ->
     {reply, State#state.default_Measure, State};
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
-handle_call(is_in_measurement, _From, State = #state{measurement_phase = MP}) ->
-    {reply, MP, State};
 handle_call({sync_phase, Phase}, _From, State) ->
     {reply, ok, State#state{synchronization_phase = Phase}};
 handle_call(trigger, _From, State) ->
@@ -204,14 +189,21 @@ handle_call(_Msg, _From, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
-handle_cast(restart, State = #state{delay = Delay}) ->
-    {noreply, State#state{measurement_phase = true}, Delay};
-handle_cast({restart, {Frequency, MaxIterations}}, State) ->
-    {noreply, State#state{iter = 0, max_iterations = MaxIterations, delay = Frequency, warm_up = true, default_Measure = {-1.0, -1}, measurement_phase = true}, Frequency};
-handle_cast({restart, {Func, Args, Delay, MaxIter, Filtering}}, State) ->
-    {noreply, State#state{iter = 0, measurement_func = Func, func_args = Args, max_iterations = MaxIter, delay = Delay, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}, measurement_phase = true}, Delay};
-handle_cast(pause, State) ->
-    {noreply, State#state{measurement_phase = false}, hibernate};
+handle_cast(restart, State = #state{delay = Delay, name = Name}) ->
+    hera_synchronization:update_order(Name, queue:in_r(node(), hera_synchronization:get_order(Name))),
+    hera_synchronization:update_measurement_phase(Name, true),
+    {noreply, State, Delay};
+handle_cast({restart, {Frequency, MaxIterations}}, State = #state{name = Name}) ->
+    hera_synchronization:update_order(Name, queue:in_r(node(), hera_synchronization:get_order(Name))),
+    hera_synchronization:update_measurement_phase(Name, true),
+    {noreply, State#state{iter = 0, max_iterations = MaxIterations, delay = Frequency, warm_up = true, default_Measure = {-1.0, -1}}, Frequency};
+handle_cast({restart, {Func, Args, Delay, MaxIter, Filtering}}, State = #state{name = Name}) ->
+    hera_synchronization:update_order(Name, queue:in_r(node(), hera_synchronization:get_order(Name))),
+    hera_synchronization:update_measurement_phase(Name, true),
+    {noreply, State#state{iter = 0, measurement_func = Func, func_args = Args, max_iterations = MaxIter, delay = Delay, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}, Delay};
+handle_cast(pause, State = #state{name = Name}) ->
+    hera_synchronization:update_measurement_phase(Name, false),
+    {noreply, State, hibernate};
 handle_cast(trigger, State) ->
     case measure(State) of
         {noreply, State, hibernate} -> {reply, ok, State, hibernate};
@@ -311,6 +303,7 @@ measure(State = #state{name = Name
         Iter ->
             NewQueue = queue:filter(fun(Item) -> Item =/= node() end, hera_synchronization:get_order(Name)),
             hera_synchronization:update_order(Name, NewQueue),
-            {noreply, State#state{iter = 0, measurement_phase = false}, hibernate};
+            hera_synchronization:update_measurement_phase(Name, false),
+            {noreply, State#state{iter = 0}, hibernate};
         _ -> {noreply, State#state{iter = Iter+1 rem ?MAX_SEQNUM, default_Measure = DefaultMeasure, warm_up = false}, Delay}
     end.
