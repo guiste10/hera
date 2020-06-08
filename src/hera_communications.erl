@@ -143,8 +143,9 @@ handle_message({measurement_phase, Name, Phase, Node}, _OsType) ->
 handle_message({measurement_phase, Name, Phase, Node, Order}, _OsType) ->
   ets:insert(measurement_phase_nodes, {{Name, Node}, Phase}),
   update_sync_phase(Name),
-  hera_synchronization:update_order(Name, Order).
-
+  hera_synchronization:update_order(Name, Order);
+handle_message(_Other, _OsType) ->
+  ok.
 
 %% @private
 %% @doc check every 500 ms if other nodes are alive
