@@ -70,7 +70,7 @@ launch_app(Measurements, Calculations) ->
   hera_pool:run(sensor_data_pool, []),
   hera_pool:start_pool(communicationsPool, 1, {hera_communications, start_link, []}),
   hera_pool:run(communicationsPool, []),
-  SynchronizationPoolLength = lists:foldl(fun(E, Acc) -> B = maps:get(synchronization, E), if B -> Acc+1; true -> Acc end end, 0, Measurements),
+  SynchronizationPoolLength = lists:foldl(fun({_Name, E}, Acc) -> B = maps:get(synchronization, E), if B -> Acc+1; true -> Acc end end, 0, Measurements),
   hera_pool:start_pool(synchronizationPool, SynchronizationPoolLength, {hera_synchronization, start_link, []}),
   SynchronizationPids = [{Name, hera_pool:run(synchronizationPool, [Name])} || {Name, _Measurement} <- Measurements],
   [register_process(Name, "syn", Pid) || {Name, {ok, Pid}} <- SynchronizationPids],
