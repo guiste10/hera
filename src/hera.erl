@@ -147,7 +147,7 @@ store_data(Name, Node, Seqnum, Data) ->
 %% @spec get_data() -> dict:dict(string(), {integer(), integer() | float()})
 %% @end
 %%--------------------------------------------------------------------
--spec get_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float()}).
+-spec get_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float(), integer()}).
 get_data(Name) ->
   hera_sensors_data:get_data(Name).
 
@@ -158,7 +158,7 @@ get_data(Name) ->
 %% @spec get_data() -> dict:dict(string(), {integer(), integer() | float()})
 %% @end
 %%--------------------------------------------------------------------
--spec get_recent_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float()}).
+-spec get_recent_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float(), integer()}).
 get_recent_data(Name) ->
   hera_sensors_data:get_recent_data(Name).
 

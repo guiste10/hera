@@ -68,7 +68,7 @@ stop(Pid) ->
 %% @spec get_data() -> dict:dict(string(), {integer(), integer() | float()})
 %% @end
 %%--------------------------------------------------------------------
--spec get_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float()}).
+-spec get_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float(), integer()}).
 get_data(Name) ->
   gen_server:call(?MODULE, {get_data, Name}).
 
@@ -80,7 +80,7 @@ get_data(Name) ->
 %% @spec get_data() -> dict:dict(string(), {integer(), integer() | float()})
 %% @end
 %%--------------------------------------------------------------------
--spec get_recent_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float()}).
+-spec get_recent_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float(), integer()}).
 get_recent_data(Name) ->
   gen_server:call(?MODULE, {get_recent_data, Name}).
 
@@ -163,8 +163,8 @@ handle_call({get_data, Name}, _From, State = #state{data = Data}) ->
 handle_call({get_recent_data, Name}, _From, State = #state{data = Data}) ->
   Dict = case maps:is_key(Name, Data) of
           true -> 
-            Dict0 =  maps:get(Name, Data),
-            dict:filter(fun(_Node, {_Seqnum, _MeasureVal, MeasureTime}) -> abs(MeasureTime - hera:get_timestamp()) =< 100000 end, Dict0); % only keep values that were stored less than 100sec ago
+            Dict0 = maps:get(Name, Data),
+            {ok, dict:filter(fun(_Node, {_Seqnum, _MeasureVal, MeasureTime}) -> abs(MeasureTime - hera:get_timestamp()) =< 500 end, Dict0)}; % only keep values that were stored less than 0.5sec ago
           false -> {error, "Not yet values for this name"}
   end,
   {reply, Dict, State};
