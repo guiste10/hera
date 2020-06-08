@@ -87,7 +87,7 @@ launch_app(Measurements, Calculations) ->
   [register_process(Name, "syn", Pid) || {Name, {ok, Pid}} <- SynchronizationPids],
 
   %% starts hera_filter
-  FilterDataProcesses = lists:filter(fun({_Name, E}) -> maps:get(filtering, E) end, Measurements),,
+  FilterDataProcesses = lists:filter(fun({_Name, E}) -> maps:get(filtering, E) end, Measurements),
   hera_pool:start_pool(filter_data_pool, length(FilterDataProcesses), {hera_filter, start_link, []}),
   FilterDataPids = [{Name, hera_pool:run(filter_data_pool, [])} || {Name, _Measurement} <- FilterDataProcesses],
   [register_process(Name, "filter", Pid) || {Name, {ok, Pid}} <- FilterDataPids],
