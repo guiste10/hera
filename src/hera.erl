@@ -69,6 +69,10 @@ launch_app(Measurements, Calculations) ->
   hera_pool:start_pool(sensor_data_pool, 1, {hera_sensors_data, start_link, []}),
   hera_pool:run(sensor_data_pool, []),
 
+  %% starts hera_communications
+  hera_pool:start_pool(communicationsPool, 1, {hera_communications, start_link, []}),
+  hera_pool:run(communicationsPool, []),
+
   %% starts hera_multicast
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),

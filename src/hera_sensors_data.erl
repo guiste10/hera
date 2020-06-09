@@ -43,7 +43,6 @@
   measures_logger_configs :: ets:tid(),
   calculations_logger_configs :: ets:tid()
 }).
--type state() :: #state{}.
 
 %%%===================================================================
 %%% API
@@ -55,10 +54,6 @@
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start_link() ->
   gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
-
-%% @private
-stop(Pid) ->
-  gen_server:call(Pid, stop).
 
 %%--------------------------------------------------------------------
 %% @doc

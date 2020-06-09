@@ -33,7 +33,7 @@
 %%====================================================================
 
 -record(state, {
-  controlling_process :: {pid(), reference()},
+  controlling_process :: pid(),
   socket :: gen_udp:socket()
 }).
 -type state() :: #state{}.
@@ -95,7 +95,7 @@ send(Message_type, Name, Node, Seqnum, Data) ->
   {stop, Reason :: term()} | ignore).
 init([]) ->
   {ok, #state{
-    controlling_process = {undefined, undefined},
+    controlling_process = undefined,
     socket = undefined
   }}.
 
@@ -109,6 +109,15 @@ init([]) ->
   {noreply, NewState :: state(), timeout() | hibernate} |
   {stop, Reason :: term(), Reply :: term(), NewState :: state()} |
   {stop, Reason :: term(), NewState :: state()}).
+handle_call({send_message, Message}, _From, State = #state{socket = Socket}) ->
+  case Socket of
+    undefined ->
+      io:format("Socket not yet started~n"),
+      ok;
+    Sock ->
+      gen_udp:send(Sock, ?MULTICAST_ADDR, ?MULTICAST_PORT, Message)
+  end,
+  {noreply, ok, State};
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
@@ -128,26 +137,16 @@ handle_cast(formation, State = #state{socket = S, controlling_process = Control}
   end,
   io:format("socket : ~p~n", [Socket]),
   ControllingProcess = case Control of
-    {undefined, undefined} ->
-      {Pid, Ref} = spawn_opt(?SERVER, receiver, [], [monitor]),
-      io:format("~nFirst Pid: ~p~nRef: ~p~n",[Pid, Ref]),
-      ok = gen_udp:controlling_process(Socket, Pid),
-      {Pid, Ref};
-    {Pid, Ref} ->
-      io:format("~nPid: ~p~nRef: ~p~n",[Pid, Ref]),
-      {Pid, Ref}
-  end,
-  {noreply, State#state{controlling_process = ControllingProcess, socket = Socket}};
-handle_cast({send_message, Message}, State = #state{socket = Socket}) ->
-  %io:format("mc handle_cast send message~n"),
-  case Socket of
-    undefined ->
-      io:format("Socket not yet started~n"),
-      ok;
-    Sock ->
-      gen_udp:send(Sock, ?MULTICAST_ADDR, ?MULTICAST_PORT, Message)
-  end,
-  {noreply, State}.
+     undefined ->
+       Pid = whereis(hera_communications),
+       ok = gen_udp:controlling_process(Socket, Pid),
+       Pid;
+     Pid when is_pid(Pid) ->
+       Pid;
+     _ ->
+       logger:error("wrong controlling process")
+   end,
+  {noreply, State#state{controlling_process = ControllingProcess, socket = Socket}}.
 
 
 %% @private
