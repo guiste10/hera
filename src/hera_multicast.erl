@@ -82,7 +82,7 @@ formation() ->
 %% -------------------------------------------------------------------
 -spec send(Message_type :: calc | measure, Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: term()) -> ok.
 send(Message_type, Name, Node, Seqnum, Data) ->
-  gen_server:cast(?SERVER, {send_message, term_to_binary({Message_type, Name, {Node, Seqnum, Data}})}).
+  gen_server:call(?SERVER, {send_message, term_to_binary({Message_type, Name, {Node, Seqnum, Data}})}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -201,32 +201,3 @@ open() ->
     {add_membership, {?MULTICAST_ADDR, OwnAddr}} %join a multicast group and use the specified network interface
   ]),
   Sock.
-
-%% @private
-%% @doc Function that handles received udp multicast messages
-receiver() ->
-  receive
-    {udp, _Sock, _IP, _InPortNo, Packet} ->
-      case binary_to_term(Packet) of
-        {measure, Name, {Node, Iter, Measure}} ->
-          case os:type() of
-            %% if it is a GRiSP board, don't log the measures, only save the most recent one
-            %% in order to perform a computation
-            {unix,rtems} ->
-              hera:store_data(Name, Node, Iter, element(1, Measure));
-            _ -> %% if it is a computer, only log the measures, don't need to
-              hera:log_measure(Name, Node, Iter, Measure)
-          end;
-        {calc, Name, {Node, Iter, Res}} ->
-          case os:type() of
-            {unix, rtems} ->
-              ok;
-            _ ->
-              hera:log_calculation(Name, Node, Iter, Res)
-          end
-      end,
-      receiver();
-    stop -> true;
-    AnythingElse -> io:format("RECEIVED: ~p~n", [AnythingElse]),
-      receiver()
-  end.
