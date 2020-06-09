@@ -40,7 +40,7 @@
 launch_hera(PosX, PosY, NodeId) ->
     Measurements = [
         {sonar, #{func => fun(InchToCm) -> sonar_measurement(InchToCm) end, args => [2.54], frequency => 100, 
-        filtering => true, upperBound => 0.28,
+        filtering => true, upperBound => 0.14,
          max_iterations => 100}},
         {pos, #{func => fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, args => [], frequency => 50, filtering => false, upperBound => 0.28, max_iterations => 3}}
     ],
@@ -51,7 +51,7 @@ launch_hera(PosX, PosY, NodeId) ->
 launch_hera(PosX, PosY, NodeId, Frequency, MaxIteration) ->
     Measurements = [
         {sonar, #{func => fun(InchToCm) -> sonar_measurement(InchToCm) end, args => [2.54], frequency => Frequency, 
-        filtering => true, upperBound => 0.28,
+        filtering => true, upperBound => 0.14,
         max_iterations => MaxIteration}},
         {pos, #{func => fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, args => [], frequency => 5000, filtering => false, upperBound => 0.28, max_iterations => 3}}
     ],
