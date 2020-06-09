@@ -153,6 +153,7 @@ init({Name, MeasurementFunc, Args, Delay, Filtering, MaxIterations, UpperBound, 
     case Synchronization of
         true ->
             hera_synchronization:update_order(Name, queue:in_r(node(), hera_synchronization:get_order(Name))),
+            hera_synchronization:send_measurement_phase_information(Name, true),
             hera_synchronization:update_measurement_phase(Name, true);
         false ->
             ok
@@ -198,23 +199,27 @@ handle_call(_Msg, _From, State) ->
     {stop, Reason :: term(), NewState :: state()}).
 handle_cast(restart, State = #state{delay = Delay, name = Name, synchronization = true}) ->
     hera_synchronization:update_order(Name, queue:in_r(node(), hera_synchronization:get_order(Name))),
+    hera_synchronization:send_measurement_phase_information(Name, true),
     hera_synchronization:update_measurement_phase(Name, true),
     {noreply, State, Delay};
 handle_cast(restart, State = #state{delay = Delay, synchronization = false}) ->
     {noreply, State, Delay};
 handle_cast({restart, {Frequency, MaxIterations}}, State = #state{name = Name, synchronization = true}) ->
     hera_synchronization:update_order(Name, queue:in_r(node(), hera_synchronization:get_order(Name))),
+    hera_synchronization:send_measurement_phase_information(Name, true),
     hera_synchronization:update_measurement_phase(Name, true),
     {noreply, State#state{iter = 0, max_iterations = MaxIterations, delay = Frequency, warm_up = true, default_Measure = {-1.0, -1}}, Frequency};
 handle_cast({restart, {Frequency, MaxIterations}}, State = #state{synchronization = false}) ->
     {noreply, State#state{iter = 0, max_iterations = MaxIterations, delay = Frequency, warm_up = true, default_Measure = {-1.0, -1}}, Frequency};
 handle_cast({restart, {Func, Args, Delay, MaxIter, Filtering}}, State = #state{name = Name, synchronization = true}) ->
     hera_synchronization:update_order(Name, queue:in_r(node(), hera_synchronization:get_order(Name))),
+    hera_synchronization:send_measurement_phase_information(Name, true),
     hera_synchronization:update_measurement_phase(Name, true),
     {noreply, State#state{iter = 0, measurement_func = Func, func_args = Args, max_iterations = MaxIter, delay = Delay, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}, Delay};
 handle_cast({restart, {Func, Args, Delay, MaxIter, Filtering}}, State = #state{synchronization = false}) ->
     {noreply, State#state{iter = 0, measurement_func = Func, func_args = Args, max_iterations = MaxIter, delay = Delay, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}, Delay};
 handle_cast(pause, State = #state{name = Name, synchronization = true}) ->
+    hera_synchronization:send_measurement_phase_information(Name, false),
     hera_synchronization:update_measurement_phase(Name, false),
     {noreply, State, hibernate};
 handle_cast(pause, State = #state{synchronization = false}) ->

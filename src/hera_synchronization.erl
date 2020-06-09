@@ -76,7 +76,7 @@ update_measurement_phase(Name, Phase) ->
   {stop, Reason :: term()} | ignore).
 init(Name) ->
   {Pid, _Ref} = spawn_opt(?SERVER, send_measurement_phase, [Name], [monitor]),
-  register(hera:get_registered_name(Name, "mp"), Pid),
+  register(hera:get_registered_name(Name, "mp"), Pid), %%TODO understand why this process eventually crash
   {ok, #state{name = Name, node_order = queue:new(), measurement_phase = false}}.
 
 %% @private
@@ -147,6 +147,7 @@ code_change(_OldVsn, State = #state{}, _Extra) ->
 %% @doc send every 40ms if the node is in measurement phase or not
 send_measurement_phase(Name) ->
 %%  hera_synchronization:send_measurement_phase_information(Name, hera_synchronization:is_in_measurement_phase(Name)),
-  hera_multicast:send({measurement_phase, Name, hera_synchronization:is_in_measurement_phase(Name), node(), hera_synchronization:get_order(Name)}),
+  io:format("send measurement phase~n"),
+  hera_multicast:send({measurement_phase, Name, hera_synchronization:is_in_measurement_phase(Name), node()}),
   timer:sleep(40),
   send_measurement_phase(Name).
