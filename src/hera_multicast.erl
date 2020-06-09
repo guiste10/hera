@@ -116,7 +116,7 @@ handle_call({send_message, Message}, _From, State = #state{socket = Socket}) ->
     Sock ->
       gen_udp:send(Sock, ?MULTICAST_ADDR, ?MULTICAST_PORT, Message)
   end,
-  {noreply, ok, State};
+  {reply, ok, State};
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
