@@ -17,7 +17,7 @@
 
 -export([start_link/7, stop/1]).
 
--export([pause_measurement/1, restart_measurement/1, restart_measurement/3, restart_measurement/6]).
+-export([pause_measurement/1, restart_measurement/1, restart_measurement/3, restart_measurement/6, perform_single_measurement/1]).
 
 -export([init/1, handle_call/3, handle_cast/2,
 handle_info/2, code_change/3, terminate/2]).
@@ -120,6 +120,10 @@ restart_measurement(Name, Frequency, MaxIterations) ->
 pause_measurement(Name) ->
     gen_server:cast(Name, pause).
 
+-spec perform_single_measurement(Name :: atom()) -> continue | stop.
+perform_single_measurement(Name) ->
+    gen_server:call(Name, single_measurement).
+
 %%====================================================================
 %% gen_server callbacks
 %%====================================================================
@@ -145,6 +149,9 @@ handle_call(get_default_measure, _From, State) ->
     {reply, State#state.default_Measure, State};
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
+handle_call(single_measurement, _From, State) ->
+    %% TODO : do measurement and get "continue" or "stop"
+    {reply, done, State};
 handle_call(_Msg, _From, State) ->
     {noreply, State}.
 
