@@ -122,7 +122,7 @@ pause_calculation(Name) ->
 -spec(init({Name :: atom(), Calc_function :: function(), Args :: list(any()), Delay :: integer(), MaxIterations :: integer() | infinity}) ->
   {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
-init({Name, CalcFunction, Args, Delay, MaxIterations}) ->
+init({Name, CalcFunction, Delay, MaxIterations}) ->
   {ok, #state{name = Name, calc_function = CalcFunction, delay = Delay, iter = 0, max_iterations = MaxIterations}, Delay}.
 
 %% @private
@@ -148,7 +148,7 @@ handle_cast(restart, State = #state{delay = Delay}) ->
   {noreply, State, Delay};
 handle_cast({restart, {Frequency, MaxIterations}}, State) ->
   {noreply, State#state{iter = 0, max_iterations = MaxIterations, delay = Frequency}, Frequency};
-handle_cast({restart, {Func, Args, Delay, MaxIter}}, State) ->
+handle_cast({restart, {Func, Delay, MaxIter}}, State) ->
   {noreply, State#state{iter = 0, calc_function = Func, max_iterations = MaxIter, delay = Delay}, Delay};
 handle_cast(pause, State) ->
   {noreply, State, hibernate};
