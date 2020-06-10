@@ -65,12 +65,13 @@ init([]) ->
   {stop, Reason :: term(), NewState :: #state{}}).
 %% when a node want to perform measures <Name>, we add this node to the corresponding queue
 handle_call({make_measure, Name}, From, State = #state{orders = M}) ->
-  case maps:get(Name, M) of
-    {badkey, Name} ->
+  case maps:is_key(Name, M) of
+    false ->
       {_Pid, _Ref} = spawn_opt(?SERVER, dispatch, [Name], [monitor]),
       NewMap = M#{Name => Queue = queue:new()},
       {reply, ok, State#state{orders = NewMap#{Name => queue:in(From, Queue)}}};
-    Queue ->
+    true ->
+      Queue = maps:get(Name, M),
       {reply, ok, State#state{orders = M#{Name => queue:in(From, Queue)}}}
   end;
 handle_call({get_and_remove_first, Name}, _From, State = #state{orders = M}) ->
