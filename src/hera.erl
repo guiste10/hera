@@ -100,7 +100,7 @@ launch_app(Measurements, Calculations, Master) ->
 
   %% starts hera_measure
   hera_pool:start_pool(measurement_pool, length(Measurements), {hera_measure, start_link, []}),
-  MeasurementsPids = [{Name, hera_pool:run(measurement_pool, [Name, maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement), maps:get(filtering, Measurement), maps:get(max_iterations, Measurement), maps:get(upperBound, Measurement)])} || {Name, Measurement} <- Measurements],
+  MeasurementsPids = [{Name, hera_pool:run(measurement_pool, [Measurement])} || {Name, Measurement} <- Measurements],
   [register(Name, Pid) || {Name, {ok, Pid}} <- MeasurementsPids],
 
   %% start hera_calculation
