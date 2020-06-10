@@ -221,16 +221,17 @@ terminate(_Reason, _State) -> ok.
 %%====================================================================
 
 %% @private
-%% @doc only perform warmup when using real sonar
+%% @doc using the sonar, computes and broadcasts the default distance when no moving objects are in the range of the sonar
 -spec perform_sonar_warmup(MeasureFunc :: function(), Args :: list(any()), Name :: atom()) ->
     DefaultMeasure :: {float(), integer()}.
 perform_sonar_warmup(MeasureFunc, Args, Name) ->
-    perform_sonar_warmup_aux(0, 200, 50, MeasureFunc, Args, Name, []). % hardcodé, récup 100ième mesure
+    perform_sonar_warmup_aux(0, 200, 50, MeasureFunc, Args, Name, []). % hardcoded
 
-% todo: make maxiter/2 unused measures, then return median of next maxiter/2 measures? or osef just send last measure?
+%% @private
+%% @doc using the sonar, computes and broadcasts the default distance when no moving objects are in the range of the sonar
 -spec perform_sonar_warmup_aux(Iter :: integer(), MaxNumIter :: integer(), Delay :: integer(), MeasureFunc :: function(), Args :: list(any()), Name :: atom(), Measures :: list(float())) ->
     DefaultMeasure :: {float(), integer()}.
-perform_sonar_warmup_aux(Iter, MaxNumIter, Delay, MeasureFunc, Args, Name, Measures) -> % todo, selec mediane de toutes les mesures
+perform_sonar_warmup_aux(Iter, MaxNumIter, Delay, MeasureFunc, Args, Name, Measures) ->
     if
         Iter < MaxNumIter ->
             {ok, Measure} = erlang:apply(MeasureFunc, Args),

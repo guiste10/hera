@@ -16,7 +16,7 @@
 
 -include("hera.hrl").
 
--export([launch_hera/4]).
+-export([launch_hera/3]).
 -export([launch_hera/5]).
 -export([launch_hera_shell/0]).
 -export([restart_calculation/2]).
@@ -37,20 +37,21 @@
 %%% API
 %%%===================================================================
 
-launch_hera(PosX, PosY, NodeId, DoFilter) ->
+launch_hera(PosX, PosY, NodeId) ->
     Measurements = [
         {sonar, #{func => fun(InchToCm) -> sonar_measurement(InchToCm) end, args => [2.54], frequency => 100, 
-        filtering => DoFilter, upperBound => 0.28,
-         max_iterations => 400}},
+        filtering => true, upperBound => 0.14,
+         max_iterations => 100}},
         {pos, #{func => fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, args => [], frequency => 50, filtering => false, upperBound => 0.28, max_iterations => 3}}
     ],
-    Calculations = [{position, #{func => fun(Id) -> calc_position(Id) end, args => [NodeId], frequency => 100, max_iterations => 400}}],
+    %Calculations = [{position, #{func => fun(Id) -> calc_position(Id) end, args => [NodeId], frequency => 100, max_iterations => 150}}],
+    Calculations = [], % no calculation
     hera:launch_app(Measurements, Calculations).
 
 launch_hera(PosX, PosY, NodeId, Frequency, MaxIteration) ->
     Measurements = [
         {sonar, #{func => fun(InchToCm) -> sonar_measurement(InchToCm) end, args => [2.54], frequency => Frequency, 
-        filtering => true, upperBound => 0.28,
+        filtering => true, upperBound => 0.14,
         max_iterations => MaxIteration}},
         {pos, #{func => fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, args => [], frequency => 5000, filtering => false, upperBound => 0.28, max_iterations => 3}}
     ],
@@ -83,7 +84,8 @@ sonar_measurement(InchToCm) ->
 
 
 calc_position(NodeId) ->
-    case hera:get_data(sonar) of
+    %case hera:get_data(sonar) of   % works
+    case hera:get_recent_data(sonar) of
         {error, Reason} ->
             logger:error(Reason),
             error;
@@ -93,13 +95,13 @@ calc_position(NodeId) ->
                     logger:error(Reason),
                     error;
                 {ok, Pos} ->
-                    Nodes = lists:filter(fun(N) -> dict:is_key(N, Pos) end, dict:fetch_keys(Sonar)),
+                    Nodes = lists:filter(fun(N) -> dict:is_key(N, Pos) end, dict:fetch_keys(Sonar)), % fetch all nodes from the sonar measurements of who we received the position
                     Values = [dict:fetch(Node, Sonar) || Node <- Nodes],
                     case Values of
-                        [{_Seq1, R1}, {_Seq2, R2}] ->
+                        [{_Seq1, R1, _T1}, {_Seq2, R2, _T2}] ->
                             [
-                                {_, #{x := PosX1, y := PosY1, node_id := _NodeId1}},
-                                {_, #{x := PosX2, y := PosY2, node_id := _NodeId2}}
+                                {_, #{x := PosX1, y := PosY1, node_id := _NodeId1},_},
+                                {_, #{x := PosX2, y := PosY2, node_id := _NodeId2},_}
                             ] = [dict:fetch(Node, Pos) || Node <- Nodes],
                             Separation = math:sqrt(math:pow(PosX2-PosX1, 2) + math:pow(PosY2-PosY1, 2)),
                             R1Sq = math : pow ( R1 , 2) ,
@@ -117,22 +119,22 @@ calc_position(NodeId) ->
                                     Result = io_lib:format("x1, ~.2f, y1, ~.2f, x2, ~.2f, y2, ~.2f", [X, Y1, X, Y2]),
                                     {ok, Result}
                             end;
-                        [{_Seq1, V1}, {_Seq2, V2}, {_Seq3, V3}] ->
+                        [{_Seq1, V1, _T1}, {_Seq2, V2, _T2}, {_Seq3, V3, _T3}] ->
                             [
-                                {_, #{x := PosX1, y := PosY1, node_id := _NodeId1}},
-                                {_, #{x := PosX2, y := PosY2, node_id := _NodeId2}},
-                                {_, #{x := PosX3, y := PosY3, node_id := _NodeId3}}
+                                {_, #{x := PosX1, y := PosY1, node_id := _NodeId1},_},
+                                {_, #{x := PosX2, y := PosY2, node_id := _NodeId2},_},
+                                {_, #{x := PosX3, y := PosY3, node_id := _NodeId3},_}
                             ] = [dict:fetch(Node, Pos) || Node <- Nodes],
                             {X_p, Y_p} = trilateration({V1, PosX1, PosY1}, {V2, PosX2, PosY2}, {V3, PosX3, PosY3}),
                             Result = io_lib:format("x, ~.2f, y, ~.2f", [X_p, Y_p]),
                             {ok, Result};
-                        [{_, _}, {_, _}, {_, _}, {_, _}] ->
+                        [{_, _, _}, {_, _, _}, {_, _, _}, {_, _, _}] ->
                             Neighbors = lists:filter(fun(N) -> neighbors(NodeId, dict:fetch(N, Pos)) end, Nodes),
                             [{_Seq1, V1}, {_Seq2, V2}, {_Seq3, V3}] = [dict:fetch(Node, Sonar) || Node <- Neighbors],
                             [
-                                {_, #{x := PosX1, y := PosY1, node_id := _NodeId1}},
-                                {_, #{x := PosX2, y := PosY2, node_id := _NodeId2}},
-                                {_, #{x := PosX3, y := PosY3, node_id := _NodeId3}}
+                                {_, #{x := PosX1, y := PosY1, node_id := _NodeId1},_},
+                                {_, #{x := PosX2, y := PosY2, node_id := _NodeId2},_},
+                                {_, #{x := PosX3, y := PosY3, node_id := _NodeId3},_}
                             ] = [dict:fetch(Node, Pos) || Node <- Neighbors],
                             {X_p, Y_p} = trilateration({V1, PosX1, PosY1}, {V2, PosX2, PosY2}, {V3, PosX3, PosY3}),
                             Result = io_lib:format("x, ~.2f, y, ~.2f", [X_p, Y_p]),

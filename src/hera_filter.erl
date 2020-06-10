@@ -110,46 +110,59 @@ terminate(_Reason, _State) -> ok.
 %% Internal functions
 %%====================================================================
 
-
+%% @private
+%% @doc applies a filter on the received measure. 
 % suppose at first call that previous_measure = default distance as in hera_measure:perform_sonar_warmup_aux()
--spec(filter_measure(Measure :: {float(), integer}, Iter :: integer(), DefaultMeasure :: {float(), integer()}, Name :: atom(), State :: state(), UpperBound :: float())->
+-spec(filter_measure(Measure :: {integer()|float(), integer}, Iter :: integer(), DefaultMeasure :: {float(), integer()}, Name :: atom(), State :: state(), UpperBound :: float())->
     State :: state()).
-filter_measure({CurrMeasureVal, MeasureTimestamp} = Measure, Iter, {DefaultMeasureVal, _} = DefaultMeasure, Name, UpperBound, State)->
-    {PrevMeasureVal, PrevMeasureTimestamp} = get_previous_measure(Iter, DefaultMeasure, State#state.previous_measure),
+filter_measure(Measure, 0, _DefaultMeasure, Name, _UpperBound, State)-> % don't filter when there is no previous measure
+    valid_measure(Name, 0, Measure, State);
+filter_measure({CurrMeasureVal, MeasureTimestamp} = Measure, Iter, {DefaultMeasureVal, _}, Name, UpperBound, State)->
+    {PrevMeasureVal, PrevMeasureTimestamp} = State#state.previous_measure,
     TimeDiff = abs(MeasureTimestamp - PrevMeasureTimestamp),
     DoFilter = case Name of 
         sonar -> filter_sonar(PrevMeasureVal, CurrMeasureVal, DefaultMeasureVal, UpperBound, TimeDiff);  %UpperBound = 0.28, % = 10.0(km/h)/35.714 cm/ms
         _ -> abs(CurrMeasureVal - PrevMeasureVal) > UpperBound*TimeDiff
     end,
-    if % if true then filter
-        DoFilter == true ->
-            State#state{num_measures = State#state.num_measures+1, num_filtered = State#state.num_filtered+1}; % keep old previous measure
-        true ->
-            % don't filter out
-            hera:store_data(Name, node(), Iter, CurrMeasureVal),
-            hera:send(measure, Name, node(), Iter, {CurrMeasureVal, MeasureTimestamp}),
-            State#state{previous_measure = Measure, num_measures = State#state.num_measures+1} % don't increment numfiltered
+    if 
+        DoFilter == true -> % filter out measure
+            State#state{num_measures = State#state.num_measures+1, num_filtered = State#state.num_filtered+1};
+        true ->  % don't filter out
+            valid_measure(Name, Iter, Measure, State)
     end.
 
--spec(is_default_measure(Measure :: float(), DefaultMeasure :: {float(), integer()})->
+%% @private
+%% @doc applies the procedure when the measure has sucessfully passed the filter
+-spec(valid_measure(Name :: atom(), Iter :: integer(), Measure :: {integer()|float(), integer()}, State :: state())->
+    State :: state()).
+valid_measure(Name, Iter, {CurrMeasureVal, MeasureTimestamp} = Measure, State)->
+    hera:store_data(Name, node(), Iter, CurrMeasureVal),
+    hera:send(measure, Name, node(), Iter, {CurrMeasureVal, MeasureTimestamp}),
+    State#state{previous_measure = Measure, num_measures = State#state.num_measures+1}.
+
+
+%% @private
+%% @doc used for sonar measurements only. 
+%% It returns true if the sonar measure has to be filtered out
+-spec(filter_sonar(PrevMeasureVal :: float(), CurrMeasureVal :: float(), DefaultMeasureVal :: float(), UpperBound :: float(), TimeDiff :: integer())->
+    State :: state()).
+filter_sonar(PrevMeasureVal, CurrMeasureVal, DefaultMeasureVal, UpperBound, TimeDiff) -> 
+    PrevIsBackDist = is_background_dist(PrevMeasureVal, DefaultMeasureVal),
+    IsDefDist = is_background_dist(CurrMeasureVal, DefaultMeasureVal),
+    IsDefDist orelse
+    (PrevIsBackDist == false andalso IsDefDist == false andalso
+    abs(CurrMeasureVal - PrevMeasureVal) > UpperBound*TimeDiff). % 0.28*(100=TimeDiff) = 0.28*TimeDiff cm/TimeDiff ms
+
+
+%% @private
+%% @doc used for sonar measurements only. 
+%% It returns true if the measure is equal to or greater than the distance measured during the warmup phase = the background distance
+-spec(is_background_dist(MeasureVal :: float(), DefaultMeasureVal :: float())->
     boolean()).
-is_default_measure(Measure, DefaultMeasure)->
+is_background_dist(MeasureVal, DefaultMeasureVal)->
     if
-        DefaultMeasure - 2.54 =< Measure andalso Measure =< DefaultMeasure + 2.54 ->
+        DefaultMeasureVal - 2.54 =< MeasureVal ->
             true;
         true ->
             false
     end.
-
-get_previous_measure(Iter, DefaultMeasure, PreviousMeasure) ->
-    case Iter of
-        0 -> DefaultMeasure;  % first performed measure after warmup
-        _ -> PreviousMeasure
-    end.
-
-filter_sonar(PrevMeasureVal, CurrMeasureVal, DefaultMeasureVal, UpperBound, TimeDiff) ->
-    PrevIsDefDist = is_default_measure(PrevMeasureVal, DefaultMeasureVal),
-    IsDefDist = is_default_measure(CurrMeasureVal, DefaultMeasureVal),
-    CurrMeasureVal > DefaultMeasureVal + 2.54 orelse 
-    (PrevIsDefDist == false andalso IsDefDist == false andalso
-    abs(CurrMeasureVal - PrevMeasureVal) > UpperBound*TimeDiff). % 0.28*(100=TimeDiff) = 0.28*TimeDiff cm/TimeDiff ms

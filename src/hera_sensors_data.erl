@@ -19,6 +19,7 @@
 -export([start_link/0]).
 -export([store_data/4]).
 -export([get_data/1]).
+-export([get_recent_data/1]).
 -export([log_measure/4]).
 -export([log_calculation/4]).
 
@@ -37,9 +38,9 @@
 %%====================================================================
 
 -record(state, {
-  % dictionary contraining the last data of all nodes
-  % with the form [{node_name, {seqnum, data}}]
-  data :: #{atom() => dict:dict(atom(), {integer(), term()})}, %% TODO: modify
+  % map of dictionaries (one per measurement type) each contraining the latest received data of all nodes
+  % with the form [{node_name, {seqnum, data, timestamp}}]
+  data :: #{atom() => dict:dict(atom(), {integer(), term(), integer()})}, %% TODO: modify
   measures_logger_configs :: ets:tid(),
   calculations_logger_configs :: ets:tid()
 }).
@@ -62,9 +63,21 @@ start_link() ->
 %% @spec get_data() -> dict:dict(string(), {integer(), integer() | float()})
 %% @end
 %%--------------------------------------------------------------------
--spec get_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float()}).
+-spec get_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float(), integer()}).
 get_data(Name) ->
   gen_server:call(?MODULE, {get_data, Name}).
+
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Retrieve the recent (+-500ms or less) data of the sensors of all nodes
+%%
+%% @spec get_data() -> dict:dict(string(), {integer(), integer() | float()})
+%% @end
+%%--------------------------------------------------------------------
+-spec get_recent_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float(), integer()}).
+get_recent_data(Name) ->
+  gen_server:call(?MODULE, {get_recent_data, Name}).
 
 %% -------------------------------------------------------------------
 %% @doc
@@ -137,11 +150,19 @@ init([]) ->
   {stop, Reason :: term(), Reply :: term(), NewState :: #state{}} |
   {stop, Reason :: term(), NewState :: #state{}}).
 handle_call({get_data, Name}, _From, State = #state{data = Data}) ->
-  Rep = case maps:is_key(Name, Data) of
+  Dict = case maps:is_key(Name, Data) of
           true -> {ok, maps:get(Name, Data)};
           false -> {error, "Not yet values for this name"}
   end,
-  {reply, Rep, State};
+  {reply, Dict, State};
+handle_call({get_recent_data, Name}, _From, State = #state{data = Data}) ->
+  Dict = case maps:is_key(Name, Data) of
+          true -> 
+            Dict0 = maps:get(Name, Data),
+            {ok, dict:filter(fun(_Node, {_Seqnum, _MeasureVal, MeasureTime}) -> abs(MeasureTime - hera:get_timestamp()) =< 500 end, Dict0)}; % only keep values that were stored less than 0.5sec ago
+          false -> {error, "Not yet values for this name"}
+  end,
+  {reply, Dict, State};
 handle_call(_Request, _From, State = #state{}) ->
   {reply, ok, State}.
 
@@ -160,16 +181,17 @@ handle_cast({store_data, {Name, {Node, Seqnum, Measure}}}, State = #state{data =
   end,
   %% TODO: modify to take the name into account
   Dict = maps:get(Name, New_data),
+  MeasureTime = hera:get_timestamp(),
   Dict2 = case dict:find(Node, Dict) of
-            {ok, {S, _Data}} ->
+            {ok, {S, _Data, _Time}} ->
               if
                 S < Seqnum orelse Seqnum == 0 ->
-                  dict:store(Node, {Seqnum, Measure}, Dict);
+                  dict:store(Node, {Seqnum, Measure, MeasureTime}, Dict);
                 true ->
                   Dict
               end;
             error ->
-              dict:store(Node, {Seqnum, Measure}, Dict)
+              dict:store(Node, {Seqnum, Measure, MeasureTime}, Dict)
           end,
   {noreply, State#state{data = New_data#{Name => Dict2}}};
 handle_cast({log_measure, {Name, {Node, Seqnum, {Data, TimeStamp}}}}, State = #state{measures_logger_configs = LogConf}) ->
