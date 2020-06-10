@@ -15,7 +15,7 @@
 
 -include("hera.hrl").
 
--export([start_link/7, stop/1]).
+-export([start_link/8, stop/1]).
 
 -export([pause_measurement/1, restart_measurement/1, restart_measurement/3, restart_measurement/6, perform_single_measurement/1]).
 
@@ -42,7 +42,8 @@ handle_info/2, code_change/3, terminate/2]).
     filtering :: boolean(),
     warm_up = true :: boolean(),
     max_iterations :: integer() | infinity,
-    upperBound :: float()
+    upperBound :: float(),
+    synchronization :: boolean()
 }).
 -type state() :: #state{}.
  
@@ -52,10 +53,10 @@ handle_info/2, code_change/3, terminate/2]).
 
 %% @private
 %% @doc Spawns the server and registers the local name (unique)
--spec(start_link(Name :: atom(), MeasurementFunc :: function(), Func_args :: list(any()), Delay :: integer(), Filtering :: boolean(), MaxIterations :: integer() | infinity, UpperBound :: float()) ->
+-spec(start_link(Name :: atom(), MeasurementFunc :: function(), Func_args :: list(any()), Delay :: integer(), Filtering :: boolean(), MaxIterations :: integer() | infinity, UpperBound :: float(), Synchronization :: boolean()) ->
     {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
-start_link(Name, MeasurementFunc, Args, Delay, Filtering, MaxIterations, UpperBound) ->
-    gen_server:start_link(?MODULE, {Name, MeasurementFunc, Args, Delay, Filtering, MaxIterations, UpperBound}, []).
+start_link(Name, MeasurementFunc, Args, Delay, Filtering, MaxIterations, UpperBound, Synchronization) ->
+    gen_server:start_link(?MODULE, {Name, MeasurementFunc, Args, Delay, Filtering, MaxIterations, UpperBound, Synchronization}, []).
 
 %% @private
 -spec(stop(Pid :: pid()) ->
@@ -130,11 +131,20 @@ perform_single_measurement(Name) ->
 
 %% @private
 %% @doc Initializes the server
--spec(init({Name :: atom(), MeasurementFunc :: function(), Args :: list(any()), Delay :: integer(), MaxIterations :: integer() | infinity, UpperBound :: float()}) ->
+-spec(init({Name :: atom(), MeasurementFunc :: function(), Args :: list(any()), Delay :: integer(), MaxIterations :: integer() | infinity, UpperBound :: float(), Synchronization :: boolean()}) ->
     {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
     {stop, Reason :: term()} | ignore).
-init({Name, MeasurementFunc, Args, Delay, Filtering, MaxIterations, UpperBound}) ->
-    {ok, #state{name = Name, measurement_func = MeasurementFunc, func_args = Args, delay = Delay, iter = 0, default_Measure = {-1.0, -1}, filtering = Filtering, max_iterations = MaxIterations, upperBound = UpperBound}, Delay}. % {ok, state, timeout}
+init({Name, MeasurementFunc, Args, Delay, Filtering, MaxIterations, UpperBound, Synchronization = true}) ->
+    {ok, #state{name = Name
+        , measurement_func = MeasurementFunc
+        , func_args = Args
+        , delay = Delay
+        , iter = 0
+        , default_Measure = {-1.0, -1}
+        , filtering = Filtering
+        , max_iterations = MaxIterations
+        , upperBound = UpperBound
+        , synchronization = Synchronization}}.
 
 %% @private
 %% @doc Handling call messages
@@ -161,11 +171,14 @@ handle_call(_Msg, _From, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
-handle_cast(restart, State = #state{delay = Delay}) ->
+handle_cast(restart, State = #state{delay = Delay, synchronization = false}) ->
     {noreply, State, Delay};
-handle_cast({restart, {Frequency, MaxIterations}}, State) ->
+handle_cast(restart, State = #state{synchronization = true}) ->
+
+    {noreply, State};
+handle_cast({restart, {Frequency, MaxIterations}}, State = #state{synchronization = false}) ->
     {noreply, State#state{iter = 0, max_iterations = MaxIterations, delay = Frequency, warm_up = true, default_Measure = {-1.0, -1}}, Frequency};
-handle_cast({restart, {Func, Args, Delay, MaxIter, Filtering}}, State) ->
+handle_cast({restart, {Func, Args, Delay, MaxIter, Filtering}}, State = #state{synchronization = false}) ->
     {noreply, State#state{iter = 0, measurement_func = Func, func_args = Args, max_iterations = MaxIter, delay = Delay, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}, Delay};
 handle_cast(pause, State) ->
     {noreply, State, hibernate};
