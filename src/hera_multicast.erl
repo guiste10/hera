@@ -13,8 +13,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, stop/1, formation/0, send/5]).
--export([receiver/0]).
+-export([start_link/0, stop/1, formation/0, send/5, send/1, hello/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
@@ -33,7 +32,7 @@
 %%====================================================================
 
 -record(state, {
-  controlling_process :: {pid(), reference()},
+  controlling_process :: pid(),
   socket :: gen_udp:socket()
 }).
 -type state() :: #state{}.
@@ -82,7 +81,20 @@ formation() ->
 %% -------------------------------------------------------------------
 -spec send(Message_type :: calc | measure, Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: term()) -> ok.
 send(Message_type, Name, Node, Seqnum, Data) ->
-  gen_server:cast(?SERVER, {send_message, term_to_binary({Message_type, Name, {Node, Seqnum, Data}})}).
+  gen_server:call(?SERVER, {send_message, term_to_binary({Message_type, Name, {Node, Seqnum, Data}})}).
+
+%% -------------------------------------------------------------------
+%% @doc
+%% Send a message the multicast cluster
+%%
+%% @param Message The message to be sent
+%%
+%% @spec send(Message_type :: calc | measure, Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: term()) -> ok
+%% @end
+%% -------------------------------------------------------------------
+-spec send(Message :: term()) -> any().
+send(Message) ->
+  gen_server:call(?SERVER, {send_message, term_to_binary(Message)}).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -94,8 +106,9 @@ send(Message_type, Name, Node, Seqnum, Data) ->
   {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
 init([]) ->
+  {_Pid, _Ref} = spawn_opt(?SERVER, hello, [], [monitor]),
   {ok, #state{
-    controlling_process = {undefined, undefined},
+    controlling_process = undefined,
     socket = undefined
   }}.
 
@@ -109,6 +122,15 @@ init([]) ->
   {noreply, NewState :: state(), timeout() | hibernate} |
   {stop, Reason :: term(), Reply :: term(), NewState :: state()} |
   {stop, Reason :: term(), NewState :: state()}).
+handle_call({send_message, Message}, _From, State = #state{socket = Socket}) ->
+  case Socket of
+    undefined ->
+      io:format("Socket not yet started~n"),
+      ok;
+    Sock ->
+      gen_udp:send(Sock, ?MULTICAST_ADDR, ?MULTICAST_PORT, Message)
+  end,
+  {reply, ok, State};
 handle_call(_Request, _From, State) ->
   {reply, ok, State}.
 
@@ -128,26 +150,16 @@ handle_cast(formation, State = #state{socket = S, controlling_process = Control}
   end,
   io:format("socket : ~p~n", [Socket]),
   ControllingProcess = case Control of
-    {undefined, undefined} ->
-      {Pid, Ref} = spawn_opt(?SERVER, receiver, [], [monitor]),
-      io:format("~nFirst Pid: ~p~nRef: ~p~n",[Pid, Ref]),
-      ok = gen_udp:controlling_process(Socket, Pid),
-      {Pid, Ref};
-    {Pid, Ref} ->
-      io:format("~nPid: ~p~nRef: ~p~n",[Pid, Ref]),
-      {Pid, Ref}
-  end,
-  {noreply, State#state{controlling_process = ControllingProcess, socket = Socket}};
-handle_cast({send_message, Message}, State = #state{socket = Socket}) ->
-  %io:format("mc handle_cast send message~n"),
-  case Socket of
-    undefined ->
-      io:format("Socket not yet started~n"),
-      ok;
-    Sock ->
-      gen_udp:send(Sock, ?MULTICAST_ADDR, ?MULTICAST_PORT, Message)
-  end,
-  {noreply, State}.
+     undefined ->
+       Pid = whereis(hera_communications),
+       ok = gen_udp:controlling_process(Socket, Pid),
+       Pid;
+     Pid when is_pid(Pid) ->
+       Pid;
+     _ ->
+       logger:error("wrong controlling process")
+   end,
+  {noreply, State#state{controlling_process = ControllingProcess, socket = Socket}}.
 
 
 %% @private
@@ -203,31 +215,7 @@ open() ->
   ]),
   Sock.
 
-%% @private
-%% @doc Function that handles received udp multicast messages
-receiver() ->
-  receive
-    {udp, _Sock, _IP, _InPortNo, Packet} ->
-      case binary_to_term(Packet) of
-        {measure, Name, {Node, Iter, Measure}} ->
-          case os:type() of
-            %% if it is a GRiSP board, don't log the measures, only save the most recent one
-            %% in order to perform a computation
-            {unix,rtems} ->
-              hera:store_data(Name, Node, Iter, Measure);
-            _ -> %% if it is a computer, only log the measures, don't need to
-              hera:log_measure(Name, Node, Iter, Measure)
-          end;
-        {calc, Name, {Node, Iter, Res}} ->
-          case os:type() of
-            {unix, rtems} ->
-              ok;
-            _ ->
-              hera:log_calculation(Name, Node, Iter, Res)
-          end
-      end,
-      receiver();
-    stop -> true;
-    AnythingElse -> io:format("RECEIVED: ~p~n", [AnythingElse]),
-      receiver()
-  end.
+hello() ->
+  hera_multicast:send({hello, node()}),
+  timer:sleep(2000),
+  hello().

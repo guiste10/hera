@@ -19,14 +19,15 @@
 -export([launch_app/0]).
 -export([clusterize/0]).
 -export([fake_sonar_get/0]).
--export([send/5]).
+-export([send/5, send/1]).
 -export([store_data/4]).
 -export([get_data/1]).
+-export([get_recent_data/1]).
 -export([log_measure/4]).
 -export([log_calculation/4]).
 -export([get_timestamp/0]).
--export([start_calculations/1]).
--export([start_measurements/1]).
+-export([pause_calculation/1, restart_calculation/5, restart_calculation/1, restart_calculation/3]).
+-export([restart_measurement/6, restart_measurement/1, restart_measurement/3, pause_measurement/1]).
 
 % Callbacks
 -export([start/2]).
@@ -65,17 +66,33 @@ stop(_State) -> ok.
 %% -------------------------------------------------------------------
 -spec launch_app(Measurements :: list(measurement()), Calculations :: list(calculation())) -> ok.
 launch_app(Measurements, Calculations) ->
+  %% starts hera_sensors_data
   hera_pool:start_pool(sensor_data_pool, 1, {hera_sensors_data, start_link, []}),
   hera_pool:run(sensor_data_pool, []),
+
+  %% starts hera_communications
+  hera_pool:start_pool(communicationsPool, 1, {hera_communications, start_link, []}),
+  hera_pool:run(communicationsPool, []),
+
+  %% starts hera_multicast
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
-  hera_pool:start_pool(measurement_pool, length(Measurements), {hera_measure, start_link, []}),
-  [hera_pool:run(measurement_pool, [Name, maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement), maps:get(filtering, Measurement), maps:get(max_iterations, Measurement)]) || {Name, Measurement} <- Measurements],
-  hera_pool:start_pool(calculation_pool, length(Calculations), {hera_calculation, start_link, []}),
-  [hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(args, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation)]) || {Name, Calculation} <- Calculations],
+  %% starts multicast
+  clusterize(),
+
+  %% starts hera_filter
   hera_pool:start_pool(filter_data_pool, 1, {hera_filter, start_link, []}),
   hera_pool:run(filter_data_pool, []),
-  clusterize().
+
+  %% starts hera_measure
+  hera_pool:start_pool(measurement_pool, length(Measurements), {hera_measure, start_link, []}),
+  MeasurementsPids = [{Name, hera_pool:run(measurement_pool, [Name, maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement), maps:get(filtering, Measurement), maps:get(max_iterations, Measurement), maps:get(upperBound, Measurement)])} || {Name, Measurement} <- Measurements],
+  [register(Name, Pid) || {Name, {ok, Pid}} <- MeasurementsPids],
+
+  %% start hera_calculation
+  hera_pool:start_pool(calculation_pool, length(Calculations), {hera_calculation, start_link, []}),
+  CalculationsPids = [{Name, hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(args, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation)])} || {Name, Calculation} <- Calculations],
+  [register(Name, Pid) || {Name, {ok, Pid}} <- CalculationsPids].
 
 %% -------------------------------------------------------------------
 %% @doc
@@ -86,10 +103,18 @@ launch_app(Measurements, Calculations) ->
 %% -------------------------------------------------------------------
 -spec launch_app() -> ok.
 launch_app() ->
+  %% starts hera_sensors_data
   hera_pool:start_pool(sensor_data_pool, 1, {hera_sensors_data, start_link, []}),
   hera_pool:run(sensor_data_pool, []),
+
+  %% starts hera_communications
+  hera_pool:start_pool(communicationsPool, 1, {hera_communications, start_link, []}),
+  hera_pool:run(communicationsPool, []),
+
+  %% starts hera_multicast
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
+  %% starts multicast
   clusterize().
 
 %% -------------------------------------------------------------------
@@ -107,18 +132,31 @@ clusterize() ->
 %% @doc
 %% Send a data over the multicast cluster
 %%
-%% @param Message_type The type of the message to be sent, either calc or measure
+%% @param MessageType The type of the message to be sent, either calc or measure
 %% @param Name The name of the sent data
 %% @param Node The node which send the message
 %% @param Seqnum The sequence number of the data
 %% @param Data The data to be sent
 %%
+%% @spec send(MessageType :: calc | measure, Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: term()) -> ok
+%% @end
+%% -------------------------------------------------------------------
+-spec send(MessageType :: calc | measure, Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: term()) -> ok.
+send(MessageType, Name, Node, Seqnum, Data) ->
+  hera_multicast:send(MessageType, Name, Node, Seqnum, Data).
+
+%% -------------------------------------------------------------------
+%% @doc
+%% Send a message the multicast cluster
+%%
+%% @param Message The message to be sent
+%%
 %% @spec send(Message_type :: calc | measure, Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: term()) -> ok
 %% @end
 %% -------------------------------------------------------------------
--spec send(Message_type :: calc | measure, Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: term()) -> ok.
-send(Message_type, Name, Node, Seqnum, Data) ->
-  hera_multicast:send(Message_type, Name, Node, Seqnum, Data).
+-spec send(Message :: term()) -> any().
+send(Message) ->
+  hera_multicast:send(Message).
 
 %% -------------------------------------------------------------------
 %% @doc
@@ -143,9 +181,20 @@ store_data(Name, Node, Seqnum, Data) ->
 %% @spec get_data() -> dict:dict(string(), {integer(), integer() | float()})
 %% @end
 %%--------------------------------------------------------------------
--spec get_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float()}).
+-spec get_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float(), integer()}).
 get_data(Name) ->
   hera_sensors_data:get_data(Name).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Retrieve the recent (+-500ms or less) data of the sensors of all nodes
+%%
+%% @spec get_data() -> dict:dict(string(), {integer(), integer() | float()})
+%% @end
+%%--------------------------------------------------------------------
+-spec get_recent_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float(), integer()}).
+get_recent_data(Name) ->
+  hera_sensors_data:get_recent_data(Name).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -181,37 +230,135 @@ log_calculation(Name, Node, Seqnum, Result) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Start workers that performs the calculations
+%% Restart worker that performs the calculation <Name> from zero with a new function
 %%
-%% @param Calculations the list of calculations to be done
+%% @param Name The name of the measurement
+%% @param Func The calculation function to be executed
+%% @param Args The arguments of the function
+%% @param Frequency The frequency of the calculation
+%% @param MaxIterations The number of iterations to be done
 %%
-%% @spec start_calculations(Calculations :: list(calculation())) -> ok.
+%% @spec restart_calculation(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer()) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec start_calculations(Calculations :: list(calculation())) -> ok.
-start_calculations(Calculations) ->
-  [hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(args, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation)]) || {Name, Calculation} <- Calculations],
+-spec restart_calculation(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer()) -> ok.
+restart_calculation(Name, Func, Args, Frequency, MaxIterations) ->
+  hera_calculation:restart_calculation(Name, Func, Args, Frequency, MaxIterations),
   ok.
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Start workers that performs the measurements
+%% Restart worker that performs the calculation <Name> from zero if the previous calculation has terminated, or from the previous state if it is pause.
 %%
-%% @param Calculations the list of calculations to be done
+%% @param Name The name of the calculation
 %%
-%% @spec start_measurements(Measurements :: list(measurement())) -> ok.
+%% @spec restart_calculation(Name :: atom()) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec start_measurements(Measurements :: list(measurement())) -> ok.
-start_measurements(Measurements) ->
-  [hera_pool:run(measurement_pool, [Name, maps:get(func, Measurement), maps:get(args, Measurement), maps:get(frequency, Measurement), maps:get(filtering, Measurement), maps:get(max_iterations, Measurement)]) || {Name, Measurement} <- Measurements],
+-spec restart_calculation(Name :: atom()) -> ok.
+restart_calculation(Name) ->
+  hera_calculation:restart_calculation(Name),
+  ok.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Restart worker that performs the calculation <Name> from zero with new frequency and number of iterations
+%%
+%% @param Name The name of the calculation
+%% @param Frequency The frequency of the calculation
+%% @param MaxIterations The number of iterations to be done
+%%
+%% @spec restart_calculation(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+-spec restart_calculation(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity) -> ok.
+restart_calculation(Name, Frequency, MaxIterations) ->
+  hera_calculation:restart_calculation(Name, Frequency, MaxIterations),
+  ok.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Pause the worker that performs the calculation <Name>
+%%
+%% @param Name The name of the calculation
+%%
+%% @spec pause_calculation(Name :: atom()) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+-spec pause_calculation(Name :: atom()) -> ok.
+pause_calculation(Name) ->
+  hera_calculation:pause_calculation(Name),
+  ok.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Restart worker that performs the measurement <Name> from zero with a new function
+%%
+%% @param Name The name of the measurement
+%% @param Func The measurement function to be executed
+%% @param Args The arguments of the function
+%% @param Frequency The frequency of the measurement
+%% @param MaxIterations The number of iterations to be done
+%% @param Filtering Boolean that indicates if a filtering must be done to the data output by the function
+%%
+%% @spec restart_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+-spec restart_measurement(Name :: atom(), Func ::fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
+restart_measurement(Name, Func, Args, Frequency, MaxIterations, Filtering) ->
+  hera_measure:restart_measurement(Name, Func, Args, Frequency, MaxIterations, Filtering),
+  ok.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Restart worker that performs the measurement <Name> from zero if the previous calculation has terminated, or from the previous state if it is pause.
+%%
+%% @param Name The name of the measurement
+%%
+%% @spec restart_measurement(Name :: atom()) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+-spec restart_measurement(Name :: atom()) -> ok.
+restart_measurement(Name) ->
+  hera_measure:restart_measurement(Name),
+  ok.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Restart worker that performs the measurement <Name> from zero with new frequency and number of iterations
+%%
+%% @param Name The name of the measurement
+%% @param Frequency The frequency of the measurement
+%% @param MaxIterations The number of iterations to be done
+%%
+%% @spec restart_measurement(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+-spec restart_measurement(Name :: atom(), Frequency :: integer(), MaxIterations :: integer()) -> ok.
+restart_measurement(Name, Frequency, MaxIterations) ->
+  hera_measure:restart_measurement(Name, Frequency, MaxIterations),
+  ok.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Pause the worker that performs the measurement <Name>
+%%
+%% @param Name The name of the measurement
+%%
+%% @spec pause_measurement(Name :: atom()) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+-spec pause_measurement(Name :: atom()) -> ok.
+pause_measurement(Name) ->
+  hera_measure:pause_measurement(Name),
   ok.
 
 %% @private
 -spec get_timestamp() -> integer().
 get_timestamp() ->
-  {Mega, Sec, Micro} = os:timestamp(),
-  (Mega*1000000 + Sec)*1000 + round(Micro/1000).
+  erlang:monotonic_time(millisecond).
+  %{Mega, Sec, Micro} = os:timestamp(),
+  %(Mega*1000000 + Sec)*1000 + round(Micro/1000).
 
 %% @private
 fake_sonar_get() ->

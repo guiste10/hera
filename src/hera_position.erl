@@ -19,8 +19,9 @@
 -export([launch_hera/3]).
 -export([launch_hera/5]).
 -export([launch_hera_shell/0]).
--export([start_new_calculation/3]).
--export([start_new_measurement/2]).
+-export([restart_calculation/2]).
+-export([restart_measurement/2]).
+-export([restart/2]).
 %%====================================================================
 %% Macros
 %%====================================================================
@@ -36,46 +37,55 @@
 %%% API
 %%%===================================================================
 
-launch_hera(Pos_x, Pos_y, Node_id) ->
+launch_hera(PosX, PosY, NodeId) ->
     Measurements = [
-        {sonar, #{func => fun(Inch_to_cm) -> sonar_measurement(Inch_to_cm) end, args => [2.54], frequency => 500, filtering => true, max_iterations => 300}},
-        {pos, #{func => fun() -> {ok, #{x => Pos_x, y => Pos_y, node_id => Node_id}} end, args => [], frequency => 30000, filtering => false, max_iterations => 2}}
+        {sonar, #{func => fun(InchToCm) -> sonar_measurement(InchToCm) end, args => [2.54], frequency => 100, 
+        filtering => true, upperBound => 0.14,
+         max_iterations => 100}},
+        {pos, #{func => fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, args => [], frequency => 50, filtering => false, upperBound => 0.28, max_iterations => 3}}
     ],
-    Calculations = [{position, #{func => fun(Id) -> calc_position(Id) end, args => [Node_id], frequency => 500, max_iterations => 300}}],
+    %Calculations = [{position, #{func => fun(Id) -> calc_position(Id) end, args => [NodeId], frequency => 100, max_iterations => 150}}],
+    Calculations = [], % no calculation
     hera:launch_app(Measurements, Calculations).
 
-launch_hera(Pos_x, Pos_y, Node_id, Frequency, Max_iteration) ->
+launch_hera(PosX, PosY, NodeId, Frequency, MaxIteration) ->
     Measurements = [
-        {sonar, #{func => fun(Inch_to_cm) -> sonar_measurement(Inch_to_cm) end, args => [2.54], frequency => Frequency, filtering => true, max_iterations => Max_iteration}},
-        {pos, #{func => fun() -> {ok, #{x => Pos_x, y => Pos_y, node_id => Node_id}} end, args => [], frequency => 30000, filtering => false, max_iterations => 2}}
+        {sonar, #{func => fun(InchToCm) -> sonar_measurement(InchToCm) end, args => [2.54], frequency => Frequency, 
+        filtering => true, upperBound => 0.14,
+        max_iterations => MaxIteration}},
+        {pos, #{func => fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, args => [], frequency => 5000, filtering => false, upperBound => 0.28, max_iterations => 3}}
     ],
-    Calculations = [{position, #{func => fun(Id) -> calc_position(Id) end, args => [Node_id], frequency => Frequency, max_iterations => Max_iteration}}],
+    Calculations = [{position, #{func => fun(Id) -> calc_position(Id) end, args => [NodeId], frequency => Frequency, max_iterations => MaxIteration}}],
+    %Calculations = [], % no calculation
     hera:launch_app(Measurements, Calculations).
 
 launch_hera_shell() ->
     hera:launch_app().
 
-start_new_calculation(Frequency, Max_iterations, Node_id) ->
-    hera:start_calculations([{position, #{func => fun(Id) -> calc_position(Id) end, args => [Node_id], frequency => Frequency, max_iterations => Max_iterations}}]).
+restart(Frequency, MaxIterations) ->
+    restart_measurement(Frequency, MaxIterations),
+    restart_calculation(Frequency, MaxIterations).
 
-start_new_measurement(Frequency, Max_iterations) ->
-    hera:start_measurements([{sonar, #{func => fun(Inch_to_cm) -> sonar_measurement(Inch_to_cm) end, args => [2.54], frequency => Frequency, filtering => true, max_iterations => Max_iterations}}]).
+restart_calculation(Frequency, MaxIterations) ->
+    hera:restart_calculation(position, Frequency, MaxIterations).
+
+restart_measurement(Frequency, MaxIterations) ->
+    hera:restart_measurement(sonar, Frequency, MaxIterations).
 
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
 
-fake_sonar_m() ->
-    {ok, hera:fake_sonar_get()}.
-
-sonar_measurement(Inch_to_cm) ->
+sonar_measurement(InchToCm) ->
     case pmod_maxsonar:get() of
         undefined -> {error, "pmod_maxsonar not set up correctly"};
-        Value -> {ok, Value*Inch_to_cm}
+        Value -> {ok, Value*InchToCm}
     end.
 
-calc_position(Node_id) ->
-    case hera:get_data(sonar) of
+
+calc_position(NodeId) ->
+    %case hera:get_data(sonar) of   % works
+    case hera:get_recent_data(sonar) of
         {error, Reason} ->
             logger:error(Reason),
             error;
@@ -85,17 +95,15 @@ calc_position(Node_id) ->
                     logger:error(Reason),
                     error;
                 {ok, Pos} ->
-                    Nodes = [N  || N <- [Node || Node <- dict:fetch_keys(Sonar)], dict:is_key(N, Pos)],
-                    Length = length(Nodes),
-
-                    if  % assign ready2 to true if set contains 2 measures
-                        Length =:= 2 ->
-                            [{_Seqnum1, R1}, {_Seqnum2, R2}] = [dict:fetch(Node, Sonar) || Node <- Nodes],
+                    Nodes = lists:filter(fun(N) -> dict:is_key(N, Pos) end, dict:fetch_keys(Sonar)), % fetch all nodes from the sonar measurements of who we received the position
+                    Values = [dict:fetch(Node, Sonar) || Node <- Nodes],
+                    case Values of
+                        [{_Seq1, R1, _T1}, {_Seq2, R2, _T2}] ->
                             [
-                                {_, #{x := Pos_x1, y := Pos_y1, node_id := _Node_id1}},
-                                {_, #{x := Pos_x2, y := Pos_y2, node_id := _Node_id2}}
+                                {_, #{x := PosX1, y := PosY1, node_id := _NodeId1},_},
+                                {_, #{x := PosX2, y := PosY2, node_id := _NodeId2},_}
                             ] = [dict:fetch(Node, Pos) || Node <- Nodes],
-                            Separation = math:sqrt(math:pow(Pos_x2-Pos_x1, 2) + math:pow(Pos_y2-Pos_y1, 2)),
+                            Separation = math:sqrt(math:pow(PosX2-PosX1, 2) + math:pow(PosY2-PosY1, 2)),
                             R1Sq = math : pow ( R1 , 2) ,
                             R2Sq = math : pow ( R2 , 2) ,
                             S2 = 2 * Separation ,
@@ -108,31 +116,30 @@ calc_position(Node_id) ->
                                 true ->
                                     Y1 = math : sqrt ( Helper ) ,
                                     Y2 = - Y1,
-                                    Result = io_lib:format("x1, ~.2f, y1, ~.2f, x2, ~.2f, y2, ~.2f)", [X, Y1, X, Y2]),
+                                    Result = io_lib:format("x1, ~.2f, y1, ~.2f, x2, ~.2f, y2, ~.2f", [X, Y1, X, Y2]),
                                     {ok, Result}
                             end;
-                        Length =:= 3 ->
-                            [{_Seq1, V1}, {_Seq2, V2}, {_Seq3, V3}] = [dict:fetch(Node, Sonar) || Node <- Nodes],
+                        [{_Seq1, V1, _T1}, {_Seq2, V2, _T2}, {_Seq3, V3, _T3}] ->
                             [
-                                {_, #{x := Pos_x1, y := Pos_y1, node_id := _Node_id1}},
-                                {_, #{x := Pos_x2, y := Pos_y2, node_id := _Node_id2}},
-                                {_, #{x := Pos_x3, y := Pos_y3, node_id := _Node_id3}}
+                                {_, #{x := PosX1, y := PosY1, node_id := _NodeId1},_},
+                                {_, #{x := PosX2, y := PosY2, node_id := _NodeId2},_},
+                                {_, #{x := PosX3, y := PosY3, node_id := _NodeId3},_}
                             ] = [dict:fetch(Node, Pos) || Node <- Nodes],
-                            {X_p, Y_p} = trilateration({V1, Pos_x1, Pos_y1}, {V2, Pos_x2, Pos_y2}, {V3, Pos_x3, Pos_y3}),
-                            Result = io_lib:format("x, ~.2f, y, ~.2f)", [X_p, Y_p]),
+                            {X_p, Y_p} = trilateration({V1, PosX1, PosY1}, {V2, PosX2, PosY2}, {V3, PosX3, PosY3}),
+                            Result = io_lib:format("x, ~.2f, y, ~.2f", [X_p, Y_p]),
                             {ok, Result};
-                        Length =:= 4 ->
-                            Neighbors = [Node || Node <- Nodes, neighbors(Node_id, dict:fetch(Node, Pos))],
+                        [{_, _, _}, {_, _, _}, {_, _, _}, {_, _, _}] ->
+                            Neighbors = lists:filter(fun(N) -> neighbors(NodeId, dict:fetch(N, Pos)) end, Nodes),
                             [{_Seq1, V1}, {_Seq2, V2}, {_Seq3, V3}] = [dict:fetch(Node, Sonar) || Node <- Neighbors],
                             [
-                                {_, #{x := Pos_x1, y := Pos_y1, node_id := _Node_id1}},
-                                {_, #{x := Pos_x2, y := Pos_y2, node_id := _Node_id2}},
-                                {_, #{x := Pos_x3, y := Pos_y3, node_id := _Node_id3}}
+                                {_, #{x := PosX1, y := PosY1, node_id := _NodeId1},_},
+                                {_, #{x := PosX2, y := PosY2, node_id := _NodeId2},_},
+                                {_, #{x := PosX3, y := PosY3, node_id := _NodeId3},_}
                             ] = [dict:fetch(Node, Pos) || Node <- Neighbors],
-                            {X_p, Y_p} = trilateration({V1, Pos_x1, Pos_y1}, {V2, Pos_x2, Pos_y2}, {V3, Pos_x3, Pos_y3}),
-                            Result = io_lib:format("x, ~.2f, y, ~.2f)", [X_p, Y_p]),
+                            {X_p, Y_p} = trilateration({V1, PosX1, PosY1}, {V2, PosX2, PosY2}, {V3, PosX3, PosY3}),
+                            Result = io_lib:format("x, ~.2f, y, ~.2f", [X_p, Y_p]),
                             {ok, Result};
-                        true ->
+                        _ ->
                             {error, "Not two mesurements available"}
                     end
             end
@@ -149,10 +156,10 @@ trilateration({V1, X1, Y1}, {V2, X2, Y2}, {V3, X3, Y3}) ->
     Y_p = (C*D - A*F) / (B*D - A*E),
     {X_p, Y_p}.
 
-neighbors(Node_id, {_, #{node_id := Id}}) ->
+neighbors(NodeId, {_, #{node_id := Id}}) ->
     if
-        Id =:= Node_id -> true;
-        Id =:= (Node_id + 4 + 1) rem 4 -> true;
-        Id =:= (Node_id + 4 - 1) rem 4 -> true;
+        Id =:= NodeId -> true;
+        Id =:= (NodeId + 4 + 1) rem 4 -> true;
+        Id =:= (NodeId + 4 - 1) rem 4 -> true;
         true -> false
     end.
