@@ -386,7 +386,7 @@ pause_measurement(Name) ->
 %%--------------------------------------------------------------------
 -spec get_synchronized_measurement(Name :: atom(), Func :: fun(() -> {ok, term()} | {error, term()} ), Filtering :: boolean(), UpperBound :: float(), MaxIterations :: integer() | infinity) -> sync_measurement().
 get_synchronized_measurement(Name, Func, Filtering, UpperBound, MaxIterations) ->
-  {Name, #{func => Func, filtering => Filtering, upper_bound => UpperBound, max_iteration => MaxIterations, synchronization => true}}.
+  {Name, #{func => Func, filtering => Filtering, upper_bound => UpperBound, max_iterations => MaxIterations, synchronization => true}}.
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -410,7 +410,7 @@ get_synchronized_measurement(Name, Func, Filtering, UpperBound, MaxIterations) -
 %%--------------------------------------------------------------------
 -spec get_unsynchronized_measurement(Name :: atom(), Func :: fun(() -> {ok, term()} | {error, term()} ), Filtering :: boolean(), UpperBound :: float(), MaxIteration :: integer() | infinity, Frequency :: integer()) -> unsync_measurement().
 get_unsynchronized_measurement(Name, Func, Filtering, UpperBound, MaxIteration, Frequency) ->
-  {Name, #{func => Func, filtering => Filtering, upper_bound => UpperBound, max_iteration => MaxIteration, frequency => Frequency, synchronization => false}}.
+  {Name, #{func => Func, filtering => Filtering, upper_bound => UpperBound, max_iterations => MaxIteration, frequency => Frequency, synchronization => false}}.
 
 %%--------------------------------------------------------------------
 %% @doc
