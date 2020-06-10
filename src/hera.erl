@@ -320,7 +320,7 @@ pause_calculation(Name) ->
 %%--------------------------------------------------------------------
 -spec restart_measurement(Name :: atom(), Func ::fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
 restart_measurement(Name, Func, Args, Frequency, MaxIterations, Filtering) ->
-  hera_measure:restart_measurement(Name, Func, Args, Frequency, MaxIterations, Filtering),
+  hera_measure:restart_measurement(Name, Func, Frequency, MaxIterations, Filtering),
   ok.
 
 %%--------------------------------------------------------------------
