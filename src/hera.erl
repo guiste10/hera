@@ -27,7 +27,7 @@
 -export([log_calculation/4]).
 -export([get_timestamp/0]).
 -export([pause_calculation/1, restart_calculation/5, restart_calculation/1, restart_calculation/3]).
--export([restart_measurement/6, restart_measurement/1, restart_measurement/3, pause_measurement/1]).
+-export([restart_measurement/5, restart_measurement/1, restart_measurement/3, pause_measurement/1]).
 -export([get_calculation/4, get_synchronized_measurement/5, get_unsynchronized_measurement/6]).
 
 % Callbacks
@@ -310,7 +310,6 @@ pause_calculation(Name) ->
 %%
 %% @param Name The name of the measurement
 %% @param Func The measurement function to be executed
-%% @param Args The arguments of the function
 %% @param Frequency The frequency of the measurement
 %% @param MaxIterations The number of iterations to be done
 %% @param Filtering Boolean that indicates if a filtering must be done to the data output by the function
@@ -318,8 +317,8 @@ pause_calculation(Name) ->
 %% @spec restart_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec restart_measurement(Name :: atom(), Func ::fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
-restart_measurement(Name, Func, Args, Frequency, MaxIterations, Filtering) ->
+-spec restart_measurement(Name :: atom(), Func ::fun((...) -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
+restart_measurement(Name, Func, Frequency, MaxIterations, Filtering) ->
   hera_measure:restart_measurement(Name, Func, Frequency, MaxIterations, Filtering),
   ok.
 
