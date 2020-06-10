@@ -16,7 +16,7 @@
 
 start_link() ->
   register(?MODULE, Pid = spawn_link(?MODULE, init, [])),
-  Pid.
+  {ok, Pid}.
 
 make_measure_request(Name) ->
   ?MODULE ! {make_measure_request, Name}.
