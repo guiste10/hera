@@ -13,7 +13,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, stop/1, formation/0, send/5]).
+-export([start_link/0, stop/1, formation/0, send/5, send/1, hello/0]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
@@ -83,6 +83,19 @@ formation() ->
 send(Message_type, Name, Node, Seqnum, Data) ->
   gen_server:call(?SERVER, {send_message, term_to_binary({Message_type, Name, {Node, Seqnum, Data}})}).
 
+%% -------------------------------------------------------------------
+%% @doc
+%% Send a message the multicast cluster
+%%
+%% @param Message The message to be sent
+%%
+%% @spec send(Message_type :: calc | measure, Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: term()) -> ok
+%% @end
+%% -------------------------------------------------------------------
+-spec send(Message :: term()) -> any().
+send(Message) ->
+  gen_server:call(?SERVER, {send_message, term_to_binary(Message)}).
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -93,6 +106,7 @@ send(Message_type, Name, Node, Seqnum, Data) ->
   {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
 init([]) ->
+  {_Pid, _Ref} = spawn_opt(?SERVER, hello, [], [monitor]),
   {ok, #state{
     controlling_process = undefined,
     socket = undefined
@@ -200,3 +214,8 @@ open() ->
     {add_membership, {?MULTICAST_ADDR, OwnAddr}} %join a multicast group and use the specified network interface
   ]),
   Sock.
+
+hello() ->
+  hera_multicast:send({hello, node()}),
+  timer:sleep(2000),
+  hello().

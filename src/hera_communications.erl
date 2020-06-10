@@ -114,5 +114,11 @@ handle_message({measure, Name, {Node, Iter, Measure}}, _OsType) ->
 %% calculations
 handle_message({calc, Name, {Node, Iter, Res}}, OsType) when OsType =/= {unix, rtems}->
   hera:log_calculation(Name, Node, Iter, Res);
+
+%% hello message
+handle_message({hello, Node}, OsType) when OsType == {unix, rtems}->
+  net_adm:ping(Node);
+
+%% catch all non-conform messages
 handle_message(_Other, _OsType) ->
   ok.
