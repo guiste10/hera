@@ -26,7 +26,7 @@
 -export([log_measure/4]).
 -export([log_calculation/4]).
 -export([get_timestamp/0]).
--export([pause_calculation/1, restart_calculation/5, restart_calculation/1, restart_calculation/3]).
+-export([pause_calculation/1, restart_calculation/4, restart_calculation/1, restart_calculation/3]).
 -export([restart_measurement/5, restart_measurement/1, restart_measurement/3, pause_measurement/1]).
 -export([get_calculation/4, get_synchronized_measurement/5, get_unsynchronized_measurement/6]).
 
@@ -105,7 +105,7 @@ launch_app(Measurements, Calculations, Master) ->
 
   %% start hera_calculation
   hera_pool:start_pool(calculation_pool, length(Calculations), {hera_calculation, start_link, []}),
-  CalculationsPids = [{Name, hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(args, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation)])} || {Name, Calculation} <- Calculations],
+  CalculationsPids = [{Name, hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation)])} || {Name, Calculation} <- Calculations],
   [register(Name, Pid) || {Name, {ok, Pid}} <- CalculationsPids].
 
 %% -------------------------------------------------------------------
@@ -255,9 +255,9 @@ log_calculation(Name, Node, Seqnum, Result) ->
 %% @spec restart_calculation(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer()) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec restart_calculation(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer()) -> ok.
-restart_calculation(Name, Func, Args, Frequency, MaxIterations) ->
-  hera_calculation:restart_calculation(Name, Func, Args, Frequency, MaxIterations),
+-spec restart_calculation(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer()) -> ok.
+restart_calculation(Name, Func, Frequency, MaxIterations) ->
+  hera_calculation:restart_calculation(Name, Func, Frequency, MaxIterations),
   ok.
 
 %%--------------------------------------------------------------------
