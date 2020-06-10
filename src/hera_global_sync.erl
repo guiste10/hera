@@ -41,8 +41,6 @@ start_link() ->
 make_measure_request(Name) ->
   gen_server:call({global, ?SYNC_PROC}, {make_measure, Name}).
 
-
-
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -66,17 +64,22 @@ init([]) ->
   {stop, Reason :: term(), Reply :: term(), NewState :: #state{}} |
   {stop, Reason :: term(), NewState :: #state{}}).
 %% when a node want to perform measures <Name>, we add this node to the corresponding queue
-handle_call({make_measure, Name}, From, State = #state{orders = M#{Name := Queue}}) ->
-  {reply, ok, State#state{orders = M#{Name => queue:in(From, Queue)}}};
 handle_call({make_measure, Name}, From, State = #state{orders = M}) ->
-  {_Pid, _Ref} = spawn_opt(?SERVER, dispatch, [Name], [monitor]),
-  NewMap = M#{Name => Queue = queue:new()},
-  {reply, ok, State#state{orders = NewMap#{Name => queue:in(From, Queue)}}};
-handle_call({get_and_remove_first, Name}, _From, State = #state{orders = M#{Name := Queue}}) ->
+  case maps:get(Name, M) of
+    {badkey, Name} ->
+      {_Pid, _Ref} = spawn_opt(?SERVER, dispatch, [Name], [monitor]),
+      NewMap = M#{Name => Queue = queue:new()},
+      {reply, ok, State#state{orders = NewMap#{Name => queue:in(From, Queue)}}};
+    Queue ->
+      {reply, ok, State#state{orders = M#{Name => queue:in(From, Queue)}}}
+  end;
+handle_call({get_and_remove_first, Name}, _From, State = #state{orders = M}) ->
+  Queue = maps:get(Name, M),
   First = queue:out(Queue),
   {_, NewQueue} = First,
   {reply, First, State#state{orders = M#{Name => NewQueue}}};
-handle_call({put_last, Item, Name}, _From, State = #state{orders = M#{Name := Queue}}) ->
+handle_call({put_last, Item, Name}, _From, State = #state{orders = M}) ->
+  Queue = maps:get(Name, M),
   {reply, ok, State#state{orders = M#{Name => queue:in(Item, Queue)}}};
 handle_call(_Request, _From, State = #state{}) ->
   {reply, ok, State}.

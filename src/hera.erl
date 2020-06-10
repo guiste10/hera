@@ -15,7 +15,7 @@
 -include("hera.hrl").
 
 %% API
--export([launch_app/2]).
+-export([launch_app/3]).
 -export([launch_app/0]).
 -export([clusterize/0]).
 -export([fake_sonar_get/0]).
@@ -28,6 +28,7 @@
 -export([get_timestamp/0]).
 -export([pause_calculation/1, restart_calculation/5, restart_calculation/1, restart_calculation/3]).
 -export([restart_measurement/6, restart_measurement/1, restart_measurement/3, pause_measurement/1]).
+-export([get_calculation/4, get_synchronized_measurement/5, get_unsynchronized_measurement/6]).
 
 % Callbacks
 -export([start/2]).
@@ -54,18 +55,31 @@ stop(_State) -> ok.
 %% @doc
 %% Start all pools. Function to be called by GRiSP boards
 %%
-%% @param Measurements
-%% @param Calculations
-%% @param Filtering Set to true to filter the measurements before storing and sending it
+%% @param Measurements List of measurements to perform on the node
+%% @param Calculations List of calculations to perform on the node
+%% @param Master set to true if the current node must start the global_sync server, false otherwise
 %%
 %% @spec launch_app(
-%%            Measurements :: list(measurement()),
-%%            Calculations :: list(calculation())
+%%            Measurements :: list(unsync_measurement() | sync_measurement()),
+%%            Calculations :: list(calculation()),
+%%            Master :: boolean()
 %%       ) -> ok
 %% @end
 %% -------------------------------------------------------------------
--spec launch_app(Measurements :: list(measurement()), Calculations :: list(calculation())) -> ok.
-launch_app(Measurements, Calculations) ->
+-spec launch_app(Measurements :: list(unsync_measurement() | sync_measurement()), Calculations :: list(calculation()), Master :: boolean()) -> ok.
+launch_app(Measurements, Calculations, Master) ->
+  %% if this node is the master node, starts the global_sync module
+  case Master of
+      true ->
+        hera_pool:start_pool(hera_global_pool, 1, {hera_global_sync, start_link, []}),
+        hera_pool:run(hera_global_pool, []);
+      false -> not_master
+  end,
+
+  %% starts hera_synchronization
+  hera_pool:start_pool(hera_synchronization_pool, 1, {hera_synchronization, start_link, []}),
+  hera_pool:run(hera_synchronization_pool, []),
+
   %% starts hera_sensors_data
   hera_pool:start_pool(sensor_data_pool, 1, {hera_sensors_data, start_link, []}),
   hera_pool:run(sensor_data_pool, []),
@@ -352,6 +366,73 @@ restart_measurement(Name, Frequency, MaxIterations) ->
 pause_measurement(Name) ->
   hera_measure:pause_measurement(Name),
   ok.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Return a well formed synchronized measurement
+%%
+%% @param Name The name of the measurement
+%% @param Func The function that performs the measurement
+%% @param Filtering A boolean that indicates if the resulting measures must be filtered
+%% @param UpperBound TODO
+%% @param MaxIterations The number of measurements to be performed
+%%
+%% @spec get_synchronized_measurement(Name :: atom()
+%%                                    , Func :: fun(() -> {ok, term()} | {error, term()} )
+%%                                    , Filtering :: boolean()
+%%                                    , UpperBound :: float()
+%%                                    , MaxIterations :: integer() | infinity)
+%%      -> sync_measurement().
+%% @end
+%%--------------------------------------------------------------------
+-spec get_synchronized_measurement(Name :: atom(), Func :: fun(() -> {ok, term()} | {error, term()} ), Filtering :: boolean(), UpperBound :: float(), MaxIterations :: integer() | infinity) -> sync_measurement().
+get_synchronized_measurement(Name, Func, Filtering, UpperBound, MaxIterations) ->
+  {Name, #{func => Func, filtering => Filtering, upper_bound => UpperBound, max_iteration => MaxIterations, synchronization => true}}.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Return a well formed unsynchronized measurement
+%%
+%% @param Name The name of the measurement
+%% @param Func The function that performs the measurement
+%% @param Filtering A boolean that indicates if the resulting measures must be filtered
+%% @param UpperBound TODO
+%% @param MaxIterations The number of measurements to be performed
+%% @param Frequency The frequency at which the measurements are done
+%%
+%% @spec get_unsynchronized_measurement(Name :: atom()
+%%                                      , Func :: fun(() -> {ok, term()} | {error, term()} )
+%%                                      , Filtering :: boolean()
+%%                                      , UpperBound :: float()
+%%                                      , MaxIteration :: integer() | infinity
+%%                                      , Frequency :: integer())
+%%      -> unsync_measurement().
+%% @end
+%%--------------------------------------------------------------------
+-spec get_unsynchronized_measurement(Name :: atom(), Func :: fun(() -> {ok, term()} | {error, term()} ), Filtering :: boolean(), UpperBound :: float(), MaxIteration :: integer() | infinity, Frequency :: integer()) -> unsync_measurement().
+get_unsynchronized_measurement(Name, Func, Filtering, UpperBound, MaxIteration, Frequency) ->
+  {Name, #{func => Func, filtering => Filtering, upper_bound => UpperBound, max_iteration => MaxIteration, frequency => Frequency, synchronization => false}}.
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Return a well formed calculation
+%%
+%% @param Name The name of the calculation
+%% @param Func The function that performs the calculation
+%% @param MaxIterations The number of calculations to be performed
+%% @param Frequency The frequency at which the calculations are done
+%%
+%% @spec get_calculation(Name :: atom
+%%                       , Func :: fun(() -> {ok, term()} | {error, term()})
+%%                       , Frequency :: integer()
+%%                       , MaxIterations :: integer() | infinity)
+%%      -> calculation().
+%% @end
+%%--------------------------------------------------------------------
+-spec get_calculation(Name :: atom, Func :: fun(() -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer() | infinity) -> calculation().
+get_calculation(Name, Func, Frequency, MaxIterations) ->
+  {Name, #{func => Func, frequency => Frequency, max_iterations => MaxIterations}}.
+
 
 %% @private
 -spec get_timestamp() -> integer().

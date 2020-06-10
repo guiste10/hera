@@ -2,7 +2,7 @@
 %% @doc hera constants definitions
 %% @end
 %%====================================================================
--export_type([calculation/0, measurement/0]).
+-export_type([calculation/0, sync_measurement/0, unsync_measurement/0]).
 %%====================================================================
 %% Common Macros
 %%====================================================================
@@ -18,23 +18,36 @@
 %% Type of a calculation to be perform by the application
 %% @type calculation() :: {atom(), #{func => function(), args => list(any()), frequency => integer()}}
 -type calculation() ::
-  {atom(),
-    #{func => fun((...) -> {ok, term()} | {error, term()}),
-    args => list(any()),
-    frequency => integer(),
-    max_iterations => integer()
+  {CalculationName :: atom(),
+    #{func => CalculationFunction :: fun(() -> {ok, term()} | {error, term()}),
+      frequency => CalculationFrequency :: integer(),
+      max_iterations => MaxIterations :: integer() | infinity
+    }
+  }.
+
+%% @doc
+%% Type of a measurement to be perform by the application
+%% @type sync_measurement() :: {atom(), #{func => function(), filtering => boolean(), max_iterations => integer() | infinity, synchronization => true}}
+-type sync_measurement() ::
+  {MeasurementName :: atom(),
+    #{func => MeasurementFunction :: fun(() -> {ok, term()} | {error, term()}),
+      filtering => MakeFiltering :: boolean(),
+      upper_bound => float(),
+      max_iterations => MaxIterations :: integer() | infinity,
+      synchronization => MakeSynchronisationOfMeasurements :: true
     }
   }.
 
 %% @doc
 %% Type of a measurement to be perform by the application
 %% @type measurement() :: {atom(), #{func => function(), args => list(any()), frequency => integer(), filtering => boolean()}}
--type measurement() ::
-  {atom(),
-    #{func => fun((...) -> {ok, term()} | {error, term()}),
-      args => list(any()),
-      frequency => integer(),
-      filtering => boolean(),
-      max_iterations => integer() | infinity
-    }
-  }.
+-type unsync_measurement() ::
+{MeasurementName :: atom(),
+  #{func => MeasurementFunction :: fun(() -> {ok, term()} | {error, term()}),
+    frequency => CalculationFrequency :: integer(),
+    filtering => MakeFiltering :: boolean(),
+    upper_bound => float(),
+    max_iterations => MaxIterations :: integer() | infinity,
+    synchronization => MakeSynchronisationOfMeasurements :: false
+  }
+}.
