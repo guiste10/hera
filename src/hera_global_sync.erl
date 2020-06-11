@@ -63,7 +63,7 @@ init([]) ->
 handle_call({make_measure, Name}, _From = {Pid, _Ref}, State = #state{orders = M}) ->
   case maps:is_key(Name, M) of
     false ->
-      {_Pid, _Ref} = spawn_opt(?SERVER, dispatch, [Name], [monitor]),
+      {_P, _R} = spawn_opt(?SERVER, dispatch, [Name], [monitor]),
       NewMap = M#{Name => Queue = queue:new()},
       {reply, ok, State#state{orders = NewMap#{Name => queue:in(Pid, Queue)}}};
     true ->
