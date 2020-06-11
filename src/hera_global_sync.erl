@@ -134,10 +134,9 @@ dispatch(Name) ->
       From ! {perform_measure, Name, self()},
       receive
         {From, measure_done, continue} ->
-          put_last(From, Name),
-          dispatch(Name);
-        {From, measure_done, stop} ->
-          dispatch(Name)
+          put_last(From, Name);
+        {From, measure_done, stop} -> ok
       after 100 -> timeout
-      end
+      end,
+      dispatch(Name)
   end.
