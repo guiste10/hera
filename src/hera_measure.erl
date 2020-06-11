@@ -161,7 +161,6 @@ handle_call(get_default_measure, _From, State) ->
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
 handle_call(single_measurement, _From, State) ->
-    %% TODO : do measurement and get "continue" or "stop"
     {NewState, Continuation} = perform_measurement(State),
     {reply, Continuation, NewState};
 handle_call(_Msg, _From, State) ->
