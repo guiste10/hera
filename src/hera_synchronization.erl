@@ -32,7 +32,7 @@ loop() ->
       loop();
     {perform_measure, Name, Pid} ->
       Resp = hera_measure:perform_single_measurement(Name),
-      Pid ! {self(), measure_done, Resp},
+      Pid ! {measure_done, Resp},
       loop()
   end.
 
