@@ -134,11 +134,15 @@ dispatch(Name) ->
       From ! {perform_measure, Name, self()},
       receive
         {measure_done, continue} ->
-          put_last(From, Name);
-        {measure_done, stop} -> ok;
+          put_last(From, Name),
+          dispatch(Name);
+        {measure_done, stop} ->
+          dispatch(Name);
         SomethingElse ->
-          logger:error("[Global_Serv] received message :~p~n", [SomethingElse])
-      after 100 -> logger:error("Global_Serv] timeout when receiving measure confirmation~n")
-      end,
-      dispatch(Name)
+          logger:error("[Global_Serv] received message :~p~n", [SomethingElse]),
+          dispatch(Name)
+      after 100 ->
+        logger:error("Global_Serv] timeout when receiving measure confirmation~n"),
+        dispatch(Name)
+      end
   end.

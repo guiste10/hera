@@ -28,13 +28,16 @@ loop() ->
   receive
     {make_measure_request, Name} ->
       started = ensure_global_sync_started(),
-      gen_server:call({global, ?SYNC_PROC}, {make_measure, Name});
+      gen_server:call({global, ?SYNC_PROC}, {make_measure, Name}),
+      loop();
     {perform_measure, Name, Pid} ->
       Resp = hera_measure:perform_single_measurement(Name),
-      Pid ! {measure_done, Resp};
-    SomethingElse -> logger:error("[Synchronization] received message: ~p~n", [SomethingElse])
-  end,
-  loop().
+      Pid ! {measure_done, Resp},
+      loop();
+    SomethingElse ->
+      logger:error("[Synchronization] received message: ~p~n", [SomethingElse]),
+      loop()
+  end.
 
 ensure_global_sync_started() ->
   case global:whereis_name(?SYNC_PROC) of
