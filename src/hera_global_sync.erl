@@ -60,7 +60,7 @@ init([]) ->
   {stop, Reason :: term(), Reply :: term(), NewState :: #state{}} |
   {stop, Reason :: term(), NewState :: #state{}}).
 %% when a node want to perform measures <Name>, we add this node to the corresponding queue
-handle_call({make_measure, Name}, From, State = #state{orders = M}) ->
+handle_call({make_measure, Name}, {From, _Ref}, State = #state{orders = M}) ->
   case maps:is_key(Name, M) of
     false ->
       {_Pid, _Ref} = spawn_opt(?SERVER, dispatch, [Name], [monitor]),
@@ -131,7 +131,6 @@ dispatch(Name) ->
   case get_and_remove_first(Name) of
     {empty, _} -> dispatch(Name);
     {{value, From}, _} ->
-      logger:error("Pid from the node : ~p~n", [From]),
       From ! {perform_measure, Name, self()}, %%TODO : why does it crash here?
       receive
         {From, measure_done, continue} ->
