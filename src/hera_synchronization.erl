@@ -28,7 +28,7 @@ loop() ->
   receive
     {make_measure_request, Name} ->
       started = ensure_global_sync_started(),
-      hera_global_sync:make_measure_request(Name),
+      gen_server:call({global, ?SYNC_PROC}, {make_measure, Name}),
       loop();
     {perform_measure, Name, Pid} ->
       Resp = hera_measure:perform_single_measurement(Name),

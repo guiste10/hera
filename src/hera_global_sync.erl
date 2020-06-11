@@ -15,7 +15,6 @@
 
 %% API
 -export([start_link/0]).
--export([make_measure_request/1]).
 -export([dispatch/1]).
 
 %% gen_server callbacks
@@ -37,9 +36,6 @@
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start_link() ->
   gen_server:start_link({global, ?SYNC_PROC}, ?MODULE, [], []).
-
-make_measure_request(Name) ->
-  gen_server:call({global, ?SYNC_PROC}, {make_measure, Name}).
 
 %%%===================================================================
 %%% gen_server callbacks
