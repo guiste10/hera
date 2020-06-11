@@ -131,7 +131,7 @@ dispatch(Name) ->
   case get_and_remove_first(Name) of
     {empty, _} -> dispatch(Name);
     {{value, From}, _} ->
-      io:format("~p~n", [From]),
+      logger:error("Pid from the node : ~p~n", [From]),
       From ! {perform_measure, Name, self()}, %%TODO : why does it crash here?
       receive
         {From, measure_done, continue} ->
