@@ -131,12 +131,13 @@ dispatch(Name) ->
   case get_and_remove_first(Name) of
     {empty, _} -> dispatch(Name);
     {{value, From}, _} ->
-      From ! {perform_measure, Name, self()}, %%TODO : why does it crash here?
+      From ! {perform_measure, Name, self()},
       receive
-        {From, measure_done, continue} ->
+        {measure_done, continue} ->
           put_last(From, Name);
-        {From, measure_done, stop} -> ok
-      after 100 -> timeout
+        {measure_done, stop} -> ok;
+        SomethingElse -> logger:error("received message :~p~n", [SomethingElse])
+      after 100 -> logger:error("timeout when receiving measure confirmation~n")
       end,
       dispatch(Name)
   end.
