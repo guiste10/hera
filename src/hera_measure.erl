@@ -145,7 +145,7 @@ init({Name, #{func := MeasurementFunc, filtering := Filtering, upper_bound := Up
     hera_synchronization:make_measure_request(Name),
     {ok, form_state(Name, MeasurementFunc, undefined, undefined, Filtering, MaxIterations, UpperBound, true)};
 init({Name, #{func := MeasurementFunc, frequency := Frequency, filtering := Filtering, upper_bound := UpperBound, max_iterations := MaxIterations, synchronization := false}})->
-    {ok, form_state(Name, MeasurementFunc, Frequency, 100, Filtering, MaxIterations, UpperBound, false)}.
+    {ok, form_state(Name, MeasurementFunc, Frequency, 100, Filtering, MaxIterations, UpperBound, false), Frequency}.
 
 %% @private
 %% @doc Handling call messages
