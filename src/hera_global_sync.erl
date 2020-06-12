@@ -15,7 +15,7 @@
 
 %% API
 -export([start_link/0]).
--export([dispatch/1]).
+-export([dispatch/2]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
@@ -63,7 +63,9 @@ init([]) ->
 handle_call({make_measure, Name}, _From = {Pid, _Ref}, State = #state{orders = M}) ->
   case maps:is_key(Name, M) of
     false ->
-      {_P, _R} = spawn_opt(?SERVER, dispatch, [Name], [monitor]),
+      GlobalName = hera_utils:concat_atoms(dispatch_, Name),
+      {P, _R} = spawn_opt(?SERVER, dispatch, [Name, GlobalName], [monitor]),
+      global:register_name(GlobalName, P),
       NewMap = M#{Name => Queue = queue:new()},
       {reply, ok, State#state{orders = NewMap#{Name => queue:in(Pid, Queue)}}};
     true ->
@@ -127,22 +129,22 @@ get_and_remove_first(Name) ->
 put_last(Item, Name) ->
   gen_server:call({global, ?SYNC_PROC}, {put_last, Item, Name}).
 
-dispatch(Name) ->
-  case get_and_remove_first(Name) of
-    {empty, _} -> dispatch(Name);
+dispatch(MeasurementName, GlobalName) ->
+  case get_and_remove_first(MeasurementName) of
+    {empty, _} -> dispatch(MeasurementName, GlobalName);
     {{value, From}, _} ->
-      From ! {perform_measure, Name, self()},
+      From ! {perform_measure, MeasurementName, GlobalName},
       receive
-        {measure_done, Name, continue} ->
-          put_last(From, Name),
-          dispatch(Name);
-        {measure_done, Name, stop} ->
-          dispatch(Name);
+        {measure_done, MeasurementName, continue} ->
+          put_last(From, MeasurementName),
+          dispatch(MeasurementName, GlobalName);
+        {measure_done, MeasurementName, stop} ->
+          dispatch(MeasurementName, GlobalName);
         SomethingElse ->
           logger:error("[Global_Serv] received message :~p~n", [SomethingElse]),
-          dispatch(Name)
+          dispatch(MeasurementName, GlobalName)
       after 100 ->
         logger:error("Global_Serv] timeout when receiving measure confirmation~n"),
-        dispatch(Name)
+        dispatch(MeasurementName, GlobalName)
       end
   end.
