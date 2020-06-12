@@ -32,7 +32,7 @@ loop() ->
       loop();
     {perform_measure, Name, Pid} ->
       Resp = hera_measure:perform_single_measurement(Name),
-      Pid ! {measure_done, Resp},
+      Pid ! {measure_done, Name, Resp},
       loop();
     SomethingElse ->
       logger:error("[Synchronization] received message: ~p~n", [SomethingElse]),

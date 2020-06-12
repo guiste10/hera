@@ -133,10 +133,10 @@ dispatch(Name) ->
     {{value, From}, _} ->
       From ! {perform_measure, Name, self()},
       receive
-        {measure_done, continue} ->
+        {measure_done, Name, continue} ->
           put_last(From, Name),
           dispatch(Name);
-        {measure_done, stop} ->
+        {measure_done, Name, stop} ->
           dispatch(Name);
         SomethingElse ->
           logger:error("[Global_Serv] received message :~p~n", [SomethingElse]),
