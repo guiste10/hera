@@ -103,21 +103,12 @@ calc_position(NodeId) ->
                                 {_, #{x := PosX1, y := PosY1, node_id := _NodeId1},_},
                                 {_, #{x := PosX2, y := PosY2, node_id := _NodeId2},_}
                             ] = [dict:fetch(Node, Pos) || Node <- Nodes],
-                            Separation = math:sqrt(math:pow(PosX2-PosX1, 2) + math:pow(PosY2-PosY1, 2)),
-                            R1Sq = math : pow ( R1 , 2) ,
-                            R2Sq = math : pow ( R2 , 2) ,
-                            S2 = 2 * Separation ,
-                            SSq = math : pow ( Separation , 2) ,
-                            X = ( R1Sq - R2Sq + SSq ) / S2 ,
-                            Helper = R1Sq - math : pow (X , 2),
-                            if
-                                Helper < 0 ->
-                                    {error, "Position not definable: square root of neg number~n"};
-                                true ->
-                                    Y1 = math : sqrt ( Helper ) ,
-                                    Y2 = - Y1,
-                                    Result = io_lib:format("x1, ~.2f, y1, ~.2f, x2, ~.2f, y2, ~.2f", [X, Y1, X, Y2]),
+                            try trilateration({R1, PosX1, PosY1}, {R2, PosX2, PosY2}) of
+                                {{X1, Y1}, {X2, Y2}} -> 
+                                    Result = io_lib:format("x1, ~.2f, y1, ~.2f, x2, ~.2f, y2, ~.2f", [X1, Y1, X2, Y2]),
                                     {ok, Result}
+                            catch
+                                error:_ -> {error, "Position not definable: square root of neg number~n"} 
                             end;
                         [{_Seq1, V1, _T1}, {_Seq2, V2, _T2}, {_Seq3, V3, _T3}] ->
                             [
@@ -145,6 +136,29 @@ calc_position(NodeId) ->
             end
     end.
 
+
+trilateration({R1, X1, Y}, {R2, X2, Y}) -> % sonars are at the same height
+    U = X2-X1,
+    Helper1 = math:pow(R1, 2) - math:pow(R2, 2) + math:pow(U, 2),
+    TargetX = Helper1/(2*U),
+    TargetY = math:sqrt(math:pow(R1, 2) - (math:pow(Helper1, 2)/(4*math:pow(U, 2)))),
+    TargetY2 = -TargetY,
+    {{TargetX+X1,TargetY+Y}, {TargetX+X1,TargetY2+Y}};
+trilateration({R, X1, Y1}, {S, X2, Y2}) ->
+    {U,V} = {X2-X1,Y2-Y1},
+    [UPow2, VPow2, RPow2, SPow2] = [math:pow(X,2) || X <- [U, V, R, S]],
+    Helper1 = RPow2*U,
+    Helper2 = RPow2*VPow2,
+    HelperUV = UPow2 + VPow2,
+    HelperRoot = math:sqrt(-VPow2*  ( math:pow(R, 4)-2*RPow2*(SPow2 + HelperUV) + math:pow(-SPow2 + HelperUV, 2)  )),
+    Helper4 = -SPow2*U + math:pow(U, 3) + U*VPow2,
+    Helper5 = -SPow2*VPow2 + UPow2*VPow2 + math:pow(V, 4),
+    Helper6 = 2*HelperUV,
+    TargetX1 = (Helper1 - HelperRoot + Helper4)/Helper6,
+    TargetY1 = (Helper2 + U*HelperRoot + Helper5)/(V*Helper6),
+    TargetX2 = (Helper1 + HelperRoot + Helper4)/Helper6,
+    TargetY2 = (Helper2 - U*HelperRoot + Helper5)/(V*Helper6),
+    {{TargetX1+X1,TargetY1+Y1}, {TargetX2+X1,TargetY2+Y1}}.
 trilateration({V1, X1, Y1}, {V2, X2, Y2}, {V3, X3, Y3}) ->
     A = 2*X2 - 2*X1,
     B = 2*Y2 - 2*Y1,
