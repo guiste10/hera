@@ -19,7 +19,7 @@
 -export([launch_app/0]).
 -export([clusterize/0]).
 -export([fake_sonar_get/0]).
--export([send/5]).
+-export([send/5, send/1]).
 -export([store_data/4]).
 -export([get_data/1]).
 -export([get_recent_data/1]).
@@ -41,7 +41,6 @@ start(_Type, _Args) ->
   %{ok, _} = application:ensure_all_started(hera),
   %application:start(kernel),
   %application:start(stdlib),
-  catch grisp:add_device(uart,pmod_maxsonar),
   hera_pool:start_link(). % verif bon appel?
 
 %% @private
@@ -104,10 +103,18 @@ launch_app(Measurements, Calculations) ->
 %% -------------------------------------------------------------------
 -spec launch_app() -> ok.
 launch_app() ->
+  %% starts hera_sensors_data
   hera_pool:start_pool(sensor_data_pool, 1, {hera_sensors_data, start_link, []}),
   hera_pool:run(sensor_data_pool, []),
+
+  %% starts hera_communications
+  hera_pool:start_pool(communicationsPool, 1, {hera_communications, start_link, []}),
+  hera_pool:run(communicationsPool, []),
+
+  %% starts hera_multicast
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
+  %% starts multicast
   clusterize().
 
 %% -------------------------------------------------------------------
@@ -137,6 +144,19 @@ clusterize() ->
 -spec send(MessageType :: calc | measure, Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: term()) -> ok.
 send(MessageType, Name, Node, Seqnum, Data) ->
   hera_multicast:send(MessageType, Name, Node, Seqnum, Data).
+
+%% -------------------------------------------------------------------
+%% @doc
+%% Send a message the multicast cluster
+%%
+%% @param Message The message to be sent
+%%
+%% @spec send(Message_type :: calc | measure, Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: term()) -> ok
+%% @end
+%% -------------------------------------------------------------------
+-spec send(Message :: term()) -> any().
+send(Message) ->
+  hera_multicast:send(Message).
 
 %% -------------------------------------------------------------------
 %% @doc
