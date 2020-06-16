@@ -103,12 +103,18 @@ calc_position(NodeId) ->
                                 {_, #{x := PosX1, y := PosY1, node_id := _NodeId1},_},
                                 {_, #{x := PosX2, y := PosY2, node_id := _NodeId2},_}
                             ] = [dict:fetch(Node, Pos) || Node <- Nodes],
-                            try trilateration({R1, PosX1, PosY1}, {R2, PosX2, PosY2}) of
+                            Res = filtered_trilateration({R1, PosX1, PosY1}, {R2, PosX2, PosY2}, MaxX, MaxY), % todo pass maxX and MaxY
+                            case Res of
+                                {none, exceedBounds} ->
+                                    {error, "Position not definable: no position that doesn't exceed imposed bounds~n"};
+                                {none, negativeRoot} ->
+                                    {error, "Position not definable: square root of neg number~n"};
+                                {X1, Y1} -> 
+                                    Result = io_lib:format("x, ~.2f, y, ~.2f", [X1, Y1]),
+                                    {ok, Result};
                                 {{X1, Y1}, {X2, Y2}} -> 
-                                    Result = io_lib:format("x1, ~.2f, y1, ~.2f, x2, ~.2f, y2, ~.2f", [X1, Y1, X2, Y2]),
+                                    Result = io_lib:format("x1, ~.2f, y1, ~.2f or x2, ~.2f, y2, ~.2f", [X1, Y1, X2, Y2]),
                                     {ok, Result}
-                            catch
-                                error:_ -> {error, "Position not definable: square root of neg number~n"} 
                             end;
                         [{_Seq1, V1, _T1}, {_Seq2, V2, _T2}, {_Seq3, V3, _T3}] ->
                             [
@@ -130,12 +136,43 @@ calc_position(NodeId) ->
                             {X_p, Y_p} = trilateration({V1, PosX1, PosY1}, {V2, PosX2, PosY2}, {V3, PosX3, PosY3}),
                             Result = io_lib:format("x, ~.2f, y, ~.2f", [X_p, Y_p]),
                             {ok, Result};
+                        %[{_, _, _}, {_, _, _}, {_, _, _}, {_, _, _}] ->
+                        % todo: add trilateration multitarget 4 sonars and make it receive maxX and MaxY as argument from launchhera()
+                        % todo: don't set limit on age of stored value so that always 4 measures available?
+                        % todo: use trilateration method below with 4 arguments ABCD + log the 2 positions found
                         _ ->
-                            {error, "Not two mesurements available"}
+                            {error, "Not the right number of measures available"}
                     end
             end
     end.
 
+% used by trilateration when only 2 sonar measures are available, and also when tracking 2 targets using 4 sonar measures.
+filtered_trilateration(Measure1, Measure2, MaxX, MaxY) -> 
+    try trilateration(Measure1, Measure2) of
+        {A, A} ->
+            A; % don't return twice the same position
+        {A, B} ->
+            filter_2_positions(A, B, MaxX, MaxY)
+    catch
+        error:_ -> {none, negativeRoot} % no position possible
+    end.
+
+% filters the target positions found by the trilateration that uses 2 sonar measures.
+% used by trilateration when only 2 sonar measures are available, and also when tracking 2 targets using 4 sonar measures.
+% when tracking 2 targets with 4 sonars, chosen sonars will be on a rectangle, and only contiguous pairs of sonars
+% will perform trilateration so that the ambiguity can be avoided by only considering valid the target positions inside that rectangle
+filter_2_positions({X1, Y1}=PosA, {X2, Y2}=PosB, MaxX, MaxY) ->
+    if
+        (0 =< X1 andalso X1 =< MaxX andalso 0 =< Y1 andalso Y1 =< MaxY) andalso 
+        (0 =< X2 andalso X2 =< MaxX andalso 0 =< Y2 andalso Y2 =< MaxY) ->
+            [PosA, PosB];
+        0 =< X1 andalso X1 =< MaxX andalso 0 =< Y1 andalso Y1 =< MaxY ->
+            PosA;
+        0 =< X2 andalso X2 =< MaxX andalso 0 =< Y2 andalso Y2 =< MaxY ->
+            PosB;
+        true ->
+            {none, exceedBounds} % none of the 2 positions respect the maxX and maxY limits
+    end.
 
 trilateration({R1, X1, Y}, {R2, X2, Y}) -> % sonars are at the same height
     U = X2-X1,
@@ -170,6 +207,68 @@ trilateration({V1, X1, Y1}, {V2, X2, Y2}, {V3, X3, Y3}) ->
     Y_p = (C*D - A*F) / (B*D - A*E),
     {X_p, Y_p}.
 
+
+  %test:trilateration({math:sqrt(8), 0, 0}, {math:sqrt(8), 0, 4},{math:sqrt(8), 10, 4}, {math:sqrt(8), 10, 0}, 10, 4). gives 8,2 and 2,2
+  trilateration(A, B, C, D, MaxX, MaxY) ->
+    PosL = get_target_positions([A, B, C, D], A, [], MaxX, MaxY),
+    case PosL of
+        [] -> 
+            {none, exceedBounds};
+        [Pos] -> % only one target position found
+            Pos;
+        [FirstPos|OtherPosL] -> % one or more target positions found
+            get_target_positions(OtherPosL, FirstPos)
+    end.
+
+% returns 2 different positions, or one if the 2 targets are really close to one another
+get_target_positions([], FirstPos) ->
+    FirstPos;
+get_target_positions([Pos|OtherPosL], FirstPos) ->
+    SameTarget = same_target(Pos, FirstPos),
+    if
+        SameTarget == true ->
+            get_target_positions(OtherPosL, FirstPos);
+        true ->
+            [FirstPos, Pos] % found 2 different targets
+    end.
+
+
+
+% targets are considered the same if the distance between them < 40
+same_target({X1, Y1}, {X2, Y2}) ->
+    DeltaX = X1-X2,
+    DeltaY = Y1-Y2,
+    math:sqrt(math:pow(DeltaX, 2) + math:pow(DeltaY, 2)) < 40.
+
+
+% returns the positions of all targets detected using a pair of sonars each time, 4 sonars -> 4 contiguous pairs of sonars
+get_target_positions([LastMeasure], FirstMeasure, PosL, MaxX, MaxY) ->
+    Pos = filtered_trilateration(LastMeasure, FirstMeasure, MaxX, MaxY), % only 1 pos should be received, because sonars with these 2 measures are contiguous
+    add_to_position_list(Pos, PosL);
+get_target_positions([Measure|MeasureL], FirstMeasure, PosL, MaxX, MaxY) -> % measureL length > 1
+    Pos = filtered_trilateration(Measure, hd(MeasureL), MaxX, MaxY),
+    PosL2 = add_to_position_list(Pos, PosL),
+get_target_positions(MeasureL, FirstMeasure, PosL2, MaxX, MaxY).
+    
+
+% add the position to the list of positions.
+add_to_position_list(Pos, PosL) ->
+    case Pos of
+        {none,_Reason} ->
+            PosL;
+        _ ->
+            [Pos|PosL]
+    end.
+
+
+
+
+
+
+
+
+
+
 neighbors(NodeId, {_, #{node_id := Id}}) ->
     if
         Id =:= NodeId -> true;
@@ -177,3 +276,4 @@ neighbors(NodeId, {_, #{node_id := Id}}) ->
         Id =:= (NodeId + 4 - 1) rem 4 -> true;
         true -> false
     end.
+
