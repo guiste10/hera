@@ -229,6 +229,8 @@ perform_measurement(State = #state{measurement_func = MeasureFunc
     , warm_up_state = #warm_up_state{iter = Iter, max_iter = MaxNumIter, measures = Measures, delay = Delay}})
     when Iter < MaxNumIter ->
 
+    logger:notice("[Synchro = ~p] Warmup phase, iter = ~p~n State : ~n~p~n", [Sync, Iter, State]),
+
     WarmUpState = State#state.warm_up_state,
     {ok, Measure} = MeasureFunc(),
     Measures2 = Measures ++ [Measure],
@@ -237,12 +239,14 @@ perform_measurement(State = #state{measurement_func = MeasureFunc
         false -> {noreply, State#state{warm_up_state = WarmUpState#warm_up_state{iter = Iter+1, measures = Measures2}}, Delay}
     end;
 
-%% last iteration of warmup phase without synchronization
+%% last iteration of warmup phase
 perform_measurement(State = #state{name = Name
     , delay = Delay
     , warm_up = true
-    , warm_up_state = #warm_up_state{max_iter = MaxNumIter, measures = Measures}
+    , warm_up_state = #warm_up_state{max_iter = MaxNumIter, measures = Measures, iter = Iter}
     , synchronization = Sync}) ->
+
+    logger:notice("[Synchro = ~p] End of warmup phase, iter = ~p~n State : ~n~p~n", [Sync, Iter, State]),
 
     Measures2 = lists:sort(Measures),
     Median = lists:nth(MaxNumIter div 2 + 1, Measures2),
@@ -265,6 +269,8 @@ perform_measurement(State = #state{name = Name
     , synchronization = Sync})
     when Iter < MaxIterations ->
 
+    logger:notice("[Synchro = ~p] Normal phase, iter = ~p~n State : ~n~p~n", [Sync, Iter, State]),
+
     normal_phase(Func, DoFilter, Iter, DefaultM, Name, UpperBound),
     case Sync of
         true -> {State#state{iter = Iter+1 rem ?MAX_SEQNUM}, continue};
@@ -273,6 +279,9 @@ perform_measurement(State = #state{name = Name
 
 %% end of normal phase
 perform_measurement(State = #state{synchronization = Sync})  ->
+
+    logger:notice("[Synchro = ~p] End of normal phase~n State : ~n~p~n", [Sync, State]),
+
     case Sync of
         true -> {State#state{iter = 0, warm_up = true, warm_up_state = #warm_up_state{iter = 0, max_iter = 100, delay = undefined, measures = []}}, stop};
         false -> {noreply, State#state{iter = 0, warm_up = true, warm_up_state = #warm_up_state{iter = 0, max_iter = 100, delay = undefined, measures = []}}, hibernate}
