@@ -276,6 +276,8 @@ perform_measurement(State = #state{name = Name
 %% end of normal phase
 perform_measurement(State = #state{synchronization = Sync})  ->
 
+    logger:notice("[Measure] End of normal phase, State = ~p", [State]),
+
     case Sync of
         true -> {State#state{iter = 0, warm_up = true, warm_up_state = #warm_up_state{iter = 0, max_iter = 100, delay = undefined, measures = []}}, stop};
         false -> {noreply, State#state{iter = 0, warm_up = true, warm_up_state = #warm_up_state{iter = 0, max_iter = 100, delay = undefined, measures = []}}, hibernate}
