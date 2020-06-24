@@ -33,8 +33,10 @@ loop() ->
       loop();
     {perform_measure, Name, GlobalName} ->
       logger:notice("[Synchronization] received message: ~p~n", [perform_measure]),
+      T1 = hera:get_timestamp(),
       Resp = hera_measure:perform_single_measurement(Name),
-      logger:notice("[Synchronization] measure done, response : ~p~n", [Resp]),
+      T2 = hera:get_timestamp(),
+      logger:notice("[Synchronization] measure done, response : ~p, time to perform all things = ~p", [Resp, T2-T1]),
       global:send(GlobalName, {measure_done, Name, Resp}),
       loop();
     SomethingElse ->
