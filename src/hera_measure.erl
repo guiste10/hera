@@ -236,7 +236,10 @@ perform_measurement(State = #state{measurement_func = MeasureFunc
     logger:notice("[Measurement] [Synchro = ~p] Warmup phase, iter = ~p~n State : ~n~p~n", [Sync, Iter, State]),
 
     WarmUpState = State#state.warm_up_state,
+    T1 = hera:get_timestamp(),
     {ok, Measure} = MeasureFunc(),
+    T2 = hera:get_timestamp(),
+    logger:notice("[Measurement] [Synchro = ~p] time to perform measure = ~p", [T2-T1]),
     Measures2 = Measures ++ [Measure],
     case Sync of
         true -> {State#state{warm_up_state = WarmUpState#warm_up_state{iter = Iter+1, measures = Measures2}}, continue};
@@ -295,13 +298,18 @@ perform_measurement(State = #state{synchronization = Sync})  ->
 %% normal phase of the measurement
 normal_phase(Func, DoFilter, Iter, DefaultM, Name, UpperBound) ->
     MeasureTimestamp = hera:get_timestamp(),
+    T1 = MeasureTimestamp,
     case Func() of
         {error, Reason} -> logger:error(Reason);
         {ok, Measure} ->
             if
                 DoFilter == true ->
+                    T2 = hera:get_timestamp(),
+                    logger:notice("[Measurement] [Synchro = ~p] time to perform measure = ~p", [T2-T1]),
                     hera_filter:filter({Measure, MeasureTimestamp}, Iter, DefaultM, Name, UpperBound);
                 true ->
+                    T2 = hera:get_timestamp(),
+                    logger:notice("[Measurement] [Synchro = ~p] time to perform measure = ~p", [T2-T1]),
                     hera:store_data(Name, node(), Iter, Measure),
                     hera:send(measure, Name, node(), Iter, {Measure, MeasureTimestamp})
             end
