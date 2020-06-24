@@ -142,11 +142,9 @@ perform_single_measurement(Name) ->
     {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
     {stop, Reason :: term()} | ignore).
 init({Name, #{func := MeasurementFunc, filtering := Filtering, upper_bound := UpperBound, max_iterations := MaxIterations, synchronization := true}})->
-    logger:notice("[Measurement] Start measurements with synchronization"),
     hera_synchronization:make_measure_request(Name),
     {ok, form_state(Name, MeasurementFunc, undefined, undefined, Filtering, MaxIterations, UpperBound, true)};
 init({Name, #{func := MeasurementFunc, frequency := Frequency, filtering := Filtering, upper_bound := UpperBound, max_iterations := MaxIterations, synchronization := false}})->
-    logger:notice("[Measurement] Start measurements without synchronization"),
     {ok, form_state(Name, MeasurementFunc, Frequency, 100, Filtering, MaxIterations, UpperBound, false), Frequency}.
 
 %% @private
@@ -163,9 +161,7 @@ handle_call(get_default_measure, _From, State) ->
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
 handle_call(single_measurement, _From, State) ->
-    logger:notice("[Measurement] Get single measure"),
     {NewState, Continuation} = perform_measurement(State),
-    logger:notice("[Measurement] Single measurement done"),
     {reply, Continuation, NewState};
 handle_call(_Msg, _From, State) ->
     {noreply, State}.
@@ -234,13 +230,8 @@ perform_measurement(State = #state{measurement_func = MeasureFunc
     , warm_up_state = #warm_up_state{iter = Iter, max_iter = MaxNumIter, measures = Measures, delay = Delay}})
     when Iter < MaxNumIter ->
 
-    logger:notice("[Measurement] [Synchro = ~p] Warmup phase, iter = ~p~n State : ~n~p~n", [Sync, Iter, State]),
-
     WarmUpState = State#state.warm_up_state,
-    T1 = hera:get_timestamp(),
     {ok, Measure} = MeasureFunc(),
-    T2 = hera:get_timestamp(),
-    logger:notice("[Measurement] [Synchro = ~p] time to perform measure = ~p", [T2-T1]),
     Measures2 = Measures ++ [Measure],
     case Sync of
         true -> {State#state{warm_up_state = WarmUpState#warm_up_state{iter = Iter+1, measures = Measures2}}, continue};
@@ -252,10 +243,8 @@ perform_measurement(State = #state{name = Name
     , delay = Delay
     , warm_up = true
     , filtering = true
-    , warm_up_state = #warm_up_state{max_iter = MaxNumIter, measures = Measures, iter = Iter}
+    , warm_up_state = #warm_up_state{max_iter = MaxNumIter, measures = Measures}
     , synchronization = Sync}) ->
-
-    logger:notice("[Measurement] [Synchro = ~p] End of warmup phase, iter = ~p~n State : ~n~p~n", [Sync, Iter, State]),
 
     Measures2 = lists:sort(Measures),
     Median = lists:nth(MaxNumIter div 2 + 1, Measures2),
@@ -278,8 +267,6 @@ perform_measurement(State = #state{name = Name
     , synchronization = Sync})
     when Iter < MaxIterations ->
 
-    logger:notice("[Measurement] [Synchro = ~p] Normal phase, iter = ~p~n State : ~n~p~n", [Sync, Iter, State]),
-
     normal_phase(Func, DoFilter, Iter, DefaultM, Name, UpperBound),
     case Sync of
         true -> {State#state{iter = Iter+1 rem ?MAX_SEQNUM}, continue};
@@ -288,8 +275,6 @@ perform_measurement(State = #state{name = Name
 
 %% end of normal phase
 perform_measurement(State = #state{synchronization = Sync})  ->
-
-    logger:notice("[Measurement] [Synchro = ~p] End of normal phase~n State : ~n~p~n", [Sync, State]),
 
     case Sync of
         true -> {State#state{iter = 0, warm_up = true, warm_up_state = #warm_up_state{iter = 0, max_iter = 100, delay = undefined, measures = []}}, stop};
@@ -300,18 +285,13 @@ perform_measurement(State = #state{synchronization = Sync})  ->
 %% normal phase of the measurement
 normal_phase(Func, DoFilter, Iter, DefaultM, Name, UpperBound) ->
     MeasureTimestamp = hera:get_timestamp(),
-    T1 = MeasureTimestamp,
     case Func() of
         {error, Reason} -> logger:error(Reason);
         {ok, Measure} ->
             if
                 DoFilter == true ->
-                    T2 = hera:get_timestamp(),
-                    logger:notice("[Measurement] [Synchro = ~p] time to perform measure = ~p", [T2-T1]),
                     hera_filter:filter({Measure, MeasureTimestamp}, Iter, DefaultM, Name, UpperBound);
                 true ->
-                    T2 = hera:get_timestamp(),
-                    logger:notice("[Measurement] [Synchro = ~p] time to perform measure = ~p", [T2-T1]),
                     hera:store_data(Name, node(), Iter, Measure),
                     hera:send(measure, Name, node(), Iter, {Measure, MeasureTimestamp})
             end

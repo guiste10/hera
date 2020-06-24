@@ -136,16 +136,14 @@ dispatch(MeasurementName, GlobalName) ->
       From ! {perform_measure, MeasurementName, GlobalName},
       receive
         {measure_done, MeasurementName, continue} ->
-          logger:notice("[Global_Serv] received message :~p~n", [measure_done_c]),
           put_last(From, MeasurementName),
           dispatch(MeasurementName, GlobalName);
         {measure_done, MeasurementName, stop} ->
-          logger:notice("[Global_Serv] received message :~p~n", [measure_done_s]),
           dispatch(MeasurementName, GlobalName);
         SomethingElse ->
           logger:error("[Global_Serv] received message :~p~n", [SomethingElse]),
           dispatch(MeasurementName, GlobalName)
-      after 1000 ->
+      after 2000 ->
         logger:error("[Global_Serv] timeout when receiving measure confirmation~n"),
         dispatch(MeasurementName, GlobalName)
       end
