@@ -230,6 +230,7 @@ terminate(_Reason, _State) -> ok.
 perform_measurement(State = #state{measurement_func = MeasureFunc
     , warm_up = true
     , synchronization = Sync
+    , filtering = true
     , warm_up_state = #warm_up_state{iter = Iter, max_iter = MaxNumIter, measures = Measures, delay = Delay}})
     when Iter < MaxNumIter ->
 
@@ -250,6 +251,7 @@ perform_measurement(State = #state{measurement_func = MeasureFunc
 perform_measurement(State = #state{name = Name
     , delay = Delay
     , warm_up = true
+    , filtering = true
     , warm_up_state = #warm_up_state{max_iter = MaxNumIter, measures = Measures, iter = Iter}
     , synchronization = Sync}) ->
 
