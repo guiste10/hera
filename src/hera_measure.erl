@@ -39,7 +39,7 @@ handle_info/2, code_change/3, terminate/2]).
     iter :: integer(),
     default_Measure :: {float(), integer()},
     filtering :: boolean(),
-    warm_up = true :: boolean(),
+    warm_up :: boolean(),
     warm_up_state :: warm_up_state(),
     max_iterations :: integer() | infinity,
     upperBound :: float(),
@@ -276,8 +276,6 @@ perform_measurement(State = #state{name = Name
 %% end of normal phase
 perform_measurement(State = #state{synchronization = Sync})  ->
 
-    logger:notice("[Measure] End of normal phase, State = ~p", [State]),
-
     case Sync of
         true -> {State#state{iter = 0, warm_up = true, warm_up_state = #warm_up_state{iter = 0, max_iter = 100, delay = undefined, measures = []}}, stop};
         false -> {noreply, State#state{iter = 0, warm_up = true, warm_up_state = #warm_up_state{iter = 0, max_iter = 100, delay = undefined, measures = []}}, hibernate}
@@ -306,6 +304,7 @@ form_state(Name, MeasurementFunc, Frequency, WarmUpDelay, Filtering, MaxIteratio
         , measurement_func = MeasurementFunc
         , delay = Frequency
         , iter = 0
+        , warm_up = true
         , default_Measure = {-1.0, -1}
         , warm_up_state = #warm_up_state{iter = 0, max_iter = 100, delay = WarmUpDelay, measures = []}
         , filtering = Filtering
