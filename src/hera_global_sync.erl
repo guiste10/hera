@@ -143,7 +143,7 @@ dispatch(MeasurementName, GlobalName) ->
         SomethingElse ->
           logger:error("[Global_Serv] received message :~p~n", [SomethingElse]),
           dispatch(MeasurementName, GlobalName)
-      after 2000 ->
+      after 100 ->
         logger:error("[Global_Serv] timeout when receiving measure confirmation~n"),
         dispatch(MeasurementName, GlobalName)
       end
