@@ -40,9 +40,9 @@ dispatch(MeasurementName, GlobalName) ->
           logger:error("[Global_Serv] received message :~p~n", [SomethingElse])
       after 1000 ->
         logger:error("[Global_Serv] timeout when receiving measure confirmation")
-      end,
-      dispatch(MeasurementName, GlobalName)
-  end.
+      end
+  end,
+  dispatch(MeasurementName, GlobalName).
 
 %%%===================================================================
 %%% Internal functions
