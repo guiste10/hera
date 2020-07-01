@@ -51,7 +51,7 @@
 %%--------------------------------------------------------------------
 -spec launch_hera(PosX :: integer(), PosY :: integer(), NodeId :: integer(), Master :: boolean()) -> any().
 launch_hera(PosX, PosY, NodeId, Master) ->
-    %%pmod_maxsonar:set_mode(single),
+    pmod_maxsonar:set_mode(single),
     Measurements = [
         hera:get_synchronized_measurement(sonar, fun() -> sonar_measurement(2.54) end, true, 0.14, infinity),
         hera:get_unsynchronized_measurement(pos, fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, false, 0.28, 3, 500)
@@ -60,7 +60,7 @@ launch_hera(PosX, PosY, NodeId, Master) ->
     hera:launch_app(Measurements, Calculations, Master).
 
 launch_hera(PosX, PosY, NodeId, MaxIteration, Master) ->
-    %%pmod_maxsonar:set_mode(single),
+    pmod_maxsonar:set_mode(single),
     Measurements = [
         hera:get_synchronized_measurement(sonar, fun() -> sonar_measurement(2.54) end, true, 0.14, MaxIteration),
         hera:get_unsynchronized_measurement(pos, fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, false, 0.28, 3, 500)
