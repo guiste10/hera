@@ -68,17 +68,6 @@ stop(_State) -> ok.
 %% -------------------------------------------------------------------
 -spec launch_app(Measurements :: list(unsync_measurement() | sync_measurement()), Calculations :: list(calculation()), Master :: boolean()) -> ok.
 launch_app(Measurements, Calculations, Master) ->
-  %% if this node is the master node, starts the global_sync module
-  case Master of
-      true ->
-        hera_pool:start_pool(hera_global_pool, 1, {hera_global_sync, start_link, []}),
-        hera_pool:run(hera_global_pool, []);
-      false -> not_master
-  end,
-
-  %% starts hera_synchronization
-  hera_pool:start_pool(hera_synchronization_pool, 1, {hera_synchronization, start_link, []}),
-  hera_pool:run(hera_synchronization_pool, []),
 
   %% starts hera_sensors_data
   hera_pool:start_pool(sensor_data_pool, 1, {hera_sensors_data, start_link, []}),
@@ -93,6 +82,18 @@ launch_app(Measurements, Calculations, Master) ->
   hera_pool:run(multicastPool, []),
   %% starts multicast
   clusterize(),
+
+  %% if this node is the master node, starts the global_sync module
+  case Master of
+    true ->
+      hera_pool:start_pool(hera_global_pool, 1, {hera_global_sync, start_link, []}),
+      hera_pool:run(hera_global_pool, []);
+    false -> not_master
+  end,
+
+  %% starts hera_synchronization
+  hera_pool:start_pool(hera_synchronization_pool, 1, {hera_synchronization, start_link, []}),
+  hera_pool:run(hera_synchronization_pool, []),
 
   %% starts hera_filter
   hera_pool:start_pool(filter_data_pool, 1, {hera_filter, start_link, []}),
