@@ -26,7 +26,9 @@ init(MeasurementName, GlobalName) ->
 
 dispatch(MeasurementName, GlobalName) ->
   case get_and_remove_first(MeasurementName) of
-    not_yet_measurements_asked -> dispatch(MeasurementName, GlobalName);
+    not_yet_measurements_asked ->
+      timer:sleep(2000),
+      dispatch(MeasurementName, GlobalName);
     {empty, _} -> dispatch(MeasurementName, GlobalName);
     {{value, From}, _} ->
       From ! {perform_measure, MeasurementName, GlobalName},
