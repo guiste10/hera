@@ -17,7 +17,7 @@
 -include("hera.hrl").
 
 -export([launch_hera/3]).
--export([launch_hera/5]).
+-export([launch_hera/7]).
 -export([launch_hera_shell/0]).
 -export([restart_calculation/2]).
 -export([restart_measurement/2]).
@@ -44,18 +44,18 @@ launch_hera(PosX, PosY, NodeId) ->
          max_iterations => 100}},
         {pos, #{func => fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, args => [], frequency => 50, filtering => false, upperBound => 0.28, max_iterations => 3}}
     ],
-    %Calculations = [{position, #{func => fun(Id) -> calc_position(Id) end, args => [NodeId], frequency => 100, max_iterations => 150}}],
+    %Calculations = [{position, #{func => fun(Id) -> calc_position(Id, infinity, infinity) end, args => [NodeId], frequency => 100, max_iterations => 150}}],
     Calculations = [], % no calculation
     hera:launch_app(Measurements, Calculations).
 
-launch_hera(PosX, PosY, NodeId, Frequency, MaxIteration) ->
+launch_hera(PosX, PosY, NodeId, Frequency, MaxIteration, MaxX, MaxY) ->
     Measurements = [
         {sonar, #{func => fun(InchToCm) -> sonar_measurement(InchToCm) end, args => [2.54], frequency => Frequency, 
         filtering => true, upperBound => 0.14,
         max_iterations => MaxIteration}},
         {pos, #{func => fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, args => [], frequency => 5000, filtering => false, upperBound => 0.28, max_iterations => 3}}
     ],
-    Calculations = [{position, #{func => fun(Id) -> calc_position(Id) end, args => [NodeId], frequency => Frequency, max_iterations => MaxIteration}}],
+    Calculations = [{position, #{func => fun(Id) -> calc_position(Id, MaxX, MaxY) end, args => [NodeId], frequency => Frequency, max_iterations => MaxIteration}}],
     %Calculations = [], % no calculation
     hera:launch_app(Measurements, Calculations).
 
@@ -83,8 +83,8 @@ sonar_measurement(InchToCm) ->
     end.
 
 
-calc_position(NodeId) ->
-    %case hera:get_data(sonar) of   % works
+calc_position(NodeId, MaxX, MaxY) ->
+    %case hera:get_data(sonar) of
     case hera:get_recent_data(sonar) of
         {error, Reason} ->
             logger:error(Reason),
@@ -95,15 +95,17 @@ calc_position(NodeId) ->
                     logger:error(Reason),
                     error;
                 {ok, Pos} ->
-                    Nodes = lists:filter(fun(N) -> dict:is_key(N, Pos) end, dict:fetch_keys(Sonar)), % fetch all nodes from the sonar measurements of who we received the position
-                    Values = [dict:fetch(Node, Sonar) || Node <- Nodes],
+                    Nodes = lists:filter(fun(N) -> dict:is_key(N, Pos) end, dict:fetch_keys(Sonar)), % fetch all nodes from the recent sonar measurements of who we received the position
+                    Values = [dict:fetch(Node, Sonar) || Node <- Nodes], 
+                    % as many values as nodes of who we received the position
+                    % values and positions are ordered according to nodes list
                     case Values of
                         [{_Seq1, R1, _T1}, {_Seq2, R2, _T2}] ->
                             [
                                 {_, #{x := PosX1, y := PosY1, node_id := _NodeId1},_},
                                 {_, #{x := PosX2, y := PosY2, node_id := _NodeId2},_}
                             ] = [dict:fetch(Node, Pos) || Node <- Nodes],
-                            Res = filtered_trilateration({R1, PosX1, PosY1}, {R2, PosX2, PosY2}, MaxX, MaxY), % todo pass maxX and MaxY
+                            Res = filtered_trilateration({R1, PosX1, PosY1}, {R2, PosX2, PosY2}, MaxX, MaxY),
                             case Res of
                                 {none, exceedBounds} ->
                                     {error, "Position not definable: no position that doesn't exceed imposed bounds~n"};
@@ -112,7 +114,7 @@ calc_position(NodeId) ->
                                 {X1, Y1} -> 
                                     Result = io_lib:format("x, ~.2f, y, ~.2f", [X1, Y1]),
                                     {ok, Result};
-                                {{X1, Y1}, {X2, Y2}} -> 
+                                [{X1, Y1}, {X2, Y2}] ->  % 2 possible positions
                                     Result = io_lib:format("x1, ~.2f, y1, ~.2f or x2, ~.2f, y2, ~.2f", [X1, Y1, X2, Y2]),
                                     {ok, Result}
                             end;
@@ -125,21 +127,36 @@ calc_position(NodeId) ->
                             {X_p, Y_p} = trilateration({V1, PosX1, PosY1}, {V2, PosX2, PosY2}, {V3, PosX3, PosY3}),
                             Result = io_lib:format("x, ~.2f, y, ~.2f", [X_p, Y_p]),
                             {ok, Result};
-                        [{_, _, _}, {_, _, _}, {_, _, _}, {_, _, _}] ->
-                            Neighbors = lists:filter(fun(N) -> neighbors(NodeId, dict:fetch(N, Pos)) end, Nodes),
-                            [{_Seq1, V1}, {_Seq2, V2}, {_Seq3, V3}] = [dict:fetch(Node, Sonar) || Node <- Neighbors],
+                        %[{_, _, _}, {_, _, _}, {_, _, _}, {_, _, _}] ->
+                            %Neighbors = lists:filter(fun(N) -> neighbors(NodeId, dict:fetch(N, Pos)) end, Nodes),
+                            %[{_Seq1, V1}, {_Seq2, V2}, {_Seq3, V3}] = [dict:fetch(Node, Sonar) || Node <- Neighbors],
+                            %[
+                            %    {_, #{x := PosX1, y := PosY1, node_id := _NodeId1},_},
+                            %    {_, #{x := PosX2, y := PosY2, node_id := _NodeId2},_},
+                            %    {_, #{x := PosX3, y := PosY3, node_id := _NodeId3},_}
+                            %] = [dict:fetch(Node, Pos) || Node <- Neighbors],
+                            %{X_p, Y_p} = trilateration({V1, PosX1, PosY1}, {V2, PosX2, PosY2}, {V3, PosX3, PosY3}),
+                            %Result = io_lib:format("x, ~.2f, y, ~.2f", [X_p, Y_p]),
+                            %{ok, Result};
+                        [{_Seq1, V1, _T1}, {_Seq2, V2, _T2}, {_Seq3, V3, _T3}, {_Seq4, V4, _T4}] ->
                             [
                                 {_, #{x := PosX1, y := PosY1, node_id := _NodeId1},_},
                                 {_, #{x := PosX2, y := PosY2, node_id := _NodeId2},_},
-                                {_, #{x := PosX3, y := PosY3, node_id := _NodeId3},_}
-                            ] = [dict:fetch(Node, Pos) || Node <- Neighbors],
-                            {X_p, Y_p} = trilateration({V1, PosX1, PosY1}, {V2, PosX2, PosY2}, {V3, PosX3, PosY3}),
-                            Result = io_lib:format("x, ~.2f, y, ~.2f", [X_p, Y_p]),
-                            {ok, Result};
-                        %[{_, _, _}, {_, _, _}, {_, _, _}, {_, _, _}] ->
-                        % todo: add trilateration multitarget 4 sonars and make it receive maxX and MaxY as argument from launchhera()
-                        % todo: don't set limit on age of stored value so that always 4 measures available?
-                        % todo: use trilateration method below with 4 arguments ABCD + log the 2 positions found
+                                {_, #{x := PosX3, y := PosY3, node_id := _NodeId3},_},
+                                {_, #{x := PosX4, y := PosY4, node_id := _NodeId4},_}
+                            ] = [dict:fetch(Node, Pos) || Node <- Nodes], % fetch pos of each node
+                            % todo: order the posVal triplets to make a circle traversal, nodes = ordered or not? if yes then its ok (1,2,3,4 but not 1,3,4,2)
+                            Res = trilateration({V1, PosX1, PosY1}, {V2, PosX2, PosY2}, {V3, PosX3, PosY3}, {V4, PosX4, PosY4}, MaxX, MaxY),
+                            case Res of
+                                {none, exceedBounds} ->
+                                    {error, "No position found that doesn't violate MaxX and MaxY limits"};
+                                {X1, Y1} ->
+                                    Result = io_lib:format("x, ~.2f, y, ~.2f", [X1, Y1]),
+                                    {ok, Result};
+                                [{X1, Y1}, {X2, Y2}] -> % 2 different targets were detected
+                                    Result = io_lib:format("x1, ~.2f, y1, ~.2f and x2, ~.2f, y2, ~.2f", [X1, Y1, X2, Y2]),
+                                    {ok, Result}
+                            end;
                         _ ->
                             {error, "Not the right number of measures available"}
                     end
@@ -207,8 +224,7 @@ trilateration({V1, X1, Y1}, {V2, X2, Y2}, {V3, X3, Y3}) ->
     Y_p = (C*D - A*F) / (B*D - A*E),
     {X_p, Y_p}.
 
-
-  %test:trilateration({math:sqrt(8), 0, 0}, {math:sqrt(8), 0, 4},{math:sqrt(8), 10, 4}, {math:sqrt(8), 10, 0}, 10, 4). gives 8,2 and 2,2
+  %test:trilateration({math:sqrt(8), 0, 0}, {math:sqrt(8), 0, 4},{math:sqrt(8), 10, 4}, {math:sqrt(8), 10, 0}, 10, 4). gives 8,2 and 2,2 when max dist < 4
   trilateration(A, B, C, D, MaxX, MaxY) ->
     PosL = get_target_positions([A, B, C, D], A, [], MaxX, MaxY),
     case PosL of
