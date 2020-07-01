@@ -11,17 +11,17 @@
 
 -include("hera.hrl").
 %% API
--export([start_link/2, init/1, dispatch/2]).
+-export([start_link/2, init/2, dispatch/2]).
 
 %%%===================================================================
 %%% API
 %%%===================================================================
 
 start_link(MeasurementName, GlobalName) ->
-  syn:register(GlobalName, Pid = spawn_link(?MODULE, init, {MeasurementName, GlobalName})),
+  syn:register(GlobalName, Pid = spawn_link(?MODULE, init, [MeasurementName, GlobalName])),
   {ok, Pid}.
 
-init({MeasurementName, GlobalName}) ->
+init(MeasurementName, GlobalName) ->
   dispatch(MeasurementName, GlobalName).
 
 dispatch(MeasurementName, GlobalName) ->
