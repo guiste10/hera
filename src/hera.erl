@@ -87,7 +87,8 @@ launch_app(Measurements, Calculations, Master) ->
   case Master of
     true ->
       hera_pool:start_pool(hera_global_pool, 1, {hera_global_sync, start_link, []}),
-      hera_pool:run(hera_global_pool, []);
+      {ok, GPid} = hera_pool:run(hera_global_pool, []),
+      global:register_name(?SYNC_PROC, GPid);
     false -> not_master
   end,
 
