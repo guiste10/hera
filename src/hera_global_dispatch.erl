@@ -26,9 +26,6 @@ init(MeasurementName, GlobalName) ->
 
 dispatch(MeasurementName, GlobalName) ->
   case get_and_remove_first(MeasurementName) of
-    not_yet_measurements_asked ->
-      timer:sleep(2000);
-    {empty, _} -> ok;
     {{value, From}, _} ->
       From ! {perform_measure, MeasurementName, GlobalName},
       receive
@@ -40,7 +37,8 @@ dispatch(MeasurementName, GlobalName) ->
           logger:error("[Global_Serv] received message :~p~n", [SomethingElse])
       after 1000 ->
         logger:error("[Global_Serv] timeout when receiving measure confirmation")
-      end
+      end;
+    _ -> timer:sleep(2000)
   end,
   dispatch(MeasurementName, GlobalName).
 
