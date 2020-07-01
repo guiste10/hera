@@ -35,7 +35,7 @@
 -spec(start_link() ->
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start_link() ->
-  gen_server:start_link(?MODULE, [], []).
+  gen_server:start_link({via, syn, ?SYNC_PROC}, ?MODULE, [], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -65,7 +65,7 @@ handle_call({make_measure, Name}, _From = {Pid, _Ref}, State = #state{orders = M
     false ->
       GlobalName = hera_utils:concat_atoms(dispatch_, Name),
       {P, _R} = spawn_opt(?SERVER, dispatch, [Name, GlobalName], [monitor]),
-      global:register_name(GlobalName, P),
+      syn:register(GlobalName, P),
       NewMap = M#{Name => Queue = queue:new()},
       {reply, ok, State#state{orders = NewMap#{Name => queue:in(Pid, Queue)}}};
     true ->
@@ -124,10 +124,10 @@ code_change(_OldVsn, State = #state{}, _Extra) ->
 %%%===================================================================
 
 get_and_remove_first(Name) ->
-  gen_server:call({global, ?SYNC_PROC}, {get_and_remove_first, Name}).
+  gen_server:call({via, syn, ?SYNC_PROC}, {get_and_remove_first, Name}).
 
 put_last(Item, Name) ->
-  gen_server:call({global, ?SYNC_PROC}, {put_last, Item, Name}).
+  gen_server:call({via, syn, ?SYNC_PROC}, {put_last, Item, Name}).
 
 dispatch(MeasurementName, GlobalName) ->
   case get_and_remove_first(MeasurementName) of
