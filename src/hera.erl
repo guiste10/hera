@@ -88,8 +88,9 @@ launch_app(Measurements, Calculations, Master) ->
     true ->
       hera_pool:start_pool(hera_global_pool, 1, {hera_global_sync, start_link, []}),
       hera_pool:run(hera_global_pool, []),
-      hera_pool:start_pool(global_dispatch_pool, length(Measurements), {hera_global_dispatch, start_link, []}),
-      [hera_pool:run(global_dispatch_pool, [Name, hera_utils:concat_atoms(dispatch_, Name)]) || {Name, _M} <- Measurements];
+      SyncMeas = lists:filter(fun({_Name, Meas}) -> maps:get(synchronization, Meas) end, Measurements),
+      hera_pool:start_pool(global_dispatch_pool, length(SyncMeas), {hera_global_dispatch, start_link, []}),
+      [hera_pool:run(global_dispatch_pool, [Name, hera_utils:concat_atoms(dispatch_, Name)]) || {Name, _M} <- SyncMeas];
     false -> not_master
   end,
 

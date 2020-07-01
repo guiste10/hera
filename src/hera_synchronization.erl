@@ -14,6 +14,10 @@
 -export([start_link/0, init/0, loop/0]).
 -export([make_measure_request/1]).
 
+%%%===================================================================
+%%% API
+%%%===================================================================
+
 start_link() ->
   register(?MODULE, Pid = spawn_link(?MODULE, init, [])),
   {ok, Pid}.
@@ -38,6 +42,10 @@ loop() ->
       logger:error("[Synchronization] received message: ~p~n", [SomethingElse]),
       loop()
   end.
+
+%%%===================================================================
+%%% Internal functions
+%%%===================================================================
 
 ensure_global_sync_started() ->
   case syn:whereis(?SYNC_PROC) of
