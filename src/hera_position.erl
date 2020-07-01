@@ -140,13 +140,15 @@ calc_position(NodeId, MaxX, MaxY) ->
                             %{ok, Result};
                         [{_Seq1, V1, _T1}, {_Seq2, V2, _T2}, {_Seq3, V3, _T3}, {_Seq4, V4, _T4}] ->
                             [
-                                {_, #{x := PosX1, y := PosY1, node_id := _NodeId1},_},
-                                {_, #{x := PosX2, y := PosY2, node_id := _NodeId2},_},
-                                {_, #{x := PosX3, y := PosY3, node_id := _NodeId3},_},
-                                {_, #{x := PosX4, y := PosY4, node_id := _NodeId4},_}
+                                {_, #{x := PosX1, y := PosY1, node_id := NodeId1},_},
+                                {_, #{x := PosX2, y := PosY2, node_id := NodeId2},_},
+                                {_, #{x := PosX3, y := PosY3, node_id := NodeId3},_},
+                                {_, #{x := PosX4, y := PosY4, node_id := NodeId4},_}
                             ] = [dict:fetch(Node, Pos) || Node <- Nodes], % fetch pos of each node
-                            % todo: order the posVal triplets to make a circle traversal, nodes = ordered or not? if yes then its ok (1,2,3,4 but not 1,3,4,2)
-                            Res = trilateration({V1, PosX1, PosY1}, {V2, PosX2, PosY2}, {V3, PosX3, PosY3}, {V4, PosX4, PosY4}, MaxX, MaxY),
+                            Measures = [{NodeId1, {V1, PosX1, PosY1}}, {NodeId2, {V2, PosX2, PosY2}}, {NodeId3, {V3, PosX3, PosY3}}, {NodeId4, {V4, PosX4, PosY4}}],
+                            ContiguousMeasuresId = lists:sort(Measures), % abcd are ordered according to nodeId to ensure they represent circular traversal of sonars
+                            ContiguousMeasures = [element(2, E) || E <- ContiguousMeasuresId], % remove nodeid part and only keep the {V, PosX, PosY} tuple
+                            Res = trilaterations_2_objects(ContiguousMeasures, MaxX, MaxY),
                             case Res of
                                 {none, exceedBounds} ->
                                     {error, "No position found that doesn't violate MaxX and MaxY limits"};
@@ -225,8 +227,8 @@ trilateration({V1, X1, Y1}, {V2, X2, Y2}, {V3, X3, Y3}) ->
     {X_p, Y_p}.
 
   %test:trilateration({math:sqrt(8), 0, 0}, {math:sqrt(8), 0, 4},{math:sqrt(8), 10, 4}, {math:sqrt(8), 10, 0}, 10, 4). gives 8,2 and 2,2 when max dist < 4
-  trilateration(A, B, C, D, MaxX, MaxY) ->
-    PosL = get_target_positions([A, B, C, D], A, [], MaxX, MaxY),
+  trilaterations_2_objects(Measures, MaxX, MaxY) ->
+    PosL = get_contiguous_pairs_positions(Measures, hd(Measures), [], MaxX, MaxY),
     case PosL of
         [] -> 
             {none, exceedBounds};
@@ -234,6 +236,25 @@ trilateration({V1, X1, Y1}, {V2, X2, Y2}, {V3, X3, Y3}) ->
             Pos;
         [FirstPos|OtherPosL] -> % one or more target positions found
             get_target_positions(OtherPosL, FirstPos)
+    end.
+
+
+% returns the positions of all targets detected using a pair of sonars each time, 4 sonars -> 4 contiguous pairs of sonars
+get_contiguous_pairs_positions([LastMeasure], FirstMeasure, PosL, MaxX, MaxY) ->
+    Pos = filtered_trilateration(LastMeasure, FirstMeasure, MaxX, MaxY), % only 1 pos should be received, because sonars with these 2 measures are contiguous
+    add_to_position_list(Pos, PosL);
+    get_contiguous_pairs_positions([Measure|MeasureL], FirstMeasure, PosL, MaxX, MaxY) -> % measureL length > 1
+    Pos = filtered_trilateration(Measure, hd(MeasureL), MaxX, MaxY),
+    PosL2 = add_to_position_list(Pos, PosL),
+    get_contiguous_pairs_positions(MeasureL, FirstMeasure, PosL2, MaxX, MaxY).
+    
+% add the position to the list of positions.
+add_to_position_list(Pos, PosL) ->
+    case Pos of
+        {none,_Reason} ->
+            PosL;
+        _ ->
+            [Pos|PosL]
     end.
 
 % returns 2 different positions, or one if the 2 targets are really close to one another
@@ -255,30 +276,6 @@ same_target({X1, Y1}, {X2, Y2}) ->
     DeltaX = X1-X2,
     DeltaY = Y1-Y2,
     math:sqrt(math:pow(DeltaX, 2) + math:pow(DeltaY, 2)) < 40.
-
-
-% returns the positions of all targets detected using a pair of sonars each time, 4 sonars -> 4 contiguous pairs of sonars
-get_target_positions([LastMeasure], FirstMeasure, PosL, MaxX, MaxY) ->
-    Pos = filtered_trilateration(LastMeasure, FirstMeasure, MaxX, MaxY), % only 1 pos should be received, because sonars with these 2 measures are contiguous
-    add_to_position_list(Pos, PosL);
-get_target_positions([Measure|MeasureL], FirstMeasure, PosL, MaxX, MaxY) -> % measureL length > 1
-    Pos = filtered_trilateration(Measure, hd(MeasureL), MaxX, MaxY),
-    PosL2 = add_to_position_list(Pos, PosL),
-get_target_positions(MeasureL, FirstMeasure, PosL2, MaxX, MaxY).
-    
-
-% add the position to the list of positions.
-add_to_position_list(Pos, PosL) ->
-    case Pos of
-        {none,_Reason} ->
-            PosL;
-        _ ->
-            [Pos|PosL]
-    end.
-
-
-
-
 
 
 
