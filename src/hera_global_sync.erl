@@ -69,10 +69,14 @@ handle_call({make_measure, Name}, _From = {Pid, _Ref}, State = #state{orders = M
       {reply, ok, State#state{orders = M#{Name => queue:in(Pid, Queue)}}}
   end;
 handle_call({get_and_remove_first, Name}, _From, State = #state{orders = M}) ->
-  Queue = maps:get(Name, M),
-  First = queue:out(Queue),
-  {_, NewQueue} = First,
-  {reply, First, State#state{orders = M#{Name => NewQueue}}};
+  case maps:is_key(Name, M) of
+    false -> {reply, not_yet_measurements_asked, State};
+    true ->
+      Queue = maps:get(Name, M),
+      First = queue:out(Queue),
+      {_, NewQueue} = First,
+      {reply, First, State#state{orders = M#{Name => NewQueue}}}
+  end;
 handle_call({put_last, Item, Name}, _From, State = #state{orders = M}) ->
   Queue = maps:get(Name, M),
   {reply, ok, State#state{orders = M#{Name => queue:in(Item, Queue)}}};
