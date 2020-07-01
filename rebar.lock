@@ -1,1 +1,4 @@
-[].
+[{<<"syn">>,
+  {git,"git://github.com/ostinelli/syn.git",
+       {ref,"5c7aeaf979930fb9b761191f56f11a6769a8ab76"}},
+  0}].
