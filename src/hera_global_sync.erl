@@ -63,9 +63,9 @@ init([]) ->
 handle_call({make_measure, Name}, _From = {Pid, _Ref}, State = #state{orders = M}) ->
   case maps:is_key(Name, M) of
     false ->
-      GlobalName = hera_utils:concat_atoms(dispatch_, Name),
-      {P, _R} = spawn_opt(?SERVER, dispatch, [Name, GlobalName], [monitor]),
-      syn:register(GlobalName, P),
+      %%GlobalName = hera_utils:concat_atoms(dispatch_, Name),
+      %%{P, _R} = spawn_opt(?SERVER, dispatch, [Name, GlobalName], [monitor]),
+      %%syn:register(GlobalName, P),
       NewMap = M#{Name => Queue = queue:new()},
       {reply, ok, State#state{orders = NewMap#{Name => queue:in(Pid, Queue)}}};
     true ->
