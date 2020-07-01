@@ -63,9 +63,6 @@ init([]) ->
 handle_call({make_measure, Name}, _From = {Pid, _Ref}, State = #state{orders = M}) ->
   case maps:is_key(Name, M) of
     false ->
-      %%GlobalName = hera_utils:concat_atoms(dispatch_, Name),
-      %%{P, _R} = spawn_opt(?SERVER, dispatch, [Name, GlobalName], [monitor]),
-      %%syn:register(GlobalName, P),
       NewMap = M#{Name => Queue = queue:new()},
       {reply, ok, State#state{orders = NewMap#{Name => queue:in(Pid, Queue)}}};
     true ->
@@ -122,29 +119,3 @@ code_change(_OldVsn, State = #state{}, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
-
-get_and_remove_first(Name) ->
-  gen_server:call({via, syn, ?SYNC_PROC}, {get_and_remove_first, Name}).
-
-put_last(Item, Name) ->
-  gen_server:call({via, syn, ?SYNC_PROC}, {put_last, Item, Name}).
-
-dispatch(MeasurementName, GlobalName) ->
-  case get_and_remove_first(MeasurementName) of
-    {empty, _} -> dispatch(MeasurementName, GlobalName);
-    {{value, From}, _} ->
-      From ! {perform_measure, MeasurementName, GlobalName},
-      receive
-        {measure_done, MeasurementName, continue} ->
-          put_last(From, MeasurementName),
-          dispatch(MeasurementName, GlobalName);
-        {measure_done, MeasurementName, stop} ->
-          dispatch(MeasurementName, GlobalName);
-        SomethingElse ->
-          logger:error("[Global_Serv] received message :~p~n", [SomethingElse]),
-          dispatch(MeasurementName, GlobalName)
-      after 100 ->
-        logger:error("[Global_Serv] timeout when receiving measure confirmation~n"),
-        dispatch(MeasurementName, GlobalName)
-      end
-  end.
