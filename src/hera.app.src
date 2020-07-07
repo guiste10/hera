@@ -8,8 +8,7 @@
     {applications, [
         kernel,
         stdlib,
-        grisp,
-        syn
+        grisp
     ]},
     {env,[]},
     {modules, [hera, hera_calculation, hera_filter, hera_measure, hera_multicast, hera_pool, hera_position, hera_sensors_data, hera_serv, hera_sup, hera_supersup, hera_worker_sup]},
