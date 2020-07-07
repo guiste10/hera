@@ -34,7 +34,7 @@
 -spec(start_link() ->
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start_link() ->
-  gen_server:start_link({via, syn, ?SYNC_PROC}, ?MODULE, [], []).
+  gen_server:start_link({global, ?SYNC_PROC}, ?MODULE, [], []).
 
 %%%===================================================================
 %%% gen_server callbacks

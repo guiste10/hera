@@ -87,7 +87,7 @@ stop(Pid) ->
 %%--------------------------------------------------------------------
 -spec restart_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
 restart_measurement(Name, Func, Frequency, MaxIterations, Filtering) ->
-    gen_server:cast(Name, {restart, {Func, Frequency, MaxIterations, Filtering}}).
+    gen_server:call(Name, {restart, {Func, Frequency, MaxIterations, Filtering}}).
 %%--------------------------------------------------------------------
 %% @doc
 %% Restart worker that performs the measurement <Name>
@@ -99,7 +99,7 @@ restart_measurement(Name, Func, Frequency, MaxIterations, Filtering) ->
 %%--------------------------------------------------------------------
 -spec restart_measurement(Name :: atom()) -> ok.
 restart_measurement(Name) ->
-    gen_server:cast(Name, restart).
+    gen_server:call(Name, restart).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -114,7 +114,7 @@ restart_measurement(Name) ->
 %%--------------------------------------------------------------------
 -spec restart_measurement(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity) -> ok.
 restart_measurement(Name, Frequency, MaxIterations) ->
-    gen_server:cast(Name, {restart, {Frequency, MaxIterations}}).
+    gen_server:call(Name, {restart, {Frequency, MaxIterations}}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -126,7 +126,7 @@ restart_measurement(Name, Frequency, MaxIterations) ->
 %% @end
 %%--------------------------------------------------------------------
 pause_measurement(Name) ->
-    gen_server:cast(Name, pause).
+    gen_server:call(Name, pause).
 
 -spec perform_single_measurement(Name :: atom()) -> continue | stop.
 perform_single_measurement(Name) ->
@@ -163,6 +163,17 @@ handle_call(stop, _From, State) ->
 handle_call(single_measurement, _From, State) ->
     {NewState, Continuation} = perform_measurement(State),
     {reply, Continuation, NewState};
+handle_call(restart, _From, State = #state{delay = Delay, synchronization = false}) ->
+    {reply, ok, State, Delay};
+handle_call(restart, _From, State = #state{name = Name, synchronization = true}) ->
+    hera_synchronization:make_measure_request(Name),
+    {reply, ok, State};
+handle_call({restart, {Frequency, MaxIterations}}, _From, State = #state{synchronization = false}) ->
+    {reply, ok, State#state{iter = 0, max_iterations = MaxIterations, delay = Frequency, warm_up = true, default_Measure = {-1.0, -1}}, Frequency};
+handle_call({restart, {Func, Delay, MaxIter, Filtering}}, _From, State = #state{synchronization = false}) ->
+    {reply, ok, State#state{iter = 0, measurement_func = Func, max_iterations = MaxIter, delay = Delay, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}, Delay};
+handle_call(pause, _From, State) ->
+    {reply, ok, State, hibernate};
 handle_call(_Msg, _From, State) ->
     {noreply, State}.
 
@@ -172,17 +183,6 @@ handle_call(_Msg, _From, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
-handle_cast(restart, State = #state{delay = Delay, synchronization = false}) ->
-    {noreply, State, Delay};
-handle_cast(restart, State = #state{name = Name, synchronization = true}) ->
-    hera_synchronization:make_measure_request(Name),
-    {noreply, State};
-handle_cast({restart, {Frequency, MaxIterations}}, State = #state{synchronization = false}) ->
-    {noreply, State#state{iter = 0, max_iterations = MaxIterations, delay = Frequency, warm_up = true, default_Measure = {-1.0, -1}}, Frequency};
-handle_cast({restart, {Func, Delay, MaxIter, Filtering}}, State = #state{synchronization = false}) ->
-    {noreply, State#state{iter = 0, measurement_func = Func, max_iterations = MaxIter, delay = Delay, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}, Delay};
-handle_cast(pause, State) ->
-    {noreply, State, hibernate};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 

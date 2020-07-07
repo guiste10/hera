@@ -18,7 +18,7 @@
 %%%===================================================================
 
 start_link(MeasurementName, GlobalName) ->
-  syn:register(GlobalName, Pid = spawn_link(?MODULE, init, [MeasurementName, GlobalName])),
+  global:register_name(GlobalName, Pid = spawn_link(?MODULE, init, [MeasurementName, GlobalName])),
   {ok, Pid}.
 
 init(MeasurementName, GlobalName) ->
@@ -47,7 +47,7 @@ dispatch(MeasurementName, GlobalName) ->
 %%%===================================================================
 
 get_and_remove_first(Name) ->
-  gen_server:call({via, syn, ?SYNC_PROC}, {get_and_remove_first, Name}).
+  gen_server:call({global, ?SYNC_PROC}, {get_and_remove_first, Name}).
 
 put_last(Item, Name) ->
-  gen_server:call({via, syn, ?SYNC_PROC}, {put_last, Item, Name}).
+  gen_server:call({global, ?SYNC_PROC}, {put_last, Item, Name}).
