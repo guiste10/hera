@@ -23,7 +23,8 @@
 -define(SERVER, ?MODULE).
 
 -record(state, {
-  orders :: #{atom() => queue:queue()}
+  orders :: #{atom() => queue:queue()},
+  nodes :: #{atom() => pid()}
 }).
 
 %%%===================================================================
@@ -46,7 +47,7 @@ start_link() ->
   {ok, State :: #state{}} | {ok, State :: #state{}, timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
 init([]) ->
-  {ok, #state{orders = maps:new()}}.
+  {ok, #state{orders = maps:new(), nodes = #{}}}.
 
 %% @private
 %% @doc Handling call messages
@@ -59,14 +60,14 @@ init([]) ->
   {stop, Reason :: term(), Reply :: term(), NewState :: #state{}} |
   {stop, Reason :: term(), NewState :: #state{}}).
 %% when a node want to perform measures <Name>, we add this node to the corresponding queue
-handle_call({make_measure, Name}, _From = {Pid, _Ref}, State = #state{orders = M}) ->
+handle_call({make_measure, Name, Node}, _From = {Pid, _Ref}, State = #state{orders = M, nodes = Nodes}) ->
   case maps:is_key(Name, M) of
     false ->
       NewMap = M#{Name => Queue = queue:new()},
-      {reply, ok, State#state{orders = NewMap#{Name => queue:in(Pid, Queue)}}};
+      {reply, ok, State#state{orders = NewMap#{Name => queue:in({Pid, Node}, Queue)}, nodes = Nodes#{Node => Pid}}};
     true ->
       Queue = maps:get(Name, M),
-      {reply, ok, State#state{orders = M#{Name => queue:in(Pid, Queue)}}}
+      {reply, ok, State#state{orders = M#{Name => queue:in({Pid, Node}, Queue)}, nodes = Nodes#{Node => Pid}}}
   end;
 handle_call({get_and_remove_first, Name}, _From, State = #state{orders = M}) ->
   case maps:is_key(Name, M) of
@@ -80,6 +81,8 @@ handle_call({get_and_remove_first, Name}, _From, State = #state{orders = M}) ->
 handle_call({put_last, Item, Name}, _From, State = #state{orders = M}) ->
   Queue = maps:get(Name, M),
   {reply, ok, State#state{orders = M#{Name => queue:in(Item, Queue)}}};
+handle_call({get_pid, NodeName}, _From, State = #state{nodes = Nodes}) ->
+  {reply, maps:get(NodeName, Nodes), State};
 handle_call(_Request, _From, State = #state{}) ->
   {reply, ok, State}.
 

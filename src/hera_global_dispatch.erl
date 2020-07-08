@@ -26,20 +26,9 @@ init(MeasurementName, GlobalName) ->
 
 dispatch(MeasurementName, GlobalName) ->
   case get_and_remove_first(MeasurementName) of
-    {{value, From}, _} ->
-      From ! {perform_measure, MeasurementName, GlobalName},
-      T1 = hera:get_timestamp(),
-      receive
-        {measure_done, MeasurementName, continue} ->
-          logger:notice("[Global_Serv] Time to get response from node = ~p", [hera:get_timestamp() - T1]),
-          put_last(From, MeasurementName);
-        {measure_done, MeasurementName, stop} ->
-           ok;
-        SomethingElse ->
-          logger:error("[Global_Serv] received message :~p~n", [SomethingElse])
-      after 1000 ->
-        logger:error("[Global_Serv] timeout when receiving measure confirmation")
-      end;
+    {{value, {Pid, Node}}, _} ->
+      Pid ! {perform_measure, MeasurementName, GlobalName},
+      receiver(Pid, MeasurementName, Node, 200); %% timeout value find by experiment the respond time
     _ -> timer:sleep(2000)
   end,
   dispatch(MeasurementName, GlobalName).
@@ -48,8 +37,29 @@ dispatch(MeasurementName, GlobalName) ->
 %%% Internal functions
 %%%===================================================================
 
+receiver(From, MeasurementName, Node, Timeout) ->
+  T1 = hera:get_timestamp(),
+  receive
+    {measure_done, MeasurementName, Node, continue} ->
+      put_last({From, Node}, MeasurementName);
+    %% If a node sends its response after Timeout, the response will arrive during another node measurement
+    %% so we catch this message and adjust the timeout in order to receive the response of the current measurement
+    {measurement_done, MeasurementName, OtherNode, continue} ->
+      put_last({get_pid_from_node_name(OtherNode), OtherNode}, MeasurementName),
+      receiver(From, MeasurementName, Node, Timeout - (hera:get_timestamp() - T1));
+    {measure_done, MeasurementName, _NodeName, stop} ->
+      ok;
+    SomethingElse ->
+      logger:error("[Global_Serv] received message :~p~n", [SomethingElse])
+  after Timeout ->
+    logger:error("[Global_Serv] timeout when receiving measure confirmation")
+  end.
+
 get_and_remove_first(Name) ->
   gen_server:call({global, ?SYNC_PROC}, {get_and_remove_first, Name}).
 
 put_last(Item, Name) ->
   gen_server:call({global, ?SYNC_PROC}, {put_last, Item, Name}).
+
+get_pid_from_node_name(NodeName) ->
+  gen_server:call({global, ?SYNC_PROC}, {get_pid, NodeName}).
