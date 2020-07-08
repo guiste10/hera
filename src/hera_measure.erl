@@ -202,11 +202,13 @@ handle_call(restart, _From, State = #state{name = Name, synchronization = true})
     {reply, ok, State};
 handle_call({restart, {Frequency, MaxIterations}}, _From, State = #state{synchronization = false}) ->
     {reply, ok, State#state{iter = 0, max_iterations = MaxIterations, delay = Frequency, warm_up = true, default_Measure = {-1.0, -1}}, Frequency};
-handle_call({restart,MaxIterations}, _From, State = #state{synchronization = true}) ->
+handle_call({restart,MaxIterations}, _From, State = #state{name = Name, synchronization = true}) ->
+    hera_synchronization:make_measure_request(Name),
     {reply, ok, State#state{iter = 0, max_iterations = MaxIterations, warm_up = true, default_Measure = {-1.0, -1}}};
 handle_call({restart, {Func, Delay, MaxIter, Filtering}}, _From, State = #state{synchronization = false}) ->
     {reply, ok, State#state{iter = 0, measurement_func = Func, max_iterations = MaxIter, delay = Delay, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}, Delay};
-handle_call({restart, {Func, MaxIter, Filtering}}, _From, State = #state{synchronization = true}) ->
+handle_call({restart, {Func, MaxIter, Filtering}}, _From, State = #state{name = Name, synchronization = true}) ->
+    hera_synchronization:make_measure_request(Name),
     {reply, ok, State#state{iter = 0, measurement_func = Func, max_iterations = MaxIter, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}};
 handle_call(pause, _From, State) ->
     {reply, ok, State, hibernate};
