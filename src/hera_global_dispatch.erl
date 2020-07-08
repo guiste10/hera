@@ -44,7 +44,7 @@ receiver(From, MeasurementName, Node, Timeout) ->
       put_last({From, Node}, MeasurementName);
     %% If a node sends its response after Timeout, the response will arrive during another node measurement
     %% so we catch this message and adjust the timeout in order to receive the response of the current measurement
-    {measurement_done, MeasurementName, OtherNode, continue} ->
+    {measure_done, MeasurementName, OtherNode, continue} ->
       put_last({get_pid_from_node_name(OtherNode), OtherNode}, MeasurementName),
       receiver(From, MeasurementName, Node, Timeout - (hera:get_timestamp() - T1));
     {measure_done, MeasurementName, _NodeName, stop} ->
