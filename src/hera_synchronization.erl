@@ -32,13 +32,11 @@ loop() ->
   receive
     {make_measure_request, Name} ->
       started = ensure_global_sync_started(),
-      gen_server:call({global, ?SYNC_PROC}, {make_measure, Name}),
+      gen_server:call({global, ?SYNC_PROC}, {make_measure, Name, node()}),
       loop();
     {perform_measure, Name, GlobalName} ->
-      T1 = hera:get_timestamp(),
       Resp = hera_measure:perform_single_measurement(Name),
-      logger:notice("[Synchronization] Time to perform measurement = ~p", [hera:get_timestamp()-T1]),
-      global:send(GlobalName, {measure_done, Name, Resp}),
+      global:send(GlobalName, {measure_done, Name, node(), Resp}),
       loop();
     SomethingElse ->
       logger:error("[Synchronization] received message: ~p~n", [SomethingElse]),
