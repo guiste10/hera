@@ -27,9 +27,9 @@
 -export([log_calculation/4]).
 -export([get_timestamp/0]).
 -export([pause_calculation/1, restart_calculation/4, restart_calculation/1, restart_calculation/3]).
--export([restart_measurement/1, pause_measurement/1]).
--export([restart_sync_measurement/2, restart_sync_measurement/4]).
--export([restart_unsync_measurement/3, restart_unsync_measurement/5]).
+-export([restart_measurement/2, pause_measurement/1]).
+-export([restart_sync_measurement/3, restart_sync_measurement/5]).
+-export([restart_unsync_measurement/4, restart_unsync_measurement/6]).
 -export([get_calculation/4, get_synchronized_measurement/5, get_unsynchronized_measurement/6]).
 
 % Callbacks
@@ -319,13 +319,14 @@ pause_calculation(Name) ->
 %% @param Frequency The frequency of the measurement
 %% @param MaxIterations The number of iterations to be done
 %% @param Filtering Boolean that indicates if a filtering must be done to the data output by the function
+%% @param WarmUpPhase Boolean that indicates if a warm-up phase must be performed
 %%
 %% @spec restart_unsync_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec restart_unsync_measurement(Name :: atom(), Func ::fun((...) -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
-restart_unsync_measurement(Name, Func, Frequency, MaxIterations, Filtering) ->
-  hera_measure:restart_unsync_measurement(Name, Func, Frequency, MaxIterations, Filtering).
+-spec restart_unsync_measurement(Name :: atom(), Func ::fun((...) -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean(), WarmUpPhase :: boolean()) -> ok.
+restart_unsync_measurement(Name, Func, Frequency, MaxIterations, Filtering, WarmUpPhase) ->
+  hera_measure:restart_unsync_measurement(Name, Func, Frequency, MaxIterations, Filtering, WarmUpPhase).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -335,26 +336,28 @@ restart_unsync_measurement(Name, Func, Frequency, MaxIterations, Filtering) ->
 %% @param Func The measurement function to be executed
 %% @param MaxIterations The number of iterations to be done
 %% @param Filtering Boolean that indicates if a filtering must be done to the data output by the function
+%% @param WarmUpPhase Boolean that indicates if a warm-up phase must be performed
 %%
 %% @spec restart_unsync_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec restart_sync_measurement(Name :: atom(), Func ::fun((...) -> {ok, term()} | {error, term()}), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
-restart_sync_measurement(Name, Func, MaxIterations, Filtering) ->
-  hera_measure:restart_sync_measurement(Name, Func, MaxIterations, Filtering).
+-spec restart_sync_measurement(Name :: atom(), Func ::fun((...) -> {ok, term()} | {error, term()}), MaxIterations :: integer(), Filtering :: boolean(), WarmUpPhase :: boolean()) -> ok.
+restart_sync_measurement(Name, Func, MaxIterations, Filtering, WarmUpPhase) ->
+  hera_measure:restart_sync_measurement(Name, Func, MaxIterations, Filtering, WarmUpPhase).
 
 %%--------------------------------------------------------------------
 %% @doc
 %% Restart worker that performs the unsynchronized or synchronized measurement <Name> from zero if the previous calculation has terminated, or from the previous state if it is pause.
 %%
 %% @param Name The name of the measurement
+%% @param WarmUpPhase Boolean that indicates if a warm-up phase must be performed
 %%
 %% @spec restart_measurement(Name :: atom()) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec restart_measurement(Name :: atom()) -> ok.
-restart_measurement(Name) ->
-  hera_measure:restart_measurement(Name).
+-spec restart_measurement(Name :: atom(), WarmUpPhase :: boolean()) -> ok.
+restart_measurement(Name, WarmUpPhase) ->
+  hera_measure:restart_measurement(Name, WarmUpPhase).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -362,13 +365,14 @@ restart_measurement(Name) ->
 %%
 %% @param Name The name of the measurement
 %% @param MaxIterations The number of iterations to be done
+%% @param WarmUpPhase Boolean that indicates if a warm-up phase must be performed
 %%
 %% @spec restart_sync_measurement(Name :: atom()) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec restart_sync_measurement(Name :: atom(), MaxIteration :: integer()) -> ok.
-restart_sync_measurement(Name, MaxIterations) ->
-  hera_measure:restart_sync_measurement(Name, MaxIterations).
+-spec restart_sync_measurement(Name :: atom(), MaxIteration :: integer(), WarmUpPhase :: boolean()) -> ok.
+restart_sync_measurement(Name, MaxIterations, WarmUpPhase) ->
+  hera_measure:restart_sync_measurement(Name, MaxIterations, WarmUpPhase).
 
 
 %%--------------------------------------------------------------------
@@ -378,13 +382,14 @@ restart_sync_measurement(Name, MaxIterations) ->
 %% @param Name The name of the measurement
 %% @param Frequency The frequency of the measurement
 %% @param MaxIterations The number of iterations to be done
+%% @param WarmUpPhase Boolean that indicates if a warm-up phase must be performed
 %%
 %% @spec restart_unsync_measurement(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec restart_unsync_measurement(Name :: atom(), Frequency :: integer(), MaxIterations :: integer()) -> ok.
-restart_unsync_measurement(Name, Frequency, MaxIterations) ->
-  hera_measure:restart_unsync_measurement(Name, Frequency, MaxIterations),
+-spec restart_unsync_measurement(Name :: atom(), Frequency :: integer(), MaxIterations :: integer(), WarmUpPhase :: boolean()) -> ok.
+restart_unsync_measurement(Name, Frequency, MaxIterations, WarmUpPhase) ->
+  hera_measure:restart_unsync_measurement(Name, Frequency, MaxIterations, WarmUpPhase),
   ok.
 
 %%--------------------------------------------------------------------
