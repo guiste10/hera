@@ -28,14 +28,16 @@ dispatch(MeasurementName, GlobalName) ->
   case get_and_remove_first(MeasurementName) of
     {{value, From}, _} ->
       From ! {perform_measure, MeasurementName, GlobalName},
+      T1 = hera:get_timestamp(),
       receive
         {measure_done, MeasurementName, continue} ->
+          logger:notice("[Global_Serv] Time to get response from node = ~p", [hera:get_timestamp() - T1]),
           put_last(From, MeasurementName);
         {measure_done, MeasurementName, stop} ->
            ok;
         SomethingElse ->
           logger:error("[Global_Serv] received message :~p~n", [SomethingElse])
-      after 100 ->
+      after 1000 ->
         logger:error("[Global_Serv] timeout when receiving measure confirmation")
       end;
     _ -> timer:sleep(2000)
