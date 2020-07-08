@@ -17,7 +17,9 @@
 
 -export([start_link/1, stop/1]).
 
--export([pause_measurement/1, restart_measurement/1, restart_measurement/3, restart_measurement/5, perform_single_measurement/1]).
+-export([restart_unsync_measurement/3, restart_unsync_measurement/5]).
+-export([restart_sync_measurement/2, restart_sync_measurement/4]).
+-export([pause_measurement/1, restart_measurement/1, perform_single_measurement/1]).
 
 -export([init/1, handle_call/3, handle_cast/2,
 handle_info/2, code_change/3, terminate/2]).
@@ -73,24 +75,40 @@ stop(Pid) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart workers that performs the measurements
+%% Restart workers that performs the unsynchronized measurements
 %%
 %% @param Name The name of the measurement
 %% @param Func The measurement function to be executed
-%% @param Args The arguments of the function
 %% @param Frequency The frequency of the measurement
 %% @param MaxIterations The number of iterations to be done
 %% @param Filtering Boolean that indicates if a filtering must be done to the data output by the function
 %%
-%% @spec restart_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
+%% @spec restart_unsync_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec restart_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
-restart_measurement(Name, Func, Frequency, MaxIterations, Filtering) ->
+-spec restart_unsync_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
+restart_unsync_measurement(Name, Func, Frequency, MaxIterations, Filtering) ->
     gen_server:call(Name, {restart, {Func, Frequency, MaxIterations, Filtering}}).
+
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart worker that performs the measurement <Name>
+%% Restart workers that performs the synchronized measurements
+%%
+%% @param Name The name of the measurement
+%% @param Func The measurement function to be executed
+%% @param MaxIterations The number of iterations to be done
+%% @param Filtering Boolean that indicates if a filtering must be done to the data output by the function
+%%
+%% @spec restart_sync_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+-spec restart_sync_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
+restart_sync_measurement(Name, Func,MaxIterations, Filtering) ->
+    gen_server:call(Name, {restart, {Func, MaxIterations, Filtering}}).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Restart worker that performs the synchronized or unsynchronized measurement <Name>
 %%
 %% @param Name The name of the measurement
 %%
@@ -103,17 +121,31 @@ restart_measurement(Name) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart worker that performs the measurement <Name>
+%% Restart worker that performs the synchronized measurement <Name>
+%%
+%% @param Name The name of the measurement
+%% @param MaxIterations The number of iterations to be done
+%%
+%% @spec restart_sync_measurement(Name :: atom()) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+-spec restart_sync_measurement(Name :: atom(), MaxIterations :: integer()) -> ok.
+restart_sync_measurement(Name, MaxIterations) ->
+    gen_server:call(Name, {restart, MaxIterations}).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Restart worker that performs the unsynchronized measurement <Name>
 %%
 %% @param Name The name of the measurement
 %% @param Frequency The frequency of the measurement
 %% @param MaxIterations The number of iterations to be done
 %%
-%% @spec restart_measurement(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity) -> ok.
+%% @spec restart_unsync_measurement(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec restart_measurement(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity) -> ok.
-restart_measurement(Name, Frequency, MaxIterations) ->
+-spec restart_unsync_measurement(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity) -> ok.
+restart_unsync_measurement(Name, Frequency, MaxIterations) ->
     gen_server:call(Name, {restart, {Frequency, MaxIterations}}).
 
 %%--------------------------------------------------------------------
@@ -170,8 +202,12 @@ handle_call(restart, _From, State = #state{name = Name, synchronization = true})
     {reply, ok, State};
 handle_call({restart, {Frequency, MaxIterations}}, _From, State = #state{synchronization = false}) ->
     {reply, ok, State#state{iter = 0, max_iterations = MaxIterations, delay = Frequency, warm_up = true, default_Measure = {-1.0, -1}}, Frequency};
+handle_call({restart,MaxIterations}, _From, State = #state{synchronization = true}) ->
+    {reply, ok, State#state{iter = 0, max_iterations = MaxIterations, warm_up = true, default_Measure = {-1.0, -1}}};
 handle_call({restart, {Func, Delay, MaxIter, Filtering}}, _From, State = #state{synchronization = false}) ->
     {reply, ok, State#state{iter = 0, measurement_func = Func, max_iterations = MaxIter, delay = Delay, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}, Delay};
+handle_call({restart, {Func, MaxIter, Filtering}}, _From, State = #state{synchronization = true}) ->
+    {reply, ok, State#state{iter = 0, measurement_func = Func, max_iterations = MaxIter, filtering = Filtering, warm_up = true, default_Measure = {-1.0, -1}}};
 handle_call(pause, _From, State) ->
     {reply, ok, State, hibernate};
 handle_call(_Msg, _From, State) ->
