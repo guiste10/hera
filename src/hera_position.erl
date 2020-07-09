@@ -21,7 +21,7 @@
 -export([launch_hera/6]).
 -export([launch_hera_shell/0]).
 -export([restart_calculation/2]).
--export([restart_measurement/2]).
+-export([restart_measurement/1]).
 -export([restart/2]).
 %%====================================================================
 %% Macros
