@@ -335,7 +335,7 @@ normal_phase(Func, DoFilter, Iter, DefaultM, Name, UpperBound) ->
                 DoFilter == true ->
                     hera_filter:filter({Measure, MeasureTimestamp}, Iter, DefaultM, Name, UpperBound);
                 true ->
-                    hera:store_data(Name, node(), Iter, Measure),
+                    hera_sensors_data:store_data(Name, node(), Iter, Measure),
                     hera:send(measure, Name, node(), Iter, {Measure, MeasureTimestamp})
             end
     end.

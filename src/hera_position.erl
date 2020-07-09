@@ -104,12 +104,12 @@ sonar_measurement(InchToCm) ->
 
 calc_position(NodeId) ->
     %case hera:get_data(sonar) of   % works
-    case hera:get_recent_data(sonar) of
+    case hera_sensors_data:get_recent_data(sonar) of
         {error, Reason} ->
             logger:error(Reason),
             error;
         {ok, Sonar} ->
-            case hera:get_data(pos) of
+            case hera_sensors_data:get_data(pos) of
                 {error, Reason} ->
                     logger:error(Reason),
                     error;

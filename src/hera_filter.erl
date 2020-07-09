@@ -136,7 +136,7 @@ filter_measure({CurrMeasureVal, MeasureTimestamp} = Measure, Iter, {DefaultMeasu
 -spec(valid_measure(Name :: atom(), Iter :: integer(), Measure :: {integer()|float(), integer()}, State :: state())->
     State :: state()).
 valid_measure(Name, Iter, {CurrMeasureVal, MeasureTimestamp} = Measure, State)->
-    hera:store_data(Name, node(), Iter, CurrMeasureVal),
+    hera_sensors_data:store_data(Name, node(), Iter, CurrMeasureVal),
     hera:send(measure, Name, node(), Iter, {CurrMeasureVal, MeasureTimestamp}),
     State#state{previous_measure = Measure, num_measures = State#state.num_measures+1}.
 

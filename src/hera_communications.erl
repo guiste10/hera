@@ -106,14 +106,14 @@ code_change(_OldVsn, State = #state{}, _Extra) ->
 handle_message({measure, Name, {Node, Iter, {Measure, _Timestamp}}}, OsType) when OsType == {unix, rtems} ->
   %% if it is a GRiSP board, don't log the measures, only save the most recent one
   %% in order to perform a computation
-  hera:store_data(Name, Node, Iter, Measure);
+  hera_sensors_data:store_data(Name, Node, Iter, Measure);
 handle_message({measure, Name, {Node, Iter, Measure}}, _OsType) ->
   %% if it is a computer, only log the measures, don't need to
-  hera:log_measure(Name, Node, Iter, Measure);
+  hera_sensors_data:log_measure(Name, Node, Iter, Measure);
 
 %% calculations
 handle_message({calc, Name, {Node, Iter, Res}}, OsType) when OsType =/= {unix, rtems}->
-  hera:log_calculation(Name, Node, Iter, Res);
+  hera_sensors_data:log_calculation(Name, Node, Iter, Res);
 
 %% hello message
 handle_message({hello, Node}, OsType) when OsType == {unix, rtems}->

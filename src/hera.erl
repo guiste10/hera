@@ -17,14 +17,8 @@
 %% API
 -export([launch_app/3]).
 -export([launch_app/0]).
--export([clusterize/0]).
 -export([fake_sonar_get/0]).
 -export([send/5, send/1]).
--export([store_data/4]).
--export([get_data/1]).
--export([get_recent_data/1]).
--export([log_measure/4]).
--export([log_calculation/4]).
 -export([get_timestamp/0]).
 -export([pause_calculation/1, restart_calculation/4, restart_calculation/1, restart_calculation/3]).
 -export([restart_measurement/2, pause_measurement/1]).
@@ -84,7 +78,7 @@ launch_app(Measurements, Calculations, Master) ->
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
   %% starts multicast
-  clusterize(),
+  hera_multicast:formation(),
 
   %% if this node is the master node, starts the global_sync module
   case Master of
@@ -136,17 +130,6 @@ launch_app() ->
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
   %% starts multicast
-  clusterize().
-
-%% -------------------------------------------------------------------
-%% @doc
-%% Start the formation of an udp multicast cluster
-%%
-%% @spec clusterize() -> ok
-%% @end
-%% -------------------------------------------------------------------
--spec clusterize() -> ok.
-clusterize() ->
   hera_multicast:formation().
 
 %% -------------------------------------------------------------------
@@ -178,76 +161,6 @@ send(MessageType, Name, Node, Seqnum, Data) ->
 -spec send(Message :: term()) -> any().
 send(Message) ->
   hera_multicast:send(Message).
-
-%% -------------------------------------------------------------------
-%% @doc
-%% Add a new data for the specified node
-%%
-%% @param Name The name/type of the data (e.g. temperature, sonar, humidity, ...)
-%% @param Node The node who perform the measurement of the data
-%% @param Seqnum The sequence number of the measured data
-%% @param Data The data measured by the sensor
-%%
-%% @spec store_data(Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: integer() | float()) -> ok
-%% @end
-%% -------------------------------------------------------------------
--spec store_data(Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: integer() | float()) -> ok.
-store_data(Name, Node, Seqnum, Data) ->
-  hera_sensors_data:store_data(Name, Node, Seqnum, Data).
-
-%%--------------------------------------------------------------------
-%% @doc
-%% Retrieve the data of sensors of all nodes
-%%
-%% @spec get_data() -> dict:dict(string(), {integer(), integer() | float()})
-%% @end
-%%--------------------------------------------------------------------
--spec get_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float(), integer()}).
-get_data(Name) ->
-  hera_sensors_data:get_data(Name).
-
-%%--------------------------------------------------------------------
-%% @doc
-%% Retrieve the recent (+-500ms or less) data of the sensors of all nodes
-%%
-%% @spec get_data() -> dict:dict(string(), {integer(), integer() | float()})
-%% @end
-%%--------------------------------------------------------------------
--spec get_recent_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float(), integer()}).
-get_recent_data(Name) ->
-  hera_sensors_data:get_recent_data(Name).
-
-%%--------------------------------------------------------------------
-%% @doc
-%% Log the given measure into a file with the same name as the node name
-%%
-%% @param Name The name/type of the measure (e.g. temperature, sonar, humidity, ...)
-%% @param Node The node who perform the measurement of the data
-%% @param Seqnum The sequence number of the measured data
-%% @param Data The data measured by the sensor
-%%
-%% @spec log_measure(Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: integer() | float()) -> ok
-%% @end
-%%--------------------------------------------------------------------
--spec log_measure(Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: integer() | float()) -> ok.
-log_measure(Name, Node, Seqnum, Data) ->
-  hera_sensors_data:log_measure(Name, Node, Seqnum, Data).
-
-%%--------------------------------------------------------------------
-%% @doc
-%% Log the given measure into a file with the same name as the node name
-%%
-%% @param Name The name of the calculation (e.g. position_calculation, temperature_median, ...)
-%% @param Node The node who perform the calculation
-%% @param Seqnum The sequence number of the calculation result
-%% @param Result The result of the calculation
-%%
-%% @spec log_calculation(Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: integer() | float()) -> ok
-%% @end
-%%--------------------------------------------------------------------
--spec log_calculation(Name :: atom(), Node :: atom(), Seqnum :: integer(), Result :: integer() | float()) -> ok.
-log_calculation(Name, Node, Seqnum, Result) ->
-  hera_sensors_data:log_calculation(Name, Node, Seqnum, Result).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -473,6 +386,16 @@ get_unsynchronized_measurement(Name, Func, Filtering, UpperBound, MaxIteration, 
 get_calculation(Name, Func, Frequency, MaxIterations) ->
   {Name, #{func => Func, frequency => Frequency, max_iterations => MaxIterations}}.
 
+%%--------------------------------------------------------------------
+%% @doc
+%% Propagate a function to all node. When receiving the function, the node executes it.
+%%
+%% @param Fun The function to be propagated
+%%
+%% @spec maybe_propagate(Fun :: function()) -> any().
+%% @end
+%%--------------------------------------------------------------------
+-spec maybe_propagate(Fun :: function()) -> any().
 maybe_propagate(Fun) ->
   hera:send({propagate, Fun}).
 
