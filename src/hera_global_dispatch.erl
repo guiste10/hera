@@ -52,8 +52,15 @@ receiver(From, MeasurementName, Node, Timeout) ->
     SomethingElse ->
       logger:error("[Global_Serv] received message :~p~n", [SomethingElse])
   after Timeout ->
-    logger:error("[Global_Serv] timeout when receiving measure confirmation")
+    logger:error("[Global_Serv] timeout when receiving measure confirmation"),
+    case is_queue_empty(MeasurementName) of
+        false -> ok;
+        true -> receiver(From, MeasurementName, Node, Timeout) %% if the queue is empty, the node is alone to perform measurement, so even if it timeout, wait its response
+    end
   end.
+
+is_queue_empty(Name) ->
+  gen_server:call({global, ?SYNC_PROC}, {is_empty, Name}).
 
 get_and_remove_first(Name) ->
   gen_server:call({global, ?SYNC_PROC}, {get_and_remove_first, Name}).

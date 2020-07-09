@@ -83,6 +83,12 @@ handle_call({put_last, Item, Name}, _From, State = #state{orders = M}) ->
   {reply, ok, State#state{orders = M#{Name => queue:in(Item, Queue)}}};
 handle_call({get_pid, NodeName}, _From, State = #state{nodes = Nodes}) ->
   {reply, maps:get(NodeName, Nodes), State};
+handle_call({is_empty, Name}, _From, State = #state{orders = M}) ->
+  case maps:is_key(Name, M) of
+    false -> {reply, not_yet_measurements_asked, State};
+    true ->
+      {reply, queue:is_empty(maps:get(Name, M)), State}
+  end;
 handle_call(_Request, _From, State = #state{}) ->
   {reply, ok, State}.
 
