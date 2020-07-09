@@ -397,7 +397,8 @@ get_calculation(Name, Func, Frequency, MaxIterations) ->
 %%--------------------------------------------------------------------
 -spec maybe_propagate(Fun :: function()) -> any().
 maybe_propagate(Fun) ->
-  hera:send({propagate, Fun}).
+  hera:send({propagate, Fun}),
+  Fun().
 
 
 %% @private
