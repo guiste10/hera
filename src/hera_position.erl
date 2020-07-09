@@ -88,6 +88,7 @@ restart_calculation(Frequency, MaxIterations) ->
     hera:restart_calculation(position, Frequency, MaxIterations).
 
 restart_measurement(MaxIterations) ->
+    hera:restart_measurement(pos, false),
     hera:restart_sync_measurement(sonar, MaxIterations, false).
 
 %%%===================================================================
