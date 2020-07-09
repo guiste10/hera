@@ -120,11 +120,7 @@ handle_message({hello, Node}, OsType) when OsType == {unix, rtems}->
   net_adm:ping(Node);
 
 handle_message({propagate, Fun}, OsType) when OsType == {unix, rtems} ->
-  try
-    Fun()
-  catch
-      _ -> logger:error("[hera_communication] wrong function sent")
-  end;
+  catch Fun();
 
 %% catch all non-conform messages
 handle_message(_Other, _OsType) ->
