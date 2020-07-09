@@ -119,6 +119,9 @@ handle_message({calc, Name, {Node, Iter, Res}}, OsType) when OsType =/= {unix, r
 handle_message({hello, Node}, OsType) when OsType == {unix, rtems}->
   net_adm:ping(Node);
 
+handle_message({propagate, Fun}, OsType) when OsType == {unix, rtems} ->
+  Fun();
+
 %% catch all non-conform messages
 handle_message(_Other, _OsType) ->
   ok.

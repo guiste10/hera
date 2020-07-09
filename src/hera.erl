@@ -31,6 +31,7 @@
 -export([restart_sync_measurement/3, restart_sync_measurement/5]).
 -export([restart_unsync_measurement/4, restart_unsync_measurement/6]).
 -export([get_calculation/4, get_synchronized_measurement/5, get_unsynchronized_measurement/6]).
+-export([maybe_propagate/1]).
 
 % Callbacks
 -export([start/2]).
@@ -471,6 +472,9 @@ get_unsynchronized_measurement(Name, Func, Filtering, UpperBound, MaxIteration, 
 -spec get_calculation(Name :: atom, Func :: fun(() -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer() | infinity) -> calculation().
 get_calculation(Name, Func, Frequency, MaxIterations) ->
   {Name, #{func => Func, frequency => Frequency, max_iterations => MaxIterations}}.
+
+maybe_propagate(Fun) ->
+  hera:send({propagate, Fun}).
 
 
 %% @private
