@@ -77,8 +77,6 @@ launch_app(Measurements, Calculations, Master) ->
   %% starts hera_multicast
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
-  %% starts multicast
-  hera_multicast:formation(),
 
   %% if this node is the master node, starts the global_sync module
   case Master of
@@ -128,9 +126,7 @@ launch_app() ->
 
   %% starts hera_multicast
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
-  hera_pool:run(multicastPool, []),
-  %% starts multicast
-  hera_multicast:formation().
+  hera_pool:run(multicastPool, []).
 
 %% -------------------------------------------------------------------
 %% @doc
