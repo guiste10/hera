@@ -46,7 +46,7 @@ receiver(From, MeasurementName, Node, Timeout) ->
     %% so we catch this message and adjust the timeout in order to receive the response of the current measurement
     {measure_done, MeasurementName, OtherNode, continue} ->
       put_last({get_pid_from_node_name(OtherNode), OtherNode}, MeasurementName),
-      receiver(From, MeasurementName, Node, Timeout - (hera:get_timestamp() - T1));
+      receiver(From, MeasurementName, Node, abs(Timeout - (hera:get_timestamp() - T1))+1);
     {measure_done, MeasurementName, _NodeName, stop} ->
       ok;
     SomethingElse ->
