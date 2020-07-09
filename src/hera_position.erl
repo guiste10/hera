@@ -81,14 +81,14 @@ launch_hera_shell() ->
     hera:launch_app().
 
 restart(Frequency, MaxIterations) ->
-    restart_measurement(Frequency, MaxIterations),
+    restart_measurement(MaxIterations),
     restart_calculation(Frequency, MaxIterations).
 
 restart_calculation(Frequency, MaxIterations) ->
     hera:restart_calculation(position, Frequency, MaxIterations).
 
-restart_measurement(Frequency, MaxIterations) ->
-    hera:restart_measurement(sonar, Frequency, MaxIterations).
+restart_measurement(MaxIterations) ->
+    hera:restart_sync_measurement(sonar, MaxIterations, false).
 
 %%%===================================================================
 %%% Internal functions

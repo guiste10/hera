@@ -161,7 +161,7 @@ filter_sonar(PrevMeasureVal, CurrMeasureVal, DefaultMeasureVal, UpperBound, Time
     boolean()).
 is_background_dist(MeasureVal, DefaultMeasureVal)->
     if
-        DefaultMeasureVal - 2.54 < MeasureVal ->
+        DefaultMeasureVal * 0.95 =< MeasureVal ->
             true;
         true ->
             false
