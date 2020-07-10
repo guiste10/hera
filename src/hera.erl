@@ -105,7 +105,8 @@ launch_app(Measurements, Calculations, Master) ->
   %% start hera_calculation
   hera_pool:start_pool(calculation_pool, length(Calculations), {hera_calculation, start_link, []}),
   CalculationsPids = [{Name, hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation)])} || {Name, Calculation} <- Calculations],
-  [register(Name, Pid) || {Name, {ok, Pid}} <- CalculationsPids].
+  [register(Name, Pid) || {Name, {ok, Pid}} <- CalculationsPids],
+  started.
 
 %% -------------------------------------------------------------------
 %% @doc
@@ -126,7 +127,8 @@ launch_app() ->
 
   %% starts hera_multicast
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
-  hera_pool:run(multicastPool, []).
+  hera_pool:run(multicastPool, []),
+  started.
 
 %% -------------------------------------------------------------------
 %% @doc

@@ -11,7 +11,7 @@
 -author("Julien Bastin <julien.bastin@student.uclouvain.be>, Guillaume Neirinckx <guillaume.neirinckx@student.uclouvain.be>").
 
 %% API
--export([start_link/0, send/5, send/1, hello/0, init/0]).
+-export([start_link/0, send/5, send/1, hello/0, init/1]).
 
 %%====================================================================
 %% Macros
@@ -30,7 +30,7 @@
 -spec(start_link() ->
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start_link() ->
-  register(?MODULE, Pid = spawn_link(?MODULE, init, [])),
+  register(?MODULE, Pid = spawn_link(?MODULE, init, [os:type()])),
   {ok, Pid}.
 
 %% -------------------------------------------------------------------
@@ -63,8 +63,11 @@ send(Message_type, Name, Node, Seqnum, Data) ->
 send(Message) ->
  ?SERVER ! {send_message, term_to_binary(Message)}.
 
-init() ->
+init({unix, rtems}) ->
   {_Pid, _Ref} = spawn_opt(?SERVER, hello, [], [monitor]),
+  Socket = open_socket(),
+  loop(Socket);
+init(_Other) ->
   Socket = open_socket(),
   loop(Socket).
 
