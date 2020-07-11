@@ -53,22 +53,19 @@ init([]) ->
     start => {hera_sensors_data, start_link, []},
     restart => permanent,
     shutdown => 2000,
-    type => worker,
-    modules => [hera_sensors_data]},
+    type => worker},
 
   SupervisorCalculation = #{id => hera_sup_calculation,
     start => {hera_serv, start_link, [calculation_pool, 1, {hera_calculation, start_link, []}]},
     restart => permanent,
     shutdown => 2000,
-    type => supervisor,
-    modules => [hera_sup2]},
+    type => supervisor},
 
   SupervisorMeasures = #{id => hera_sup_measure,
     start => {hera_serv, start_link, [measurement_pool, 1, {hera_measure, start_link, []}]},
     restart => permanent,
     shutdown => 2000,
-    type => supervisor,
-    modules => [hera_sup2]},
+    type => supervisor},
 
   SupervisorMeasurements = #{id => hera_sup_measurement,
     start => {hera_sup2, start_link, [
@@ -83,8 +80,7 @@ init([]) ->
     ]},
     restart => permanent,
     shutdown => 2000,
-    type => supervisor,
-    modules => [hera_sup2]},
+    type => supervisor},
 
   SupervisorCalcMeas = #{id => hera_sup_calc_meas,
     start => {hera_sup2, start_link, [
@@ -95,8 +91,7 @@ init([]) ->
     ]},
     restart => permanent,
     shutdown => 2000,
-    type => supervisor,
-    modules => [hera_sup2]},
+    type => supervisor},
 
   Supervisor1 = #{id => hera_sup1,
     start => {hera_sup2, start_link, [
@@ -111,15 +106,13 @@ init([]) ->
     ]},
     restart => permanent,
     shutdown => 2000,
-    type => supervisor,
-    modules => [hera_sup2]},
+    type => supervisor},
 
   SupervisorDispatch = #{id => hera_sup_dispatch,
     start => {hera_serv, start_link, [dispatch_pool, 1, {hera_global_dispatch, start_link, []}]},
     restart => permanent,
     shutdown => 2000,
-    type => supervisor,
-    modules => [hera_sup2]},
+    type => supervisor},
 
   Supervisor2 = #{id => hera_sup2,
     start => {hera_sup2, start_link, [
@@ -132,8 +125,7 @@ init([]) ->
     ]},
     restart => permanent,
     shutdown => 2000,
-    type => supervisor,
-    modules => [hera_sup2]},
+    type => supervisor},
 
   {ok, {SupFlags, [SensorsData, Supervisor1, Supervisor2]}}.
 
