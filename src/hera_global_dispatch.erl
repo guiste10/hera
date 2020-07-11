@@ -46,14 +46,23 @@ receiver(From, MeasurementName, Node, Timeout) ->
     %% so we catch this message and adjust the timeout in order to receive the response of the current measurement
     {measure_done, MeasurementName, OtherNode, continue} ->
       put_last({get_pid_from_node_name(OtherNode), OtherNode}, MeasurementName),
-      receiver(From, MeasurementName, Node, Timeout - (hera:get_timestamp() - T1));
+      receiver(From, MeasurementName, Node, abs(Timeout - (hera:get_timestamp() - T1))+1);
     {measure_done, MeasurementName, _NodeName, stop} ->
       ok;
+    {'EXIT', _ParentPid, shutdown} ->
+      erlang:exit(shutdown);
     SomethingElse ->
       logger:error("[Global_Serv] received message :~p~n", [SomethingElse])
   after Timeout ->
-    logger:error("[Global_Serv] timeout when receiving measure confirmation")
+    logger:error("[Global_Serv] timeout when receiving measure confirmation"),
+    case is_queue_empty(MeasurementName) of
+        false -> ok;
+        true -> receiver(From, MeasurementName, Node, Timeout) %% if the queue is empty, the node is alone to perform measurement, so even if it timeout, wait its response
+    end
   end.
+
+is_queue_empty(Name) ->
+  gen_server:call({global, ?SYNC_PROC}, {is_empty, Name}).
 
 get_and_remove_first(Name) ->
   gen_server:call({global, ?SYNC_PROC}, {get_and_remove_first, Name}).

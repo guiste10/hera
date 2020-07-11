@@ -136,7 +136,7 @@ filter_measure({CurrMeasureVal, MeasureTimestamp} = Measure, Iter, {DefaultMeasu
 -spec(valid_measure(Name :: atom(), Iter :: integer(), Measure :: {integer()|float(), integer()}, State :: state())->
     State :: state()).
 valid_measure(Name, Iter, {CurrMeasureVal, MeasureTimestamp} = Measure, State)->
-    hera:store_data(Name, node(), Iter, CurrMeasureVal),
+    hera_sensors_data:store_data(Name, node(), Iter, CurrMeasureVal),
     hera:send(measure, Name, node(), Iter, {CurrMeasureVal, MeasureTimestamp}),
     State#state{previous_measure = Measure, num_measures = State#state.num_measures+1}.
 
@@ -161,7 +161,7 @@ filter_sonar(PrevMeasureVal, CurrMeasureVal, DefaultMeasureVal, UpperBound, Time
     boolean()).
 is_background_dist(MeasureVal, DefaultMeasureVal)->
     if
-        DefaultMeasureVal - 2.54 < MeasureVal ->
+        DefaultMeasureVal * 0.95 =< MeasureVal ->
             true;
         true ->
             false

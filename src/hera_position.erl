@@ -21,7 +21,7 @@
 -export([launch_hera/6]).
 -export([launch_hera_shell/0]).
 -export([restart_calculation/2]).
--export([restart_measurement/2]).
+-export([restart_measurement/1]).
 -export([restart/2]).
 %%====================================================================
 %% Macros
@@ -81,14 +81,15 @@ launch_hera_shell() ->
     hera:launch_app().
 
 restart(Frequency, MaxIterations) ->
-    restart_measurement(Frequency, MaxIterations),
+    restart_measurement(MaxIterations),
     restart_calculation(Frequency, MaxIterations).
 
 restart_calculation(Frequency, MaxIterations) ->
     hera:restart_calculation(position, Frequency, MaxIterations).
 
-restart_measurement(Frequency, MaxIterations) ->
-    hera:restart_measurement(sonar, Frequency, MaxIterations).
+restart_measurement(MaxIterations) ->
+    hera:restart_measurement(pos, false),
+    hera:restart_sync_measurement(sonar, MaxIterations, false).
 
 %%%===================================================================
 %%% Internal functions
@@ -104,12 +105,12 @@ sonar_measurement(InchToCm) ->
 
 calc_position(NodeId) ->
     %case hera:get_data(sonar) of   % works
-    case hera:get_recent_data(sonar) of
+    case hera_sensors_data:get_recent_data(sonar) of
         {error, Reason} ->
             logger:error(Reason),
             error;
         {ok, Sonar} ->
-            case hera:get_data(pos) of
+            case hera_sensors_data:get_data(pos) of
                 {error, Reason} ->
                     logger:error(Reason),
                     error;

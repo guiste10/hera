@@ -206,15 +206,15 @@ handle_call({restart, WarmUp}, _From, State = #state{name = Name, synchronizatio
     hera_synchronization:make_measure_request(Name),
     {reply, ok, State#state{warm_up = WarmUp}};
 handle_call({restart, {Frequency, MaxIterations, WarmUp}}, _From, State = #state{synchronization = false}) ->
-    {reply, ok, State#state{iter = 0, max_iterations = MaxIterations, delay = Frequency, warm_up = WarmUp, default_Measure = {-1.0, -1}}, Frequency};
+    {reply, ok, State#state{iter = 0, max_iterations = MaxIterations, delay = Frequency, warm_up = WarmUp}, Frequency};
 handle_call({restart, MaxIterations, WarmUp}, _From, State = #state{name = Name, synchronization = true}) ->
     hera_synchronization:make_measure_request(Name),
-    {reply, ok, State#state{iter = 0, max_iterations = MaxIterations, warm_up = WarmUp, default_Measure = {-1.0, -1}}};
+    {reply, ok, State#state{iter = 0, max_iterations = MaxIterations, warm_up = WarmUp}};
 handle_call({restart, {Func, Delay, MaxIter, Filtering, WarmUp}}, _From, State = #state{synchronization = false}) ->
-    {reply, ok, State#state{iter = 0, measurement_func = Func, max_iterations = MaxIter, delay = Delay, filtering = Filtering, warm_up = WarmUp, default_Measure = {-1.0, -1}}, Delay};
+    {reply, ok, State#state{iter = 0, measurement_func = Func, max_iterations = MaxIter, delay = Delay, filtering = Filtering, warm_up = WarmUp}, Delay};
 handle_call({restart, {Func, MaxIter, Filtering, WarmUp}}, _From, State = #state{name = Name, synchronization = true}) ->
     hera_synchronization:make_measure_request(Name),
-    {reply, ok, State#state{iter = 0, measurement_func = Func, max_iterations = MaxIter, filtering = Filtering, warm_up = WarmUp, default_Measure = {-1.0, -1}}};
+    {reply, ok, State#state{iter = 0, measurement_func = Func, max_iterations = MaxIter, filtering = Filtering, warm_up = WarmUp}};
 handle_call(pause, _From, State) ->
     {reply, ok, State, hibernate};
 handle_call(_Msg, _From, State) ->
@@ -335,7 +335,7 @@ normal_phase(Func, DoFilter, Iter, DefaultM, Name, UpperBound) ->
                 DoFilter == true ->
                     hera_filter:filter({Measure, MeasureTimestamp}, Iter, DefaultM, Name, UpperBound);
                 true ->
-                    hera:store_data(Name, node(), Iter, Measure),
+                    hera_sensors_data:store_data(Name, node(), Iter, Measure),
                     hera:send(measure, Name, node(), Iter, {Measure, MeasureTimestamp})
             end
     end.
