@@ -15,7 +15,7 @@
 -include("hera.hrl").
 
 %% API
--export([launch_app/3]).
+-export([launch_app/2]).
 -export([fake_sonar_get/0]).
 -export([send/5, send/1]).
 -export([get_timestamp/0]).
@@ -59,17 +59,8 @@ stop(_State) -> ok.
 %%       ) -> ok
 %% @end
 %% -------------------------------------------------------------------
--spec launch_app(Measurements :: list(unsync_measurement() | sync_measurement()), Calculations :: list(calculation()), Master :: boolean()) -> ok.
-launch_app(Measurements, Calculations, Master) ->
-
-  %% if this node is the master node, starts the global_sync module
-  case Master of
-    true ->
-      SyncMeas = lists:filter(fun({_Name, Meas}) -> maps:get(synchronization, Meas) end, Measurements),
-      hera_pool:set_limit(dispatch_pool, length(SyncMeas)),
-      [hera_pool:run(dispatch_pool, [Name, hera_utils:concat_atoms(dispatch_, Name)]) || {Name, _M} <- SyncMeas];
-    false -> not_master
-  end,
+-spec launch_app(Measurements :: list(unsync_measurement() | sync_measurement()), Calculations :: list(calculation())) -> ok.
+launch_app(Measurements, Calculations) ->
 
   %% starts hera_measure
   hera_pool:set_limit(measurement_pool, length(Measurements)),
