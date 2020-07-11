@@ -18,11 +18,11 @@
 
 -export([launch_hera/4]).
 -export([launch_hera/5]).
--export([launch_hera/6]).
--export([launch_hera_shell/0]).
+-export([launch_hera/3]).
 -export([restart_calculation/2]).
 -export([restart_measurement/1]).
 -export([restart/2]).
+-export([sonar_measurement/0]).
 %%====================================================================
 %% Macros
 %%====================================================================
@@ -50,35 +50,32 @@
 %%
 %%--------------------------------------------------------------------
 -spec launch_hera(PosX :: integer(), PosY :: integer(), NodeId :: integer(), Master :: boolean()) -> any().
-launch_hera(PosX, PosY, NodeId, Master) ->
+launch_hera(PosX, PosY, NodeId) ->
     pmod_maxsonar:set_mode(single),
     Measurements = [
-        hera:get_synchronized_measurement(sonar, fun() -> sonar_measurement(2.54) end, true, 0.14, infinity),
+        hera:get_synchronized_measurement(sonar, fun() -> sonar_measurement() end, true, 0.14, infinity),
         hera:get_unsynchronized_measurement(pos, fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, false, 0.28, 3, 500)
     ],
     Calculations = [hera:get_calculation(position, fun() -> calc_position(NodeId) end, 50, infinity)],
-    hera:launch_app(Measurements, Calculations, Master).
+    hera:launch_app(Measurements, Calculations).
 
-launch_hera(PosX, PosY, NodeId, MaxIteration, Master) ->
+launch_hera(PosX, PosY, NodeId, MaxIteration) ->
     pmod_maxsonar:set_mode(single),
     Measurements = [
-        hera:get_synchronized_measurement(sonar, fun() -> sonar_measurement(2.54) end, true, 0.14, MaxIteration),
+        hera:get_synchronized_measurement(sonar, fun() -> sonar_measurement() end, true, 0.14, MaxIteration),
         hera:get_unsynchronized_measurement(pos, fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, false, 0.28, 3, 500)
     ],
     Calculations = [hera:get_calculation(position, fun() -> calc_position(NodeId) end, 50, MaxIteration)],
-    hera:launch_app(Measurements, Calculations, Master).
+    hera:launch_app(Measurements, Calculations).
 
-launch_hera(PosX, PosY, NodeId, Frequency, MaxIteration, Master) ->
+launch_hera(PosX, PosY, NodeId, Frequency, MaxIteration) ->
     Measurements = [
-        hera:get_unsynchronized_measurement(sonar, fun() -> sonar_measurement(2.54) end, true, 0.14, MaxIteration, Frequency),
+        hera:get_unsynchronized_measurement(sonar, fun() -> sonar_measurement() end, true, 0.14, MaxIteration, Frequency),
         hera:get_unsynchronized_measurement(pos, fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, false, 0.28, 3, 500)
     ],
     Calculations = [hera:get_calculation(position, fun() -> calc_position(NodeId) end, 50, MaxIteration)],
     %Calculations = [], % no calculation
-    hera:launch_app(Measurements, Calculations, Master).
-
-launch_hera_shell() ->
-    hera:launch_app().
+    hera:launch_app(Measurements, Calculations).
 
 restart(Frequency, MaxIterations) ->
     restart_measurement(MaxIterations),
@@ -95,11 +92,11 @@ restart_measurement(MaxIterations) ->
 %%% Internal functions
 %%%===================================================================
 
-sonar_measurement(InchToCm) ->
+sonar_measurement() ->
     case pmod_maxsonar:get() of
         undefined -> {error, "pmod_maxsonar not set up correctly"};
         Value ->
-            {ok, Value*InchToCm}
+            {ok, Value*2.54}
     end.
 
 
