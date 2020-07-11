@@ -134,7 +134,7 @@ launch_app() ->
 
 test_launch_hera() ->
   Measurements = [hera:get_unsynchronized_measurement(test1, fun() -> {ok, 10.0} end, false, 0.17, 10, 2000), hera:get_unsynchronized_measurement(test2, fun() -> {ok, 20.0} end, false, 0.17, 10, 2000)],
-  hera_pool:start_pool(measurement_pool, length(Measurements), {hera_measure, start_link, []}),
+  hera_pool:set_limit(measurement_pool, length(Measurements)),
   MeasurementsPids = [{Name, hera_pool:run(measurement_pool, [{Name, Measurement}])} || {Name, Measurement} <- Measurements],
   [register(Name, Pid) || {Name, {ok, Pid}} <- MeasurementsPids],
   started.

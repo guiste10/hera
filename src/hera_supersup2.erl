@@ -57,20 +57,14 @@ init([]) ->
     modules => [hera_sensors_data]},
 
   SupervisorCalculation = #{id => hera_sup_calculation,
-    start => {hera_sup2, start_link, [
-      supervisor_calculation,
-      simple_one_for_one, []
-    ]},
+    start => {hera_serv, start_link, [calculation_pool, 1, {hera_calculation, start_link, []}]},
     restart => permanent,
     shutdown => 2000,
     type => supervisor,
     modules => [hera_sup2]},
 
   SupervisorMeasures = #{id => hera_sup_measure,
-    start => {hera_sup2, start_link, [
-      supervisor_measures,
-      simple_one_for_one, []
-    ]},
+    start => {hera_serv, start_link, [measurement_pool, 1, {hera_measure, start_link, []}]},
     restart => permanent,
     shutdown => 2000,
     type => supervisor,
@@ -121,10 +115,7 @@ init([]) ->
     modules => [hera_sup2]},
 
   SupervisorDispatch = #{id => hera_sup_dispatch,
-    start => {hera_sup2, start_link, [
-      supervisor_dispatch,
-      simple_one_for_one, []
-    ]},
+    start => {hera_serv, start_link, [dispatch_pool, 1, {hera_global_dispatch, start_link, []}]},
     restart => permanent,
     shutdown => 2000,
     type => supervisor,
