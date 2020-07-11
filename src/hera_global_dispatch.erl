@@ -49,6 +49,8 @@ receiver(From, MeasurementName, Node, Timeout) ->
       receiver(From, MeasurementName, Node, abs(Timeout - (hera:get_timestamp() - T1))+1);
     {measure_done, MeasurementName, _NodeName, stop} ->
       ok;
+    {'EXIT', _ParentPid, shutdown} ->
+      erlang:exit(shutdown);
     SomethingElse ->
       logger:error("[Global_Serv] received message :~p~n", [SomethingElse])
   after Timeout ->

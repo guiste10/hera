@@ -32,6 +32,8 @@ loop() ->
   receive
     {udp, _Sock, _IP, _InPortNo, Packet} ->
       handle_message(binary_to_term(Packet), os:type());
+    {'EXIT', _ParentPid, shutdown} ->
+      erlang:exit(shutdown);
     Other ->
       logger:error("[hera_communication] Wrong message received ~p~n", [Other])
   end,

@@ -40,7 +40,7 @@
 -record(state, {
   % map of dictionaries (one per measurement type) each contraining the latest received data of all nodes
   % with the form [{node_name, {seqnum, data, timestamp}}]
-  data :: #{atom() => dict:dict(atom(), {integer(), term(), integer()})}, %% TODO: modify
+  data :: #{atom() => dict:dict(atom(), {integer(), term(), integer()})},
   measures_logger_configs :: ets:tid(),
   calculations_logger_configs :: ets:tid()
 }).
@@ -179,7 +179,6 @@ handle_cast({store_data, {Name, {Node, Seqnum, Measure}}}, State = #state{data =
                true ->
                  Data
   end,
-  %% TODO: modify to take the name into account
   Dict = maps:get(Name, New_data),
   MeasureTime = hera:get_timestamp(),
   Dict2 = case dict:find(Node, Dict) of

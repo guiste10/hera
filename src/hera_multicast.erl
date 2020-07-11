@@ -74,7 +74,11 @@ init(_Other) ->
 loop(Socket) ->
   receive
     {send_message, Message} ->
-      send_message(Socket, Message)
+      send_message(Socket, Message);
+    {'EXIT', _ParentPid, shutdown} ->
+      erlang:exit(shutdown);
+    Other ->
+      logger:error("[hera_multicast] received wrong message : ~p~n", [Other])
   end,
   loop(Socket).
 %%%===================================================================

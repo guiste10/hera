@@ -38,6 +38,8 @@ loop() ->
       Resp = hera_measure:perform_single_measurement(Name),
       global:send(GlobalName, {measure_done, Name, node(), Resp}),
       loop();
+    {'EXIT', _ParentPid, shutdown} ->
+      erlang:exit(shutdown);
     SomethingElse ->
       logger:error("[Synchronization] received message: ~p~n", [SomethingElse]),
       loop()
