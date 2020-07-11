@@ -8,8 +8,8 @@
     | {error, {already_started, pid()}
     | {shutdown, term()}
     | term()}.
-start_link(MFA = {_,_,_}) ->
-    supervisor:start_link(?MODULE, MFA).
+start_link(MFA = {M,_,_}) ->
+    supervisor:start_link({local, hera_utils:concat_atoms(worker_sup_, M)}, ?MODULE, MFA).
  
 -spec init({Module :: atom(), Function :: atom(), Arguments :: list()}) ->
     {ok , {supervisor:sup_flags() , [supervisor:child_spec()]}}.

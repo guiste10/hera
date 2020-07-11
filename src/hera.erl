@@ -16,7 +16,6 @@
 
 %% API
 -export([launch_app/3]).
--export([launch_app/0]).
 -export([fake_sonar_get/0]).
 -export([send/5, send/1]).
 -export([get_timestamp/0]).
@@ -26,7 +25,6 @@
 -export([restart_unsync_measurement/4, restart_unsync_measurement/6]).
 -export([get_calculation/4, get_synchronized_measurement/5, get_unsynchronized_measurement/6]).
 -export([maybe_propagate/1]).
--export([test_launch_hera/0]).
 
 % Callbacks
 -export([start/2]).
@@ -41,7 +39,7 @@ start(_Type, _Args) ->
   %application:start(kernel),
   %application:start(stdlib),
   %%hera_pool:start_link(). % verif bon appel?
-  hera_supersup2:start_link().
+  hera_supersup:start_link(os:type()).
 
 %% @private
 stop(_State) -> ok.
@@ -68,75 +66,24 @@ stop(_State) -> ok.
 -spec launch_app(Measurements :: list(unsync_measurement() | sync_measurement()), Calculations :: list(calculation()), Master :: boolean()) -> ok.
 launch_app(Measurements, Calculations, Master) ->
 
-  %% starts hera_sensors_data
-  hera_pool:start_pool(sensor_data_pool, 1, {hera_sensors_data, start_link, []}),
-  hera_pool:run(sensor_data_pool, []),
-
-  %% starts hera_communications
-  hera_pool:start_pool(communicationsPool, 1, {hera_communications, start_link, []}),
-  hera_pool:run(communicationsPool, []),
-
-  %% starts hera_multicast
-  hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
-  hera_pool:run(multicastPool, []),
-
   %% if this node is the master node, starts the global_sync module
   case Master of
     true ->
-      hera_pool:start_pool(hera_global_pool, 1, {hera_global_sync, start_link, []}),
-      hera_pool:run(hera_global_pool, []),
       SyncMeas = lists:filter(fun({_Name, Meas}) -> maps:get(synchronization, Meas) end, Measurements),
-      hera_pool:start_pool(global_dispatch_pool, length(SyncMeas), {hera_global_dispatch, start_link, []}),
-      [hera_pool:run(global_dispatch_pool, [Name, hera_utils:concat_atoms(dispatch_, Name)]) || {Name, _M} <- SyncMeas];
+      hera_pool:set_limit(dispatch_pool, length(SyncMeas)),
+      [hera_pool:run(dispatch_pool, [Name, hera_utils:concat_atoms(dispatch_, Name)]) || {Name, _M} <- SyncMeas];
     false -> not_master
   end,
 
-  %% starts hera_synchronization
-  hera_pool:start_pool(hera_synchronization_pool, 1, {hera_synchronization, start_link, []}),
-  hera_pool:run(hera_synchronization_pool, []),
-
-  %% starts hera_filter
-  hera_pool:start_pool(filter_data_pool, 1, {hera_filter, start_link, []}),
-  hera_pool:run(filter_data_pool, []),
-
   %% starts hera_measure
-  hera_pool:start_pool(measurement_pool, length(Measurements), {hera_measure, start_link, []}),
+  hera_pool:set_limit(measurement_pool, length(Measurements)),
   MeasurementsPids = [{Name, hera_pool:run(measurement_pool, [{Name, Measurement}])} || {Name, Measurement} <- Measurements],
   [register(Name, Pid) || {Name, {ok, Pid}} <- MeasurementsPids],
 
   %% start hera_calculation
-  hera_pool:start_pool(calculation_pool, length(Calculations), {hera_calculation, start_link, []}),
+  hera_pool:set_limit(calculation_pool, length(Calculations)),
   CalculationsPids = [{Name, hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation)])} || {Name, Calculation} <- Calculations],
   [register(Name, Pid) || {Name, {ok, Pid}} <- CalculationsPids],
-  started.
-
-%% -------------------------------------------------------------------
-%% @doc
-%% Start only multicast pool. Function to be called by a shell on a computer
-%%
-%% @spec launch_app() -> ok
-%% @end
-%% -------------------------------------------------------------------
--spec launch_app() -> ok.
-launch_app() ->
-  %% starts hera_sensors_data
-  hera_pool:start_pool(sensor_data_pool, 1, {hera_sensors_data, start_link, []}),
-  hera_pool:run(sensor_data_pool, []),
-
-  %% starts hera_communications
-  hera_pool:start_pool(communicationsPool, 1, {hera_communications, start_link, []}),
-  hera_pool:run(communicationsPool, []),
-
-  %% starts hera_multicast
-  hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
-  hera_pool:run(multicastPool, []),
-  started.
-
-test_launch_hera() ->
-  Measurements = [hera:get_unsynchronized_measurement(test1, fun() -> {ok, 10.0} end, false, 0.17, 10, 2000), hera:get_unsynchronized_measurement(test2, fun() -> {ok, 20.0} end, false, 0.17, 10, 2000)],
-  hera_pool:set_limit(measurement_pool, length(Measurements)),
-  MeasurementsPids = [{Name, hera_pool:run(measurement_pool, [{Name, Measurement}])} || {Name, Measurement} <- Measurements],
-  [register(Name, Pid) || {Name, {ok, Pid}} <- MeasurementsPids],
   started.
 
 %% -------------------------------------------------------------------

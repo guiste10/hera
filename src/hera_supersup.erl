@@ -1,71 +1,163 @@
-% @doc hera top level supervisor.
-% @end
+%%%-------------------------------------------------------------------
+%%% @author julien
+%%% @copyright (C) 2020, <COMPANY>
+%%% @doc
+%%%
+%%% @end
+%%% Created : 11. Jul 2020 4:58 PM
+%%%-------------------------------------------------------------------
 -module(hera_supersup).
--author("Julien Bastin <julien.bastin@student.uclouvain.be>, Guillaume Neirinckx <guillaume.neirinckx@student.uclouvain.be>").
+-author("julien").
 
--behavior(supervisor).
+-behaviour(supervisor).
 
--include("hera.hrl").
+%% API
+-export([start_link/1]).
 
-% API
--export([start_link/0, stop/0, start_pool/3, stop_pool/1]).
-
-% Callbacks
+%% Supervisor callbacks
 -export([init/1]).
 
-%--- API -----------------------------------------------------------------------
+-define(SERVER, ?MODULE).
 
-% {ok, Pid :: pid()} | ignore | {error, Reason :: term()}.
-%% @doc Start hera top level supervisor using the current supervisor (= shell)
--spec start_link() ->
-    {ok, pid()}
-    | ignore
-    | {error, {already_started, pid()}
-    | {shutdown, term()}
-    | term()}.
-start_link() -> 
-    io:format("supersup process is being started ~n"),
-    supervisor:start_link({local, supersup}, ?MODULE, []).
+%%%===================================================================
+%%% API functions
+%%%===================================================================
 
-%% @doc  kill supervisor brutally
--spec stop() ->
-    true
-    | ok.
-stop() ->
-    case whereis(supersup) of
-    P when is_pid(P) ->
-    exit(P, kill);
-    _ -> ok
-    end.
+%% @doc Starts the supervisor
+-spec(start_link(OsType :: {unix | win32, atom()}) -> {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
+start_link(OsType) ->
+  supervisor:start_link({local, ?SERVER}, ?MODULE, OsType).
 
-% {ok, Child :: child()} |
-% {ok, Child :: child(), Info :: term()} |
-% {error, startchild_err()}.
+%%%===================================================================
+%%% Supervisor callbacks
+%%%===================================================================
 
-%% @doc starts a process pool named "Name", with num of workers limit "limit", using worker specified in MFA
-% worker will be started by worker_sup = its supervisor
--spec start_pool(Name :: atom(), Limit :: integer(), MFA :: tuple()) ->
-    supervisor:startchild_ret().
-start_pool(Name, Limit, MFA) ->
-    ChildSpec = {Name, % id
-    {hera_sup, start_link, [Name, Limit, MFA]}, % start
-    permanent, 10500, supervisor, [hera_sup]}, % restart,shutdown,type,module
-    supervisor:start_child(supersup, ChildSpec). % supersup will be the supervisor, hera_sup:startlink will be called by supersup, supersup will be considered as the supervisor in hera_sup:startlink
-
-%% @doc stops a process pool
--spec stop_pool(PoolName :: atom()) ->
-    ok | 
-    {error, running | restarting | not_found | simple_one_for_one}.
-stop_pool(Name) ->
-    supervisor:terminate_child(supersup, Name),
-    supervisor:delete_child(supersup, Name).
-
-%--- Callbacks -----------------------------------------------------------------
-%% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
 %% @private
--spec init([]) ->
-    {ok , {supervisor:sup_flags() , []}}.
-init([]) ->
-    MaxRestart = 6,
-    MaxTime = 3600,
-    {ok, {{one_for_one, MaxRestart, MaxTime}, []}}. % childless
+%% @doc Whenever a supervisor is started using supervisor:start_link/[2,3],
+%% this function is called by the new process to find out about
+%% restart strategy, maximum restart frequency and child
+%% specifications.
+-spec(init(Args :: term()) ->
+  {ok, {SupFlags :: {RestartStrategy :: supervisor:strategy(),
+    MaxR :: non_neg_integer(), MaxT :: non_neg_integer()},
+    [ChildSpec :: supervisor:child_spec()]}}
+  | ignore | {error, Reason :: term()}).
+init(OsType) when OsType == {unix, rtems} ->
+  MaxRestarts = 6,
+  MaxSecondsBetweenRestarts = 3600,
+  SupFlags = #{strategy => rest_for_one,
+    intensity => MaxRestarts,
+    period => MaxSecondsBetweenRestarts},
+
+  SensorsData = #{id => hera_sensors_data,
+    start => {hera_sensors_data, start_link, []},
+    restart => permanent,
+    shutdown => 2000,
+    type => worker},
+
+  SupervisorCalculation = #{id => hera_sup_calculation,
+    start => {hera_serv, start_link, [calculation_pool, 1, supervisor_calc_meas, {hera_calculation, start_link, []}]},
+    restart => permanent,
+    shutdown => 2000,
+    type => supervisor},
+
+  SupervisorMeasures = #{id => hera_sup_measure,
+    start => {hera_serv, start_link, [measurement_pool, 1, supervisor_measurement, {hera_measure, start_link, []}]},
+    restart => permanent,
+    shutdown => 2000,
+    type => supervisor},
+
+  SupervisorMeasurements = #{id => hera_sup_measurement,
+    start => {hera_sup2, start_link, [
+      supervisor_measurement,
+      rest_for_one, [
+        #{id => hera_synchronization,
+          start => {hera_synchronization, start_link, []}},
+        #{id => hera_filter,
+          start => {hera_filter, start_link, []}},
+        SupervisorMeasures
+      ]
+    ]},
+    restart => permanent,
+    shutdown => 2000,
+    type => supervisor},
+
+  SupervisorCalcMeas = #{id => hera_sup_calc_meas,
+    start => {hera_sup2, start_link, [
+      supervisor_calc_meas,
+      one_for_one, [
+        SupervisorMeasurements, SupervisorCalculation
+      ]
+    ]},
+    restart => permanent,
+    shutdown => 2000,
+    type => supervisor},
+
+  Supervisor1 = #{id => hera_sup1,
+    start => {hera_sup2, start_link, [
+      supervisor_1,
+      rest_for_one, [
+        #{id => hera_communications,
+          start => {hera_communications, start_link, []}},
+        #{id => hera_multicast,
+          start => {hera_multicast, start_link, []}},
+        SupervisorCalcMeas
+      ]
+    ]},
+    restart => permanent,
+    shutdown => 2000,
+    type => supervisor},
+
+  SupervisorDispatch = #{id => hera_sup_dispatch,
+    start => {hera_serv, start_link, [dispatch_pool, 1, supervisor_2, {hera_global_dispatch, start_link, []}]},
+    restart => permanent,
+    shutdown => 2000,
+    type => supervisor},
+
+  Supervisor2 = #{id => hera_sup2,
+    start => {hera_sup2, start_link, [
+      supervisor_2,
+      rest_for_one, [
+        #{id => hera_global_sync,
+          start => {hera_global_sync, start_link, []}},
+        SupervisorDispatch
+      ]
+    ]},
+    restart => permanent,
+    shutdown => 2000,
+    type => supervisor},
+
+  {ok, {SupFlags, [SensorsData, Supervisor1, Supervisor2]}};
+
+init(_OsType) ->
+  MaxRestarts = 6,
+  MaxSecondsBetweenRestarts = 3600,
+  SupFlags = #{strategy => rest_for_one,
+    intensity => MaxRestarts,
+    period => MaxSecondsBetweenRestarts},
+
+  SensorsData = #{id => hera_sensors_data,
+    start => {hera_sensors_data, start_link, []},
+    restart => permanent,
+    shutdown => 2000,
+    type => worker},
+
+  Supervisor1 = #{id => hera_sup1,
+    start => {hera_sup2, start_link, [
+      supervisor_1,
+      rest_for_one, [
+        #{id => hera_communications,
+          start => {hera_communications, start_link, []}},
+        #{id => hera_multicast,
+          start => {hera_multicast, start_link, []}}
+      ]
+    ]},
+    restart => permanent,
+    shutdown => 2000,
+    type => supervisor},
+
+  {ok, {SupFlags, [SensorsData, Supervisor1]}}.
+
+%%%===================================================================
+%%% Internal functions
+%%%===================================================================
