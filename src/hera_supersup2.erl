@@ -56,13 +56,13 @@ init([]) ->
     type => worker},
 
   SupervisorCalculation = #{id => hera_sup_calculation,
-    start => {hera_serv, start_link, [calculation_pool, 1, {hera_calculation, start_link, []}]},
+    start => {hera_serv, start_link, [calculation_pool, 1, {hera_calculation, start_link, supervisor_calc_meas, []}]},
     restart => permanent,
     shutdown => 2000,
     type => supervisor},
 
   SupervisorMeasures = #{id => hera_sup_measure,
-    start => {hera_serv, start_link, [measurement_pool, 1, {hera_measure, start_link, []}]},
+    start => {hera_serv, start_link, [measurement_pool, 1, {hera_measure, start_link, supervisor_measurement, []}]},
     restart => permanent,
     shutdown => 2000,
     type => supervisor},
@@ -109,7 +109,7 @@ init([]) ->
     type => supervisor},
 
   SupervisorDispatch = #{id => hera_sup_dispatch,
-    start => {hera_serv, start_link, [dispatch_pool, 1, {hera_global_dispatch, start_link, []}]},
+    start => {hera_serv, start_link, [dispatch_pool, 1, {hera_global_dispatch, start_link, supervisor_2, []}]},
     restart => permanent,
     shutdown => 2000,
     type => supervisor},
