@@ -25,7 +25,6 @@
 -export([restart_unsync_measurement/4, restart_unsync_measurement/6]).
 -export([get_calculation/4, get_synchronized_measurement/5, get_unsynchronized_measurement/6]).
 -export([maybe_propagate/1]).
--export([test_launch_hera/0]).
 
 % Callbacks
 -export([start/2]).
@@ -36,11 +35,7 @@
 
 %% @private
 start(_Type, _Args) ->
-  %{ok, _} = application:ensure_all_started(hera),
-  %application:start(kernel),
-  %application:start(stdlib),
-  %%hera_pool:start_link(). % verif bon appel?
-  hera_supersup:start_link({unix, rtems}).
+  hera_supersup:start_link(os:type()).
 
 %% @private
 stop(_State) -> ok.
@@ -86,19 +81,6 @@ launch_app(Measurements, Calculations, Master) ->
   CalculationsPids = [{Name, hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation)])} || {Name, Calculation} <- Calculations],
   [register(Name, Pid) || {Name, {ok, Pid}} <- CalculationsPids],
   started.
-
-test_launch_hera() ->
-  Measurements = [
-    hera:get_synchronized_measurement(sync_measurement_1, fun() -> {ok, 10.0} end, false, 0.14, 10),
-    hera:get_synchronized_measurement(sync_measurement_2, fun() -> {ok, 20.0} end, false, 0.14, 10),
-    hera:get_unsynchronized_measurement(unsync_measurement_1, fun() -> {ok, 20.0} end, false, 0.14, 10, 1000),
-    hera:get_unsynchronized_measurement(unsync_measurement_2, fun() -> {ok, 20.0} end, false, 0.14, 10, 1000)
-  ],
-  Calculations = [
-    hera:get_calculation(calculation_1, fun() -> {ok, 22.22} end, 1000, 10),
-    hera:get_calculation(calculation_2, fun() -> {ok, 23.2} end, 1000, 10)
-  ],
-  hera:launch_app(Measurements, Calculations, true).
 
 %% -------------------------------------------------------------------
 %% @doc
