@@ -26,6 +26,7 @@
 -export([restart_unsync_measurement/4, restart_unsync_measurement/6]).
 -export([get_calculation/4, get_synchronized_measurement/5, get_unsynchronized_measurement/6]).
 -export([maybe_propagate/1]).
+-export([test_launch_hera/0]).
 
 % Callbacks
 -export([start/2]).
@@ -39,7 +40,8 @@ start(_Type, _Args) ->
   %{ok, _} = application:ensure_all_started(hera),
   %application:start(kernel),
   %application:start(stdlib),
-  hera_pool:start_link(). % verif bon appel?
+  %%hera_pool:start_link(). % verif bon appel?
+  hera_supersup2:start_link().
 
 %% @private
 stop(_State) -> ok.
@@ -128,6 +130,13 @@ launch_app() ->
   %% starts hera_multicast
   hera_pool:start_pool(multicastPool, 1, {hera_multicast, start_link, []}),
   hera_pool:run(multicastPool, []),
+  started.
+
+test_launch_hera() ->
+  Measurements = [hera:get_unsynchronized_measurement(test1, fun() -> {ok, 10.0} end, false, 0.17, 10, 2000), hera:get_unsynchronized_measurement(test2, fun() -> {ok, 20.0} end, false, 0.17, 10, 2000)],
+  hera_pool:start_pool(measurement_pool, length(Measurements), {hera_measure, start_link, []}),
+  MeasurementsPids = [{Name, hera_pool:run(measurement_pool, [{Name, Measurement}])} || {Name, Measurement} <- Measurements],
+  [register(Name, Pid) || {Name, {ok, Pid}} <- MeasurementsPids],
   started.
 
 %% -------------------------------------------------------------------
