@@ -46,7 +46,6 @@
 %% @param PosX The x coordinate of the board in the room
 %% @param PosY The y coordinate of the board in the room
 %% @param NodeId The id of the board. The first board must have NodeId = 0
-%% @param Master Boolean that indicates if the current node must start hera_global_sync. Only one board in the room must have this value to true.
 %%
 %%--------------------------------------------------------------------
 -spec launch_hera(PosX :: integer(), PosY :: integer(), NodeId :: integer(), Master :: boolean()) -> any().
