@@ -108,26 +108,7 @@ init(OsType) when OsType == {unix, rtems} ->
     shutdown => 2000,
     type => supervisor},
 
-  SupervisorDispatch = #{id => hera_sup_dispatch,
-    start => {hera_serv, start_link, [dispatch_pool, 1, supervisor_2, {hera_global_dispatch, start_link, []}]},
-    restart => permanent,
-    shutdown => 2000,
-    type => supervisor},
-
-  Supervisor2 = #{id => hera_sup2,
-    start => {hera_sup2, start_link, [
-      supervisor_2,
-      rest_for_one, [
-        #{id => hera_global_sync,
-          start => {hera_global_sync, start_link, []}},
-        SupervisorDispatch
-      ]
-    ]},
-    restart => permanent,
-    shutdown => 2000,
-    type => supervisor},
-
-  {ok, {SupFlags, [SensorsData, Supervisor1, Supervisor2]}};
+  {ok, {SupFlags, [SensorsData, Supervisor1]}};
 
 init(_OsType) ->
   MaxRestarts = 6,
