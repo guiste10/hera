@@ -58,10 +58,6 @@ handle_message({measure, Name, {Node, Iter, Measure}}, _OsType) ->
 handle_message({calc, Name, {Node, Iter, Res}}, OsType) when OsType =/= {unix, rtems}->
   hera_sensors_data:log_calculation(Name, Node, Iter, Res);
 
-%% hello message
-handle_message({hello, Node}, OsType) when OsType == {unix, rtems}->
-  net_adm:ping(Node);
-
 handle_message({propagate, Fun}, OsType) when OsType == {unix, rtems} ->
   catch Fun();
 

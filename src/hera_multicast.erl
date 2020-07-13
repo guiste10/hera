@@ -64,7 +64,6 @@ send(Message) ->
  ?SERVER ! {send_message, term_to_binary(Message)}.
 
 init({unix, rtems}) ->
-  {_Pid, _Ref} = spawn_opt(?SERVER, hello, [], [monitor]),
   Socket = open_socket(),
   loop(Socket);
 init(_Other) ->
@@ -118,8 +117,3 @@ open() ->
     {add_membership, {?MULTICAST_ADDR, OwnAddr}} %join a multicast group and use the specified network interface
   ]),
   Sock.
-
-hello() ->
-  hera_multicast:send({hello, node()}),
-  timer:sleep(2000),
-  hello().
