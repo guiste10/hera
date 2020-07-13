@@ -11,7 +11,7 @@
 -author("Julien Bastin <julien.bastin@student.uclouvain.be>, Guillaume Neirinckx <guillaume.neirinckx@student.uclouvain.be>").
 
 %% API
--export([start_link/0, send/5, send/1, hello/0, init/1]).
+-export([start_link/0, send/5, send/1, init/1]).
 
 %%====================================================================
 %% Macros
