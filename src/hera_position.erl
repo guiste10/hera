@@ -127,7 +127,7 @@ calc_position(NodeId, MaxX, MaxY) ->
                             {X_p, Y_p} = trilateration({V1, PosX1, PosY1}, {V2, PosX2, PosY2}, {V3, PosX3, PosY3}),
                             Result = io_lib:format("x, ~.2f, y, ~.2f", [X_p, Y_p]),
                             {ok, Result};
-                        %[{_, _, _}, {_, _, _}, {_, _, _}, {_, _, _}] ->
+                        %[{_, _, _}, {_, _, _}, {_, _, _}, {_, _, _}] ->  \n ioformat? 2 targets?
                             %Neighbors = lists:filter(fun(N) -> neighbors(NodeId, dict:fetch(N, Pos)) end, Nodes),
                             %[{_Seq1, V1}, {_Seq2, V2}, {_Seq3, V3}] = [dict:fetch(Node, Sonar) || Node <- Neighbors],
                             %[
@@ -226,8 +226,8 @@ trilateration({V1, X1, Y1}, {V2, X2, Y2}, {V3, X3, Y3}) ->
     Y_p = (C*D - A*F) / (B*D - A*E),
     {X_p, Y_p}.
 
-  %test:trilateration({math:sqrt(8), 0, 0}, {math:sqrt(8), 0, 4},{math:sqrt(8), 10, 4}, {math:sqrt(8), 10, 0}, 10, 4). gives 8,2 and 2,2 when max dist < 4
-  trilaterations_2_objects(Measures, MaxX, MaxY) ->
+%test:trilateration({math:sqrt(8), 0, 0}, {math:sqrt(8), 0, 4},{math:sqrt(8), 10, 4}, {math:sqrt(8), 10, 0}, 10, 4). gives 8,2 and 2,2 when max dist < 4
+trilaterations_2_objects(Measures, MaxX, MaxY) ->
     PosL = get_contiguous_pairs_positions(Measures, hd(Measures), [], MaxX, MaxY),
     case PosL of
         [] -> 
@@ -243,7 +243,7 @@ trilateration({V1, X1, Y1}, {V2, X2, Y2}, {V3, X3, Y3}) ->
 get_contiguous_pairs_positions([LastMeasure], FirstMeasure, PosL, MaxX, MaxY) ->
     Pos = filtered_trilateration(LastMeasure, FirstMeasure, MaxX, MaxY), % only 1 pos should be received, because sonars with these 2 measures are contiguous
     add_to_position_list(Pos, PosL);
-    get_contiguous_pairs_positions([Measure|MeasureL], FirstMeasure, PosL, MaxX, MaxY) -> % measureL length > 1
+get_contiguous_pairs_positions([Measure|MeasureL], FirstMeasure, PosL, MaxX, MaxY) -> % measureL length > 1
     Pos = filtered_trilateration(Measure, hd(MeasureL), MaxX, MaxY),
     PosL2 = add_to_position_list(Pos, PosL),
     get_contiguous_pairs_positions(MeasureL, FirstMeasure, PosL2, MaxX, MaxY).
