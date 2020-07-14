@@ -16,12 +16,13 @@
 
 -include("hera.hrl").
 
--export([launch_hera/3]).
+-export([launch_hera/5]).
+-export([launch_hera/6]).
 -export([launch_hera/7]).
--export([launch_hera_shell/0]).
 -export([restart_calculation/2]).
--export([restart_measurement/2]).
+-export([restart_measurement/1]).
 -export([restart/2]).
+-export([sonar_measurement/0]).
 %%====================================================================
 %% Macros
 %%====================================================================
@@ -37,60 +38,76 @@
 %%% API
 %%%===================================================================
 
-launch_hera(PosX, PosY, NodeId) ->
+%%--------------------------------------------------------------------
+%% @doc
+%% Launch hera with synchronization to follow a person in a room.
+%% In this case, a synchronization is performed between the measurement of the pmod_maxsonar in order to avoid cross-talking between them
+%%
+%% @param PosX The x coordinate of the board in the room
+%% @param PosY The y coordinate of the board in the room
+%% @param NodeId The id of the board. The first board must have NodeId = 0
+%%
+%%--------------------------------------------------------------------
+
+-spec launch_hera(PosX :: integer(), PosY :: integer(), NodeId :: integer(), MaxX :: integer(), MaxY :: integer()) -> any().
+launch_hera(PosX, PosY, NodeId, MaxX, MaxY) ->
+    pmod_maxsonar:set_mode(single),
     Measurements = [
-        {sonar, #{func => fun(InchToCm) -> sonar_measurement(InchToCm) end, args => [2.54], frequency => 100, 
-        filtering => true, upperBound => 0.14,
-         max_iterations => 100}},
-        {pos, #{func => fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, args => [], frequency => 50, filtering => false, upperBound => 0.28, max_iterations => 3}}
+        hera:get_synchronized_measurement(sonar, fun() -> sonar_measurement() end, true, 0.14, infinity),
+        hera:get_unsynchronized_measurement(pos, fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, false, 0.28, 3, 500)
     ],
-    %Calculations = [{position, #{func => fun(Id) -> calc_position(Id, infinity, infinity) end, args => [NodeId], frequency => 100, max_iterations => 150}}],
-    Calculations = [], % no calculation
+    Calculations = [hera:get_calculation(position, fun() -> calc_position(NodeId, MaxX, MaxY) end, 50, infinity)],
+    hera:launch_app(Measurements, Calculations).
+
+launch_hera(PosX, PosY, NodeId, MaxIteration, MaxX, MaxY) ->
+    pmod_maxsonar:set_mode(single),
+    Measurements = [
+        hera:get_synchronized_measurement(sonar, fun() -> sonar_measurement() end, true, 0.14, MaxIteration),
+        hera:get_unsynchronized_measurement(pos, fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, false, 0.28, 3, 500)
+    ],
+    Calculations = [hera:get_calculation(position, fun() -> calc_position(NodeId, MaxX, MaxY) end, 50, MaxIteration)],
     hera:launch_app(Measurements, Calculations).
 
 launch_hera(PosX, PosY, NodeId, Frequency, MaxIteration, MaxX, MaxY) ->
     Measurements = [
-        {sonar, #{func => fun(InchToCm) -> sonar_measurement(InchToCm) end, args => [2.54], frequency => Frequency, 
-        filtering => true, upperBound => 0.14,
-        max_iterations => MaxIteration}},
-        {pos, #{func => fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, args => [], frequency => 5000, filtering => false, upperBound => 0.28, max_iterations => 3}}
+        hera:get_unsynchronized_measurement(sonar, fun() -> sonar_measurement() end, true, 0.14, MaxIteration, Frequency),
+        hera:get_unsynchronized_measurement(pos, fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, false, 0.28, 3, 500)
     ],
-    Calculations = [{position, #{func => fun(Id) -> calc_position(Id, MaxX, MaxY) end, args => [NodeId], frequency => Frequency, max_iterations => MaxIteration}}],
+    Calculations = [hera:get_calculation(position, fun() -> calc_position(NodeId, MaxX, MaxY) end, 50, MaxIteration)],
     %Calculations = [], % no calculation
     hera:launch_app(Measurements, Calculations).
 
-launch_hera_shell() ->
-    hera:launch_app().
-
 restart(Frequency, MaxIterations) ->
-    restart_measurement(Frequency, MaxIterations),
+    restart_measurement(MaxIterations),
     restart_calculation(Frequency, MaxIterations).
 
 restart_calculation(Frequency, MaxIterations) ->
     hera:restart_calculation(position, Frequency, MaxIterations).
 
-restart_measurement(Frequency, MaxIterations) ->
-    hera:restart_measurement(sonar, Frequency, MaxIterations).
+restart_measurement(MaxIterations) ->
+    hera:restart_measurement(pos, false),
+    hera:restart_sync_measurement(sonar, MaxIterations, false).
 
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
 
-sonar_measurement(InchToCm) ->
+sonar_measurement() ->
     case pmod_maxsonar:get() of
         undefined -> {error, "pmod_maxsonar not set up correctly"};
-        Value -> {ok, Value*InchToCm}
+        Value ->
+            {ok, Value*2.54}
     end.
 
 
-calc_position(NodeId, MaxX, MaxY) ->
+calc_position(_NodeId, MaxX, MaxY) -> % todo remove nodeId if not using neighbours
     %case hera:get_data(sonar) of
     case hera:get_recent_data(sonar) of
         {error, Reason} ->
             logger:error(Reason),
             error;
         {ok, Sonar} ->
-            case hera:get_data(pos) of
+            case hera_sensors_data:get_data(pos) of
                 {error, Reason} ->
                     logger:error(Reason),
                     error;

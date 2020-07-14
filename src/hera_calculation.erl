@@ -15,7 +15,7 @@
 -include("hera.hrl").
 
 %% API
--export([start_link/5, stop/1, restart_calculation/5, restart_calculation/1, restart_calculation/3, pause_calculation/1]).
+-export([start_link/4, stop/1, restart_calculation/4, restart_calculation/1, restart_calculation/3, pause_calculation/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
@@ -35,7 +35,6 @@
 -record(state, {
   name :: atom(),
   calc_function :: function(),
-  func_args :: list(any()),
   delay :: integer(),
   iter :: integer(),
   max_iterations :: integer() | infinity
@@ -48,10 +47,10 @@
 
 %% @private
 %% @doc Spawns the server and registers the local name (unique)
--spec(start_link(Name :: atom(), CalcFunction :: function(), Args :: list(any()), Delay :: integer(), MaxIterations :: integer() | infinity) ->
+-spec(start_link(Name :: atom(), CalcFunction :: function(), Delay :: integer(), MaxIterations :: integer() | infinity) ->
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
-start_link(Name, CalcFunction, Args, Delay, MaxIterations) ->
-  gen_server:start_link(?MODULE, {Name, CalcFunction, Args, Delay, MaxIterations}, []).
+start_link(Name, CalcFunction, Delay, MaxIterations) ->
+  gen_server:start_link(?MODULE, {Name, CalcFunction, Delay, MaxIterations}, []).
 
 %% @private
 stop(Pid) ->
@@ -70,9 +69,9 @@ stop(Pid) ->
 %% @spec restart_calculation(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer()) -> ok.
 %% @end
 %%--------------------------------------------------------------------
--spec restart_calculation(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer()) -> ok.
-restart_calculation(Name, Func, Args, Frequency, MaxIterations) ->
-  gen_server:cast(Name, {restart, {Func, Args, Frequency, MaxIterations}}).
+-spec restart_calculation(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer()) -> ok.
+restart_calculation(Name, Func, Frequency, MaxIterations) ->
+  gen_server:cast(Name, {restart, {Func, Frequency, MaxIterations}}).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -123,8 +122,8 @@ pause_calculation(Name) ->
 -spec(init({Name :: atom(), Calc_function :: function(), Args :: list(any()), Delay :: integer(), MaxIterations :: integer() | infinity}) ->
   {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
-init({Name, CalcFunction, Args, Delay, MaxIterations}) ->
-  {ok, #state{name = Name, calc_function = CalcFunction, func_args = Args, delay = Delay, iter = 0, max_iterations = MaxIterations}, Delay}.
+init({Name, CalcFunction, Delay, MaxIterations}) ->
+  {ok, #state{name = Name, calc_function = CalcFunction, delay = Delay, iter = 0, max_iterations = MaxIterations}, Delay}.
 
 %% @private
 %% @doc Handling call messages
@@ -149,8 +148,8 @@ handle_cast(restart, State = #state{delay = Delay}) ->
   {noreply, State, Delay};
 handle_cast({restart, {Frequency, MaxIterations}}, State) ->
   {noreply, State#state{iter = 0, max_iterations = MaxIterations, delay = Frequency}, Frequency};
-handle_cast({restart, {Func, Args, Delay, MaxIter}}, State) ->
-  {noreply, State#state{iter = 0, calc_function = Func, func_args = Args, max_iterations = MaxIter, delay = Delay}, Delay};
+handle_cast({restart, {Func, Delay, MaxIter}}, State) ->
+  {noreply, State#state{iter = 0, calc_function = Func, max_iterations = MaxIter, delay = Delay}, Delay};
 handle_cast(pause, State) ->
   {noreply, State, hibernate};
 handle_cast(_Request, State = #state{}) ->
@@ -162,8 +161,8 @@ handle_cast(_Request, State = #state{}) ->
   {noreply, NewState :: state()} |
   {noreply, NewState :: state(), timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: state()}).
-handle_info(timeout, State = #state{name = Name, calc_function = Func, func_args = Args, iter = Iter, delay = Delay, max_iterations = MaxIterations}) ->
-  case erlang:apply(Func, Args) of
+handle_info(timeout, State = #state{name = Name, calc_function = Func, iter = Iter, delay = Delay, max_iterations = MaxIterations}) ->
+  case Func() of
     {error, Reason} -> logger:error(Reason);
     {ok, Res} -> hera:send(calc, Name, node(), Iter, Res);
     Other -> io:format("result : ~p", [Other])

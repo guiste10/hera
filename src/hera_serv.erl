@@ -1,6 +1,6 @@
 -module(hera_serv).
 -behaviour(gen_server).
--export([start_link/4, run/2, sync_queue/2, async_queue/2, stop/1]).
+-export([start_link/4, run/2, sync_queue/2, async_queue/2, stop/1, set_limit/2]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 code_change/3, terminate/2]).
 
@@ -35,6 +35,10 @@ sync_queue(Name, Args) ->
 -spec(async_queue(Name :: atom(), Arguments :: list()) ->  ok). 
 async_queue(Name, Args) ->
     gen_server:cast(Name, {async, Args}).
+
+-spec set_limit(Name :: atom(), Limit :: integer()) -> ok.
+set_limit(Name, Limit) ->
+    gen_server:call(Name, {set_limit, Limit}).
  
 -spec(stop(atom()) -> gen_server:reply()).
 stop(Name) ->
@@ -90,7 +94,9 @@ handle_call({sync, Args}, _From, S = #state{limit=N, sup=Sup, refs=R}) when N > 
     Ref = erlang:monitor(process, Pid),
     {reply, {ok,Pid}, S#state{limit=N-1, refs=gb_sets:add(Ref,R)}};
 handle_call({sync, Args},  From, S = #state{queue=Q}) ->
-    {noreply, S#state{queue=queue:in({From, Args}, Q)}};   % add to queue 
+    {noreply, S#state{queue=queue:in({From, Args}, Q)}};   % add to queue
+handle_call({set_limit, Limit}, _From, State) ->
+    {reply, ok, State#state{limit = Limit}};
 handle_call(stop, _From, State) ->
     {stop, normal, ok, State};
     handle_call(_Msg, _From, State) ->
