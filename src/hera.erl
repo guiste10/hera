@@ -25,6 +25,7 @@
 -export([restart_unsync_measurement/4, restart_unsync_measurement/6]).
 -export([get_calculation/4, get_synchronized_measurement/5, get_unsynchronized_measurement/6]).
 -export([maybe_propagate/1]).
+-export([illustrate_sup_tree/0]).
 
 % Callbacks
 -export([start/2]).
@@ -72,6 +73,16 @@ launch_app(Measurements, Calculations) ->
   CalculationsPids = [{Name, hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation)])} || {Name, Calculation} <- Calculations],
   [register(Name, Pid) || {Name, {ok, Pid}} <- CalculationsPids],
   started.
+
+illustrate_sup_tree() ->
+  Measures = [
+    hera:get_unsynchronized_measurement(board_position, fun() -> {ok, 10.0} end, false, 1, 10, 1000),
+    hera:get_synchronized_measurement(sonar, fun() -> {ok, 20.0} end, false, 1, 10)
+  ],
+  Calculations = [
+    hera:get_calculation(objet_position, fun() -> {ok, 32.0} end, 1000, 10)
+  ],
+  launch_app(Measures, Calculations).
 
 %% -------------------------------------------------------------------
 %% @doc
