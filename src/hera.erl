@@ -36,7 +36,7 @@
 
 %% @private
 start(_Type, _Args) ->
-  hera_supersup:start_link(os:type()).
+  hera_supersup:start_link({unix, rtems}).
 
 %% @private
 stop(_State) -> ok.
