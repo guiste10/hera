@@ -62,7 +62,7 @@ launch_hera(PosX, PosY, NodeId, MaxX, MaxY) ->
 launch_hera(PosX, PosY, NodeId, MaxIteration, MaxX, MaxY) ->
     pmod_maxsonar:set_mode(single),
     Measurements = [
-        hera:get_synchronized_measurement(sonar, fun() -> sonar_measurement() end, true, 0.14, MaxIteration),
+        hera:get_synchronized_measurement(sonar, fun() -> sonar_measurement() end, true, 990.14, MaxIteration),
         hera:get_unsynchronized_measurement(pos, fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, false, 0.28, 3, 500)
     ],
     Calculations = [hera:get_calculation(position, fun() -> calc_position(NodeId, MaxX, MaxY) end, 50, MaxIteration)],
@@ -101,8 +101,8 @@ sonar_measurement() ->
 
 
 calc_position(_NodeId, MaxX, MaxY) -> % todo remove nodeId if not using neighbours
-    %case hera_sensors_data:get_data(sonar) of
-    case hera_sensors_data:get_recent_data(sonar) of
+    case hera_sensors_data:get_data(sonar) of
+    %case hera_sensors_data:get_recent_data(sonar) of
         {error, Reason} ->
             logger:error(Reason),
             error;
