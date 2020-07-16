@@ -101,8 +101,8 @@ sonar_measurement() ->
 
 
 calc_position(_NodeId, MaxX, MaxY) -> % todo remove nodeId if not using neighbours
-    %case hera:get_data(sonar) of
-    case hera:get_recent_data(sonar) of
+    %case hera_sensors_data:get_data(sonar) of
+    case hera_sensors_data:get_recent_data(sonar) of
         {error, Reason} ->
             logger:error(Reason),
             error;
