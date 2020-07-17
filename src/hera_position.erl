@@ -16,9 +16,9 @@
 
 -include("hera.hrl").
 
--export([launch_hera/4]).
 -export([launch_hera/5]).
--export([launch_hera/3]).
+-export([launch_hera/6]).
+-export([launch_hera/7]).
 -export([restart_calculation/2]).
 -export([restart_measurement/1]).
 -export([restart/2]).
@@ -48,31 +48,32 @@
 %% @param NodeId The id of the board. The first board must have NodeId = 0
 %%
 %%--------------------------------------------------------------------
--spec launch_hera(PosX :: integer(), PosY :: integer(), NodeId :: integer(), Master :: boolean()) -> any().
-launch_hera(PosX, PosY, NodeId) ->
+
+-spec launch_hera(PosX :: integer(), PosY :: integer(), NodeId :: integer(), MaxX :: integer(), MaxY :: integer()) -> any().
+launch_hera(PosX, PosY, NodeId, MaxX, MaxY) ->
     pmod_maxsonar:set_mode(single),
     Measurements = [
         hera:get_synchronized_measurement(sonar, fun() -> sonar_measurement() end, true, 0.14, infinity),
         hera:get_unsynchronized_measurement(pos, fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, false, 0.28, 3, 500)
     ],
-    Calculations = [hera:get_calculation(position, fun() -> calc_position(NodeId) end, 50, infinity)],
+    Calculations = [hera:get_calculation(position, fun() -> calc_position(NodeId, MaxX, MaxY) end, 50, infinity)],
     hera:launch_app(Measurements, Calculations).
 
-launch_hera(PosX, PosY, NodeId, MaxIteration) ->
+launch_hera(PosX, PosY, NodeId, MaxIteration, MaxX, MaxY) ->
     pmod_maxsonar:set_mode(single),
     Measurements = [
         hera:get_synchronized_measurement(sonar, fun() -> sonar_measurement() end, true, 0.14, MaxIteration),
         hera:get_unsynchronized_measurement(pos, fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, false, 0.28, 3, 500)
     ],
-    Calculations = [hera:get_calculation(position, fun() -> calc_position(NodeId) end, 50, MaxIteration)],
+    Calculations = [hera:get_calculation(position, fun() -> calc_position(NodeId, MaxX, MaxY) end, 50, MaxIteration)],
     hera:launch_app(Measurements, Calculations).
 
-launch_hera(PosX, PosY, NodeId, Frequency, MaxIteration) ->
+launch_hera(PosX, PosY, NodeId, Frequency, MaxIteration, MaxX, MaxY) ->
     Measurements = [
         hera:get_unsynchronized_measurement(sonar, fun() -> sonar_measurement() end, true, 0.14, MaxIteration, Frequency),
         hera:get_unsynchronized_measurement(pos, fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, false, 0.28, 3, 500)
     ],
-    Calculations = [hera:get_calculation(position, fun() -> calc_position(NodeId) end, 50, MaxIteration)],
+    Calculations = [hera:get_calculation(position, fun() -> calc_position(NodeId, MaxX, MaxY) end, 50, MaxIteration)],
     %Calculations = [], % no calculation
     hera:launch_app(Measurements, Calculations).
 
@@ -99,8 +100,8 @@ sonar_measurement() ->
     end.
 
 
-calc_position(NodeId) ->
-    %case hera:get_data(sonar) of   % works
+calc_position(NodeId, MaxX, MaxY) -> % todo remove nodeId if not using neighbours
+    %case hera_sensors_data:get_data(sonar) of
     case hera_sensors_data:get_recent_data(sonar) of
         {error, Reason} ->
             logger:error(Reason),
@@ -111,20 +112,28 @@ calc_position(NodeId) ->
                     logger:error(Reason),
                     error;
                 {ok, Pos} ->
-                    Nodes = lists:filter(fun(N) -> dict:is_key(N, Pos) end, dict:fetch_keys(Sonar)), % fetch all nodes from the sonar measurements of who we received the position
-                    Values = [dict:fetch(Node, Sonar) || Node <- Nodes],
+                    Nodes = lists:filter(fun(N) -> dict:is_key(N, Pos) end, dict:fetch_keys(Sonar)), % fetch all nodes from the recent sonar measurements of who we received the position
+                    Values = [dict:fetch(Node, Sonar) || Node <- Nodes], 
+                    % as many values as nodes of who we received the position
+                    % values and positions are ordered according to nodes list
                     case Values of
                         [{_Seq1, R1, _T1}, {_Seq2, R2, _T2}] ->
                             [
                                 {_, #{x := PosX1, y := PosY1, node_id := _NodeId1},_},
                                 {_, #{x := PosX2, y := PosY2, node_id := _NodeId2},_}
                             ] = [dict:fetch(Node, Pos) || Node <- Nodes],
-                            try trilateration({R1, PosX1, PosY1}, {R2, PosX2, PosY2}) of
-                                {{X1, Y1}, {X2, Y2}} -> 
-                                    Result = io_lib:format("x1, ~.2f, y1, ~.2f, x2, ~.2f, y2, ~.2f", [X1, Y1, X2, Y2]),
+                            Res = filtered_trilateration({R1, PosX1, PosY1}, {R2, PosX2, PosY2}, MaxX, MaxY),
+                            case Res of
+                                {none, exceedBounds} ->
+                                    {error, "Position not definable: no position that doesn't exceed imposed bounds~n"};
+                                {none, negativeRoot} ->
+                                    {error, "Position not definable: square root of neg number~n"};
+                                {X1, Y1} -> 
+                                    Result = io_lib:format("x, ~.2f, y, ~.2f", [X1, Y1]),
+                                    {ok, Result};
+                                [{X1, Y1}, {X2, Y2}] ->  % 2 possible positions
+                                    Result = io_lib:format("x1, ~.2f, y1, ~.2f or x2, ~.2f, y2, ~.2f", [X1, Y1, X2, Y2]),
                                     {ok, Result}
-                            catch
-                                error:_ -> {error, "Position not definable: square root of neg number~n"} 
                             end;
                         [{_Seq1, V1, _T1}, {_Seq2, V2, _T2}, {_Seq3, V3, _T3}] ->
                             [
@@ -146,12 +155,60 @@ calc_position(NodeId) ->
                             {X_p, Y_p} = trilateration({V1, PosX1, PosY1}, {V2, PosX2, PosY2}, {V3, PosX3, PosY3}),
                             Result = io_lib:format("x, ~.2f, y, ~.2f", [X_p, Y_p]),
                             {ok, Result};
+                        %[{_Seq1, V1, _T1}, {_Seq2, V2, _T2}, {_Seq3, V3, _T3}, {_Seq4, V4, _T4}] ->
+                        %    [
+                        %        {_, #{x := PosX1, y := PosY1, node_id := NodeId1},_},
+                        %        {_, #{x := PosX2, y := PosY2, node_id := NodeId2},_},
+                        %        {_, #{x := PosX3, y := PosY3, node_id := NodeId3},_},
+                        %        {_, #{x := PosX4, y := PosY4, node_id := NodeId4},_}
+                        %    ] = [dict:fetch(Node, Pos) || Node <- Nodes], % fetch pos of each node
+                        %    Measures = [{NodeId1, {V1, PosX1, PosY1}}, {NodeId2, {V2, PosX2, PosY2}}, {NodeId3, {V3, PosX3, PosY3}}, {NodeId4, {V4, PosX4, PosY4}}],
+                        %    ContiguousMeasuresId = lists:sort(Measures), % abcd are ordered according to nodeId to ensure they represent circular traversal of sonars
+                        %    ContiguousMeasures = [element(2, E) || E <- ContiguousMeasuresId], % remove nodeid part and only keep the {V, PosX, PosY} tuple
+                        %    Res = trilaterations_2_objects(ContiguousMeasures, MaxX, MaxY),
+                        %    case Res of
+                        %        {none, exceedBounds} ->
+                        %            {error, "No position found that doesn't violate MaxX and MaxY limits"};
+                        %        {X1, Y1} ->
+                        %            Result = io_lib:format("x, ~.2f, y, ~.2f", [X1, Y1]),
+                        %            {ok, Result};
+                        %        [{X1, Y1}, {X2, Y2}] -> % 2 different targets were detected
+                        %            Result = io_lib:format("x1, ~.2f, y1, ~.2f and x2, ~.2f, y2, ~.2f", [X1, Y1, X2, Y2]),
+                        %            {ok, Result}
+                        %     end;
                         _ ->
-                            {error, "Not two mesurements available"}
+                            {error, "Not the right number of measures available"}
                     end
             end
     end.
 
+% used by trilateration when only 2 sonar measures are available, and also when tracking 2 targets using 4 sonar measures.
+filtered_trilateration(Measure1, Measure2, MaxX, MaxY) -> 
+    try trilateration(Measure1, Measure2) of
+        {A, A} ->
+            A; % don't return twice the same position
+        {A, B} ->
+            filter_2_positions(A, B, MaxX, MaxY)
+    catch
+        error:_ -> {none, negativeRoot} % no position possible
+    end.
+
+% filters the target positions found by the trilateration that uses 2 sonar measures.
+% used by trilateration when only 2 sonar measures are available, and also when tracking 2 targets using 4 sonar measures.
+% when tracking 2 targets with 4 sonars, chosen sonars will be on a rectangle, and only contiguous pairs of sonars
+% will perform trilateration so that the ambiguity can be avoided by only considering valid the target positions inside that rectangle
+filter_2_positions({X1, Y1}=PosA, {X2, Y2}=PosB, MaxX, MaxY) ->
+    if
+        (0 =< X1 andalso X1 =< MaxX andalso 0 =< Y1 andalso Y1 =< MaxY) andalso 
+        (0 =< X2 andalso X2 =< MaxX andalso 0 =< Y2 andalso Y2 =< MaxY) ->
+            [PosA, PosB];
+        0 =< X1 andalso X1 =< MaxX andalso 0 =< Y1 andalso Y1 =< MaxY ->
+            PosA;
+        0 =< X2 andalso X2 =< MaxX andalso 0 =< Y2 andalso Y2 =< MaxY ->
+            PosB;
+        true ->
+            {none, exceedBounds} % none of the 2 positions respect the maxX and maxY limits
+    end.
 
 trilateration({R1, X1, Y}, {R2, X2, Y}) -> % sonars are at the same height
     U = X2-X1,
@@ -186,6 +243,62 @@ trilateration({V1, X1, Y1}, {V2, X2, Y2}, {V3, X3, Y3}) ->
     Y_p = (C*D - A*F) / (B*D - A*E),
     {X_p, Y_p}.
 
+%test:trilateration({math:sqrt(8), 0, 0}, {math:sqrt(8), 0, 4},{math:sqrt(8), 10, 4}, {math:sqrt(8), 10, 0}, 10, 4). gives 8,2 and 2,2 when max dist < 4
+trilaterations_2_objects(Measures, MaxX, MaxY) ->
+    PosL = get_contiguous_pairs_positions(Measures, hd(Measures), [], MaxX, MaxY),
+    case PosL of
+        [] -> 
+            {none, exceedBounds};
+        [Pos] -> % only one target position found
+            Pos;
+        [FirstPos|OtherPosL] -> % one or more target positions found
+            get_target_positions(OtherPosL, FirstPos)
+    end.
+
+
+% returns the positions of all targets detected using a pair of sonars each time, 4 sonars -> 4 contiguous pairs of sonars
+get_contiguous_pairs_positions([LastMeasure], FirstMeasure, PosL, MaxX, MaxY) ->
+    Pos = filtered_trilateration(LastMeasure, FirstMeasure, MaxX, MaxY), % only 1 pos should be received, because sonars with these 2 measures are contiguous
+    add_to_position_list(Pos, PosL);
+get_contiguous_pairs_positions([Measure|MeasureL], FirstMeasure, PosL, MaxX, MaxY) -> % measureL length > 1
+    Pos = filtered_trilateration(Measure, hd(MeasureL), MaxX, MaxY),
+    PosL2 = add_to_position_list(Pos, PosL),
+    get_contiguous_pairs_positions(MeasureL, FirstMeasure, PosL2, MaxX, MaxY).
+    
+% add the position to the list of positions.
+add_to_position_list(Pos, PosL) ->
+    case Pos of
+        {none,_Reason} ->
+            PosL;
+        _ ->
+            [Pos|PosL]
+    end.
+
+% returns 2 different positions, or one if the 2 targets are really close to one another
+get_target_positions([], FirstPos) ->
+    FirstPos;
+get_target_positions([Pos|OtherPosL], FirstPos) ->
+    SameTarget = same_target(Pos, FirstPos),
+    if
+        SameTarget == true ->
+            get_target_positions(OtherPosL, FirstPos);
+        true ->
+            [FirstPos, Pos] % found 2 different targets
+    end.
+
+
+
+% targets are considered the same if the distance between them < 40
+same_target({X1, Y1}, {X2, Y2}) ->
+    DeltaX = X1-X2,
+    DeltaY = Y1-Y2,
+    math:sqrt(math:pow(DeltaX, 2) + math:pow(DeltaY, 2)) < 40.
+
+
+
+
+
+
 neighbors(NodeId, {_, #{node_id := Id}}) ->
     if
         Id =:= NodeId -> true;
@@ -193,3 +306,4 @@ neighbors(NodeId, {_, #{node_id := Id}}) ->
         Id =:= (NodeId + 4 - 1) rem 4 -> true;
         true -> false
     end.
+
