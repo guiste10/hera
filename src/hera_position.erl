@@ -62,7 +62,7 @@ launch_hera(PosX, PosY, NodeId, MaxX, MaxY) ->
 launch_hera(PosX, PosY, NodeId, MaxIteration, MaxX, MaxY) ->
     pmod_maxsonar:set_mode(single),
     Measurements = [
-        hera:get_synchronized_measurement(sonar, fun() -> sonar_measurement() end, true, 990.14, MaxIteration),
+        hera:get_synchronized_measurement(sonar, fun() -> sonar_measurement() end, true, 0.14, MaxIteration),
         hera:get_unsynchronized_measurement(pos, fun() -> {ok, #{x => PosX, y => PosY, node_id => NodeId}} end, false, 0.28, 3, 500)
     ],
     Calculations = [hera:get_calculation(position, fun() -> calc_position(NodeId, MaxX, MaxY) end, 50, MaxIteration)],
@@ -100,9 +100,9 @@ sonar_measurement() ->
     end.
 
 
-calc_position(_NodeId, MaxX, MaxY) -> % todo remove nodeId if not using neighbours
-    case hera_sensors_data:get_data(sonar) of
-    %case hera_sensors_data:get_recent_data(sonar) of
+calc_position(NodeId, MaxX, MaxY) -> % todo remove nodeId if not using neighbours
+    %case hera_sensors_data:get_data(sonar) of
+    case hera_sensors_data:get_recent_data(sonar) of
         {error, Reason} ->
             logger:error(Reason),
             error;
@@ -144,38 +144,38 @@ calc_position(_NodeId, MaxX, MaxY) -> % todo remove nodeId if not using neighbou
                             {X_p, Y_p} = trilateration({V1, PosX1, PosY1}, {V2, PosX2, PosY2}, {V3, PosX3, PosY3}),
                             Result = io_lib:format("x, ~.2f, y, ~.2f", [X_p, Y_p]),
                             {ok, Result};
-                        %[{_, _, _}, {_, _, _}, {_, _, _}, {_, _, _}] ->  \n ioformat? 2 targets?
-                            %Neighbors = lists:filter(fun(N) -> neighbors(NodeId, dict:fetch(N, Pos)) end, Nodes),
-                            %[{_Seq1, V1}, {_Seq2, V2}, {_Seq3, V3}] = [dict:fetch(Node, Sonar) || Node <- Neighbors],
-                            %[
-                            %    {_, #{x := PosX1, y := PosY1, node_id := _NodeId1},_},
-                            %    {_, #{x := PosX2, y := PosY2, node_id := _NodeId2},_},
-                            %    {_, #{x := PosX3, y := PosY3, node_id := _NodeId3},_}
-                            %] = [dict:fetch(Node, Pos) || Node <- Neighbors],
-                            %{X_p, Y_p} = trilateration({V1, PosX1, PosY1}, {V2, PosX2, PosY2}, {V3, PosX3, PosY3}),
-                            %Result = io_lib:format("x, ~.2f, y, ~.2f", [X_p, Y_p]),
-                            %{ok, Result};
-                        [{_Seq1, V1, _T1}, {_Seq2, V2, _T2}, {_Seq3, V3, _T3}, {_Seq4, V4, _T4}] ->
+                        [{_, _, _}, {_, _, _}, {_, _, _}, {_, _, _}] ->
+                            Neighbors = lists:filter(fun(N) -> neighbors(NodeId, dict:fetch(N, Pos)) end, Nodes),
+                            [{_Seq1, V1}, {_Seq2, V2}, {_Seq3, V3}] = [dict:fetch(Node, Sonar) || Node <- Neighbors],
                             [
-                                {_, #{x := PosX1, y := PosY1, node_id := NodeId1},_},
-                                {_, #{x := PosX2, y := PosY2, node_id := NodeId2},_},
-                                {_, #{x := PosX3, y := PosY3, node_id := NodeId3},_},
-                                {_, #{x := PosX4, y := PosY4, node_id := NodeId4},_}
-                            ] = [dict:fetch(Node, Pos) || Node <- Nodes], % fetch pos of each node
-                            Measures = [{NodeId1, {V1, PosX1, PosY1}}, {NodeId2, {V2, PosX2, PosY2}}, {NodeId3, {V3, PosX3, PosY3}}, {NodeId4, {V4, PosX4, PosY4}}],
-                            ContiguousMeasuresId = lists:sort(Measures), % abcd are ordered according to nodeId to ensure they represent circular traversal of sonars
-                            ContiguousMeasures = [element(2, E) || E <- ContiguousMeasuresId], % remove nodeid part and only keep the {V, PosX, PosY} tuple
-                            Res = trilaterations_2_objects(ContiguousMeasures, MaxX, MaxY),
-                            case Res of
-                                {none, exceedBounds} ->
-                                    {error, "No position found that doesn't violate MaxX and MaxY limits"};
-                                {X1, Y1} ->
-                                    Result = io_lib:format("x, ~.2f, y, ~.2f", [X1, Y1]),
-                                    {ok, Result};
-                                [{X1, Y1}, {X2, Y2}] -> % 2 different targets were detected
-                                    Result = io_lib:format("x1, ~.2f, y1, ~.2f and x2, ~.2f, y2, ~.2f", [X1, Y1, X2, Y2]),
-                                    {ok, Result}
-                            end;
+                                {_, #{x := PosX1, y := PosY1, node_id := _NodeId1},_},
+                                {_, #{x := PosX2, y := PosY2, node_id := _NodeId2},_},
+                                {_, #{x := PosX3, y := PosY3, node_id := _NodeId3},_}
+                            ] = [dict:fetch(Node, Pos) || Node <- Neighbors],
+                            {X_p, Y_p} = trilateration({V1, PosX1, PosY1}, {V2, PosX2, PosY2}, {V3, PosX3, PosY3}),
+                            Result = io_lib:format("x, ~.2f, y, ~.2f", [X_p, Y_p]),
+                            {ok, Result};
+                        %[{_Seq1, V1, _T1}, {_Seq2, V2, _T2}, {_Seq3, V3, _T3}, {_Seq4, V4, _T4}] ->
+                        %    [
+                        %        {_, #{x := PosX1, y := PosY1, node_id := NodeId1},_},
+                        %        {_, #{x := PosX2, y := PosY2, node_id := NodeId2},_},
+                        %        {_, #{x := PosX3, y := PosY3, node_id := NodeId3},_},
+                        %        {_, #{x := PosX4, y := PosY4, node_id := NodeId4},_}
+                        %    ] = [dict:fetch(Node, Pos) || Node <- Nodes], % fetch pos of each node
+                        %    Measures = [{NodeId1, {V1, PosX1, PosY1}}, {NodeId2, {V2, PosX2, PosY2}}, {NodeId3, {V3, PosX3, PosY3}}, {NodeId4, {V4, PosX4, PosY4}}],
+                        %    ContiguousMeasuresId = lists:sort(Measures), % abcd are ordered according to nodeId to ensure they represent circular traversal of sonars
+                        %    ContiguousMeasures = [element(2, E) || E <- ContiguousMeasuresId], % remove nodeid part and only keep the {V, PosX, PosY} tuple
+                        %    Res = trilaterations_2_objects(ContiguousMeasures, MaxX, MaxY),
+                        %    case Res of
+                        %        {none, exceedBounds} ->
+                        %            {error, "No position found that doesn't violate MaxX and MaxY limits"};
+                        %        {X1, Y1} ->
+                        %            Result = io_lib:format("x, ~.2f, y, ~.2f", [X1, Y1]),
+                        %            {ok, Result};
+                        %        [{X1, Y1}, {X2, Y2}] -> % 2 different targets were detected
+                        %            Result = io_lib:format("x1, ~.2f, y1, ~.2f and x2, ~.2f, y2, ~.2f", [X1, Y1, X2, Y2]),
+                        %            {ok, Result}
+                        %     end;
                         _ ->
                             {error, "Not the right number of measures available"}
                     end
