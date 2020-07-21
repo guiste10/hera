@@ -61,6 +61,12 @@ handle_message({calc, Name, {Node, Iter, Res}}, OsType) when OsType =/= {unix, r
 handle_message({propagate, Fun}, OsType) when OsType == {unix, rtems} ->
   catch Fun();
 
+handle_message({test_speed_udp, Timestamp, Iter}, _OsType) ->
+  hera:send({reply_test_speed_udp, Timestamp, Iter});
+
+handle_message({reply_test_speed_udp, Timestamp, Iter}, _OsType) ->
+  logger:notice("~p ~p", [Iter, hera:get_timestamp() - Timestamp]);
+
 %% catch all non-conform messages
 handle_message(_Other, _OsType) ->
   ok.
