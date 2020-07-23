@@ -150,7 +150,7 @@ filter_sonar(PrevMeasureVal, CurrMeasureVal, DefaultMeasureVal, UpperBound, Time
     PrevIsBackDist = is_background_dist(PrevMeasureVal, DefaultMeasureVal),
     IsDefDist = is_background_dist(CurrMeasureVal, DefaultMeasureVal),
     IsDefDist orelse
-    (PrevIsBackDist == false andalso IsDefDist == false andalso
+    (PrevIsBackDist == false andalso
     abs(CurrMeasureVal - PrevMeasureVal) > UpperBound*TimeDiff). % 0.28*(100=TimeDiff) = 0.28*TimeDiff cm/TimeDiff ms
 
 
