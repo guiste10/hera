@@ -37,7 +37,8 @@ send_msgs_tcp(Socks, Iter, Max) ->
 
 test_speed_tcp(Max) ->
   Boards = [{169,254,16,1},{169,254,16,2},{169,254,16,3}],
-  Socks = [gen_tcp:connect(B, 4402, [{active, true}, inet])|| B <- Boards], %% connect to all boards
+  SocksOk = [gen_tcp:connect(B, 4402, [{active, true}, inet])|| B <- Boards], %% connect to all boards
+  Socks = [S || {ok, S} <- SocksOk],
   R = fun(Sock) -> %% when receive a packet from the right socket, log the iteration and timestamp
     receive
       {tcp, Sock, Data} ->
