@@ -35,17 +35,17 @@ send_msgs_tcp(Socks, Iter, Max) ->
   end,
   timer:sleep(200).
 
+receiver(Sock) ->
+  receive
+    {tcp, Sock, Data} ->
+      {I, T} = erlang:binary_to_term(Data),
+      logger:notice("~p ~p", [I, hera:get_timestamp() - T])
+  end,
+  receiver(Sock).
+
 test_speed_tcp(Max) ->
   Boards = [{169,254,16,1},{169,254,16,2},{169,254,16,3}],
   SocksOk = [gen_tcp:connect(B, 4402, [{active, true}, inet])|| B <- Boards], %% connect to all boards
   Socks = [S || {ok, S} <- SocksOk],
-  R = fun(Sock) -> %% when receive a packet from the right socket, log the iteration and timestamp
-    receive
-      {tcp, Sock, Data} ->
-        {I, T} = erlang:binary_to_term(Data),
-        logger:notice("~p ~p", [I, hera:get_timestamp() - T])
-    end,
-    R(Sock)
-  end,
-  lists:map(fun(S) -> gen_tcp:controlling_process(S, spawn(fun() -> R(S) end)) end, Socks), %% one process by socket
+  lists:map(fun(S) -> gen_tcp:controlling_process(S, spawn(fun() -> receiver(S) end)) end, Socks), %% one process by socket
   send_msgs_tcp(Socks, 1, Max).
