@@ -26,14 +26,14 @@ create_tcp_serv() ->
   gen_tcp:controlling_process(Sock2, Pid).
 
 send_msgs_tcp(Socks, Iter, Max) ->
+  timer:sleep(200),
   case Iter of
     Max -> terminated;
     _ ->
       Timestamp = hera:get_timestamp(),
       lists:map(fun(S) -> gen_tcp:send(S, erlang:term_to_binary({Iter, Timestamp})) end, Socks),%% send the message to all nodes
       send_msgs_tcp(Socks, Iter+1, Max)
-  end,
-  timer:sleep(200).
+  end.
 
 receiver(Sock) ->
   receive
