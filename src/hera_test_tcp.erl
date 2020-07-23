@@ -30,7 +30,7 @@ send_msgs_tcp(Socks, Iter, Max) ->
     Max -> terminated;
     _ ->
       Timestamp = hera:get_timestamp(),
-      [gen_tcp:send(S, erlang:term_to_binary({Iter, Timestamp})) || S <- Socks], %% send the message to all nodes
+      lists:map(fun(S) -> gen_tcp:send(S, erlang:term_to_binary({Iter, Timestamp})) end, Socks),%% send the message to all nodes
       send_msgs_tcp(Socks, Iter+1, Max)
   end,
   timer:sleep(200).
@@ -44,7 +44,8 @@ test_speed_tcp(Max) ->
       {tcp, Sock, Data} ->
         {I, T} = erlang:binary_to_term(Data),
         logger:notice("~p ~p", [I, hera:get_timestamp() - T])
-    end
+    end,
+    R(Sock)
   end,
-  [gen_tcp:controlling_process(S, spawn(fun() -> R(S) end)) || S <- Socks], %% one process by socket
+  lists:map(fun(S) -> gen_tcp:controlling_process(S, spawn(fun() -> R(S) end)) end, Socks), %% one process by socket
   send_msgs_tcp(Socks, 1, Max).
