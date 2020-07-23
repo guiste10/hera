@@ -25,17 +25,25 @@ create_tcp_serv() ->
   Pid = spawn(fun() -> test(Sock2) end),
   gen_tcp:controlling_process(Sock2, Pid).
 
-send_msgs_tcp(Sock, Iter, Max, B) ->
+send_msgs_tcp(Socks, Iter, Max) ->
   case Iter of
     Max -> terminated;
     _ ->
-      {ok, Data} = B(),
-      logger:notice("~p", [hera:get_timestamp() - list_to_integer(Data)]),
-      send_msgs_tcp(Sock, Iter+1, Max, B)
+      Timestamp = hera:get_timestamp(),
+      [gen_tcp:send(S, erlang:term_to_binary({Iter, Timestamp})) || S <- Socks], %% send the message to all nodes
+      send_msgs_tcp(Socks, Iter+1, Max)
   end,
   timer:sleep(200).
 
 test_speed_tcp(Max) ->
-  {ok, Sock} = gen_tcp:connect({169,254,16,1}, 4402, [{active, false}, inet]),
-  B = fun() -> gen_tcp:send(Sock, erlang:integer_to_binary(hera:get_timestamp())), gen_tcp:recv(Sock, 0) end,
-  send_msgs_tcp(Sock, 1, Max, B).
+  Boards = [{169,254,16,1},{169,254,16,2},{169,254,16,3}],
+  Socks = [gen_tcp:connect(B, 4402, [{active, true}, inet])|| B <- Boards], %% connect to all boards
+  R = fun(Sock) -> %% when receive a packet from the right socket, log the iteration and timestamp
+    receive
+      {tcp, Sock, Data} ->
+        {I, T} = erlang:binary_to_term(Data),
+        logger:notice("~p ~p", [I, hera:get_timestamp() - T])
+    end
+  end,
+  [gen_tcp:controlling_process(S, spawn(fun() -> R(S) end)) || S <- Socks], %% one process by socket
+  send_msgs_tcp(Socks, 1, Max).
