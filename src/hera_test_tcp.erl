@@ -45,7 +45,7 @@ receiver(Sock) ->
 
 test_speed_tcp(Max) ->
   Boards = [{169,254,16,1},{169,254,16,2},{169,254,16,3}],
-  SocksOk = [gen_tcp:connect(B, 4402, [{active, true}, inet])|| B <- Boards], %% connect to all boards
+  SocksOk = [gen_tcp:connect(B, 4402, [{active, true}, inet, binary])|| B <- Boards], %% connect to all boards
   Socks = [S || {ok, S} <- SocksOk],
   lists:map(fun(S) -> gen_tcp:controlling_process(S, spawn(fun() -> receiver(S) end)) end, Socks), %% one process by socket
   send_msgs_tcp(Socks, 1, Max).
