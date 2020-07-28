@@ -64,13 +64,11 @@ launch_app(Measurements, Calculations) ->
 
   %% starts hera_measure
   hera_pool:set_limit(measurement_pool, length(Measurements)),
-  MeasurementsPids = [{Name, hera_pool:run(measurement_pool, [{Name, Measurement}])} || {Name, Measurement} <- Measurements],
-  [register(Name, Pid) || {Name, {ok, Pid}} <- MeasurementsPids],
+  lists:map(fun(Measurement) -> hera_pool:run(measurement_pool, [Measurement]) end, Measurements),
 
   %% start hera_calculation
   hera_pool:set_limit(calculation_pool, length(Calculations)),
-  CalculationsPids = [{Name, hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation)])} || {Name, Calculation} <- Calculations],
-  [register(Name, Pid) || {Name, {ok, Pid}} <- CalculationsPids],
+  lists:map(fun({Name, Calculation}) -> hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation)]) end, Calculations),
   started.
 
 %% -------------------------------------------------------------------

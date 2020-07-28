@@ -64,8 +64,8 @@ handle_info/2, code_change/3, terminate/2]).
 %% @doc Spawns the server and registers the local name (unique)
 -spec(start_link(Measurement :: unsync_measurement() | sync_measurement()) ->
     {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
-start_link(Measurement) ->
-    gen_server:start_link(?MODULE, Measurement, []).
+start_link(Measurement = {Name, _Map}) ->
+    gen_server:start_link({local, Name}, ?MODULE, Measurement, []).
 
 %% @private
 -spec(stop(Pid :: pid()) ->
