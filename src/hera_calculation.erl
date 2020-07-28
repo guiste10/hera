@@ -50,7 +50,7 @@
 -spec(start_link(Name :: atom(), CalcFunction :: function(), Delay :: integer(), MaxIterations :: integer() | infinity) ->
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start_link(Name, CalcFunction, Delay, MaxIterations) ->
-  gen_server:start_link(?MODULE, {Name, CalcFunction, Delay, MaxIterations}, []).
+  gen_server:start_link({local, Name}, ?MODULE, {Name, CalcFunction, Delay, MaxIterations}, []).
 
 %% @private
 stop(Pid) ->
