@@ -40,7 +40,7 @@ handle_info/2, code_change/3, terminate/2]).
     delay :: integer(),
     iter :: integer(),
     default_Measure :: {float(), integer()},
-    filtering :: boolean(),
+    filtering :: function() | undefined,
     warm_up :: boolean(),
     warm_up_state :: warm_up_state(),
     max_iterations :: integer() | infinity,
@@ -178,10 +178,10 @@ perform_single_measurement(Name) ->
 -spec(init(sync_measurement() | unsync_measurement()) ->
     {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
     {stop, Reason :: term()} | ignore).
-init({Name, #{func := MeasurementFunc, filtering := Filtering, upper_bound := UpperBound, max_iterations := MaxIterations, synchronization := true}})->
+init({Name, #{func := MeasurementFunc, filter := Filtering, upper_bound := UpperBound, max_iterations := MaxIterations, synchronization := true}})->
     hera_synchronization:make_measure_request(Name),
     {ok, form_state(Name, MeasurementFunc, undefined, undefined, Filtering, MaxIterations, UpperBound, true)};
-init({Name, #{func := MeasurementFunc, frequency := Frequency, filtering := Filtering, upper_bound := UpperBound, max_iterations := MaxIterations, synchronization := false}})->
+init({Name, #{func := MeasurementFunc, frequency := Frequency, filter := Filtering, upper_bound := UpperBound, max_iterations := MaxIterations, synchronization := false}})->
     {ok, form_state(Name, MeasurementFunc, Frequency, 100, Filtering, MaxIterations, UpperBound, false), Frequency}.
 
 %% @private
@@ -330,12 +330,13 @@ normal_phase(Func, DoFilter, Iter, DefaultM, Name, UpperBound) ->
     case Func() of
         {error, Reason} -> logger:error(Reason);
         {ok, Measure} ->
-            if
-                DoFilter == true ->
-                    hera_filter:filter({Measure, MeasureTimestamp}, Iter, DefaultM, Name, UpperBound);
-                true ->
+            case DoFilter of
+                F when is_atom(F) ->
                     hera_sensors_data:store_data(Name, node(), Iter, Measure),
-                    hera:send(measure, Name, node(), Iter, {Measure, MeasureTimestamp})
+                    hera:send(measure, Name, node(), Iter, {Measure, MeasureTimestamp});
+                Func when is_function(Func, 5) ->
+                    hera_filter:filter(Name, {Measure, MeasureTimestamp}, Iter, UpperBound, [DefaultM]);
+                _ -> logger:error("[Measurement] Wrong filter value")
             end
     end.
 

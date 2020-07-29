@@ -23,7 +23,7 @@
 -export([restart_measurement/2, pause_measurement/1]).
 -export([restart_sync_measurement/3, restart_sync_measurement/5]).
 -export([restart_unsync_measurement/4, restart_unsync_measurement/6]).
--export([get_calculation/4, get_synchronized_measurement/5, get_unsynchronized_measurement/6]).
+-export([get_calculation/6, get_synchronized_measurement/5, get_unsynchronized_measurement/6]).
 -export([maybe_propagate/1]).
 
 % Callbacks
@@ -62,13 +62,20 @@ stop(_State) -> ok.
 -spec launch_app(Measurements :: list(unsync_measurement() | sync_measurement()), Calculations :: list(calculation())) -> ok.
 launch_app(Measurements, Calculations) ->
 
+  %% starts hera_filter
+  CalcFilters = lists:filter(fun({_Name, C}) -> is_function(maps:get(filter, C)) end, Calculations),
+  MeasFilters = lists:filter(fun({_Name, M}) -> is_function(maps:get(filter, M)) end, Measurements),
+  hera_pool:set_limit(filter_pool, length(MeasFilters) + length(CalcFilters)),
+  lists:map(fun({Name, Filter}) -> hera_pool:run(filter_pool, [maps:get(Name, maps:get(filter, Filter)), measure]) end, MeasFilters),
+  lists:map(fun({Name, Filter}) -> hera_pool:run(filter_pool, [maps:get(Name, maps:get(filter, Filter)), calc]) end, CalcFilters),
+
   %% starts hera_measure
   hera_pool:set_limit(measurement_pool, length(Measurements)),
   lists:map(fun(Measurement) -> hera_pool:run(measurement_pool, [Measurement]) end, Measurements),
 
   %% start hera_calculation
   hera_pool:set_limit(calculation_pool, length(Calculations)),
-  lists:map(fun({Name, Calculation}) -> hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation)]) end, Calculations),
+  lists:map(fun({Name, Calculation}) -> hera_pool:run(calculation_pool, [Name, maps:get(func, Calculation), maps:get(frequency, Calculation), maps:get(max_iterations, Calculation), maps:get(filter, Calculation), maps:get(upper_bound, Calculation)]) end, Calculations),
   started.
 
 %% -------------------------------------------------------------------
@@ -277,9 +284,11 @@ pause_measurement(Name) ->
 %%      -> sync_measurement().
 %% @end
 %%--------------------------------------------------------------------
--spec get_synchronized_measurement(Name :: atom(), Func :: fun(() -> {ok, term()} | {error, term()} ), Filtering :: boolean(), UpperBound :: float(), MaxIterations :: integer() | infinity) -> sync_measurement().
+-spec get_synchronized_measurement(Name :: atom(), Func :: fun(() -> {ok, term()} | {error, term()} ), Filtering :: fun((any(), any(), integer(), list(any())) -> boolean()) | undefine,
+    UpperBound :: float(), MaxIterations :: integer() | infinity)
+      -> sync_measurement().
 get_synchronized_measurement(Name, Func, Filtering, UpperBound, MaxIterations) ->
-  {Name, #{func => Func, filtering => Filtering, upper_bound => UpperBound, max_iterations => MaxIterations, synchronization => true}}.
+  {Name, #{func => Func, filter => Filtering, upper_bound => UpperBound, max_iterations => MaxIterations, synchronization => true}}.
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -301,9 +310,11 @@ get_synchronized_measurement(Name, Func, Filtering, UpperBound, MaxIterations) -
 %%      -> unsync_measurement().
 %% @end
 %%--------------------------------------------------------------------
--spec get_unsynchronized_measurement(Name :: atom(), Func :: fun(() -> {ok, term()} | {error, term()} ), Filtering :: boolean(), UpperBound :: float(), MaxIteration :: integer() | infinity, Frequency :: integer()) -> unsync_measurement().
+-spec get_unsynchronized_measurement(Name :: atom(), Func :: fun(() -> {ok, term()} | {error, term()} ), Filtering :: fun((any(), any(), integer(), list(any())) -> boolean()) | undefine,
+    UpperBound :: float(), MaxIteration :: integer() | infinity, Frequency :: integer())
+      -> unsync_measurement().
 get_unsynchronized_measurement(Name, Func, Filtering, UpperBound, MaxIteration, Frequency) ->
-  {Name, #{func => Func, filtering => Filtering, upper_bound => UpperBound, max_iterations => MaxIteration, frequency => Frequency, synchronization => false}}.
+  {Name, #{func => Func, filter => Filtering, upper_bound => UpperBound, max_iterations => MaxIteration, frequency => Frequency, synchronization => false}}.
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -321,9 +332,11 @@ get_unsynchronized_measurement(Name, Func, Filtering, UpperBound, MaxIteration, 
 %%      -> calculation().
 %% @end
 %%--------------------------------------------------------------------
--spec get_calculation(Name :: atom, Func :: fun(() -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer() | infinity) -> calculation().
-get_calculation(Name, Func, Frequency, MaxIterations) ->
-  {Name, #{func => Func, frequency => Frequency, max_iterations => MaxIterations}}.
+-spec get_calculation(Name :: atom, Func :: fun(() -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer() | infinity,
+    Filter :: fun((any(), any(), integer(), list(any())) -> boolean()) | undefine, UpperBound :: float())
+      -> calculation().
+get_calculation(Name, Func, Frequency, MaxIterations, Filter, UpperBound) ->
+  {Name, #{func => Func, frequency => Frequency, max_iterations => MaxIterations, filter => Filter, upper_bound => UpperBound}}.
 
 %%--------------------------------------------------------------------
 %% @doc

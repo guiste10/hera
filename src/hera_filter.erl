@@ -1,6 +1,6 @@
 -module(hera_filter).
 -behaviour(gen_server).
--export([start_link/0, stop/1, filter/5]).
+-export([start_link/3, stop/1, filter/5]).
 -export([init/1, handle_call/3, handle_cast/2,
 handle_info/2, code_change/3, terminate/2]).
 
@@ -15,9 +15,11 @@ handle_info/2, code_change/3, terminate/2]).
 %%====================================================================
 
 -record(state, {
-    previous_measure :: {float(), integer()}, % {measure,timestamp}
-    num_measures :: integer(),
-    num_filtered :: integer()
+    previous_value :: {float(), integer()}, % {measure,timestamp}
+    num_value :: integer(),
+    num_filtered :: integer(),
+    filtering_function :: fun((any(), any(), integer(), list(any())) -> boolean()),
+    type :: atom()
 }).
 -type state() :: #state{}.
 
@@ -26,18 +28,20 @@ handle_info/2, code_change/3, terminate/2]).
 %%%===================================================================
 
 %% @doc Spawns the server and registers the local name (unique)
--spec(start_link() ->
+-spec(start_link(Name :: atom(), FilteringFunction :: fun((any(), any(), integer(), list(any())) -> boolean()), Type :: atom()) ->
     {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
-start_link() ->
-    gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+start_link(Name, FilteringFunction, Type) ->
+    FilterName = hera_utils:concat_atoms(filter_, Name),
+    gen_server:start_link({local, FilterName}, ?MODULE, {FilteringFunction, Type}, []).
 
 stop(Pid) ->
     gen_server:call(Pid, stop).
 
--spec(filter(Measure :: {float(), integer()}, Iter :: integer(), DefaultMeasure :: {float(), integer()}, Name :: atom(), UpperBound :: float()) ->
+-spec(filter(Name :: atom(), Value :: {any(), integer()}, Iter :: integer(), UpperBound :: float(), AdditionalArgs :: list(any())) ->
     ok).
-filter(Measure, Iter, DefaultMeasure, Name, UpperBound)->
-    gen_server:cast(?SERVER, {filter, Measure, Iter, DefaultMeasure, Name, UpperBound}),
+filter(Name, Value, Iter, UpperBound, AdditionalArgs)->
+    FilterName = hera_utils:concat_atoms(filter_, Name),
+    gen_server:cast(FilterName, {filter, Name, Value, Iter, UpperBound, AdditionalArgs}),
     ok.
 
 %%====================================================================
@@ -46,11 +50,11 @@ filter(Measure, Iter, DefaultMeasure, Name, UpperBound)->
 
 %% @private
 %% @doc Initializes the server
--spec(init([]) ->
+-spec(init(FilteringFunction :: fun((any(), any(), integer(), list(any())) -> boolean())) ->
     {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
     {stop, Reason :: term()} | ignore).
-init([]) ->
-    {ok, #state{previous_measure = {-1.0, -1}, num_measures = 0, num_filtered = 0}}.
+init({FilteringFunction, Type}) ->
+    {ok, #state{previous_value  = {-1.0, -1}, num_value = 0, num_filtered = 0, filtering_function = FilteringFunction, type = Type}}.
 
 %% @private
 %% @doc Handling call messages
@@ -73,9 +77,8 @@ handle_call(_Msg, _From, State) ->
     {noreply, NewState :: state()} |
     {noreply, NewState :: state(), timeout() | hibernate} |
     {stop, Reason :: term(), NewState :: state()}).
-handle_cast({filter, Measure, Iter, DefaultMeasure, Name, UpperBound}, State) ->
-    State2 = filter_measure(Measure, Iter, DefaultMeasure, Name, UpperBound, State),
-    {noreply, State2};
+handle_cast({filter, Name, Value, Iter, UpperBound, AdditionalArgs}, State) ->
+    {noreply, filter_value(Name, Value, Iter, UpperBound, AdditionalArgs, State)};
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
@@ -109,60 +112,25 @@ terminate(_Reason, _State) -> ok.
 %%====================================================================
 %% Internal functions
 %%====================================================================
-
 %% @private
-%% @doc applies a filter on the received measure. 
+%% @doc applies a filter on the received measure.
 % suppose at first call that previous_measure = default distance as in hera_measure:perform_sonar_warmup_aux()
--spec(filter_measure(Measure :: {integer()|float(), integer}, Iter :: integer(), DefaultMeasure :: {float(), integer()}, Name :: atom(), State :: state(), UpperBound :: float())->
-    State :: state()).
-filter_measure(Measure, 0, _DefaultMeasure, Name, _UpperBound, State)-> % don't filter when there is no previous measure
-    valid_measure(Name, 0, Measure, State);
-filter_measure({CurrMeasureVal, MeasureTimestamp} = Measure, Iter, {DefaultMeasureVal, _}, Name, UpperBound, State)->
-    {PrevMeasureVal, PrevMeasureTimestamp} = State#state.previous_measure,
-    TimeDiff = abs(MeasureTimestamp - PrevMeasureTimestamp),
-    DoFilter = case Name of 
-        sonar -> filter_sonar(PrevMeasureVal, CurrMeasureVal, DefaultMeasureVal, UpperBound, TimeDiff);  %UpperBound = 0.28, % = 10.0(km/h)/35.714 cm/ms
-        _ -> abs(CurrMeasureVal - PrevMeasureVal) > UpperBound*TimeDiff
-    end,
-    if 
-        DoFilter == true -> % filter out measure
-            State#state{num_measures = State#state.num_measures+1, num_filtered = State#state.num_filtered+1};
-        true ->  % don't filter out
-            valid_measure(Name, Iter, Measure, State)
+filter_value(Name, Value, 0, _UpperBound, _AddArgs, State) ->
+    valid_measure(Name, 0, Value, State);
+filter_value(Name, {CurrVal, ValTimestamp} = Value, Iter, UpperBound, AdditionalArgs, State = #state{previous_value = PreviousValue, num_value = NumValue, num_filtered = NumFiltered, filtering_function = FilteringFunction}) ->
+    {PrevVal, PrevMeasureTimestamp} = PreviousValue,
+    TimeDiff = abs(ValTimestamp - PrevMeasureTimestamp),
+    case FilteringFunction(CurrVal, PrevVal, TimeDiff, UpperBound, AdditionalArgs) of
+        true -> State#state{num_value =  NumValue+1, num_filtered = NumFiltered+1};
+        false -> valid_measure(Name, Iter, Value, State)
     end.
 
 %% @private
 %% @doc applies the procedure when the measure has sucessfully passed the filter
 -spec(valid_measure(Name :: atom(), Iter :: integer(), Measure :: {integer()|float(), integer()}, State :: state())->
     State :: state()).
-valid_measure(Name, Iter, {CurrMeasureVal, MeasureTimestamp} = Measure, State)->
-    hera_sensors_data:store_data(Name, node(), Iter, CurrMeasureVal),
-    hera:send(measure, Name, node(), Iter, {CurrMeasureVal, MeasureTimestamp}),
-    State#state{previous_measure = Measure, num_measures = State#state.num_measures+1}.
+valid_measure(Name, Iter, {CurrVal, ValTimestamp} = Value, State = #state{num_value = NumValue, type = Type})->
+    hera_sensors_data:store_data(Name, node(), Iter, CurrVal),
+    hera:send(Type, Name, node(), Iter, {CurrVal,ValTimestamp}),
+    State#state{previous_value = Value, num_value = NumValue+1}.
 
-
-%% @private
-%% @doc used for sonar measurements only. 
-%% It returns true if the sonar measure has to be filtered out
--spec(filter_sonar(PrevMeasureVal :: float(), CurrMeasureVal :: float(), DefaultMeasureVal :: float(), UpperBound :: float(), TimeDiff :: integer())->
-    State :: state()).
-filter_sonar(PrevMeasureVal, CurrMeasureVal, DefaultMeasureVal, UpperBound, TimeDiff) -> 
-    PrevIsBackDist = is_background_dist(PrevMeasureVal, DefaultMeasureVal),
-    IsDefDist = is_background_dist(CurrMeasureVal, DefaultMeasureVal),
-    IsDefDist orelse
-    (PrevIsBackDist == false andalso
-    abs(CurrMeasureVal - PrevMeasureVal) > UpperBound*TimeDiff). % 0.28*(100=TimeDiff) = 0.28*TimeDiff cm/TimeDiff ms
-
-
-%% @private
-%% @doc used for sonar measurements only. 
-%% It returns true if the measure is equal to or greater than the distance measured during the warmup phase = the background distance
--spec(is_background_dist(MeasureVal :: float(), DefaultMeasureVal :: float())->
-    boolean()).
-is_background_dist(MeasureVal, DefaultMeasureVal)->
-    if
-        DefaultMeasureVal * 0.95 =< MeasureVal ->
-            true;
-        true ->
-            false
-    end.
