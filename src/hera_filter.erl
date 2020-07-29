@@ -18,7 +18,7 @@ handle_info/2, code_change/3, terminate/2]).
     previous_value :: {float(), integer()}, % {measure,timestamp}
     num_value :: integer(),
     num_filtered :: integer(),
-    filtering_function :: fun((any(), any(), integer(), list(any())) -> boolean()),
+    filtering_function :: fun((any(), any(), integer(), list(any())) -> boolean() | any()),
     type :: atom()
 }).
 -type state() :: #state{}.
@@ -122,7 +122,9 @@ filter_value(Name, {CurrVal, ValTimestamp} = Value, Iter, UpperBound, Additional
     TimeDiff = abs(ValTimestamp - PrevMeasureTimestamp),
     case FilteringFunction(CurrVal, PrevVal, TimeDiff, UpperBound, AdditionalArgs) of
         true -> State#state{num_value =  NumValue+1, num_filtered = NumFiltered+1};
-        false -> valid_measure(Name, Iter, Value, State)
+        false -> valid_measure(Name, Iter, Value, State);
+        V when not is_boolean(V) -> valid_measure(Name, Iter, V, State);
+        _ -> logger:error("[Filter] Bad return of the filtering function")
     end.
 
 %% @private
