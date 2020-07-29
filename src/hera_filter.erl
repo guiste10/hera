@@ -133,6 +133,10 @@ filter_value(Name, {CurrVal, ValTimestamp} = Value, Iter, UpperBound, Additional
     State :: state()).
 valid_measure(Name, Iter, {CurrVal, ValTimestamp} = Value, State = #state{num_value = NumValue, type = Type})->
     hera_sensors_data:store_data(Name, node(), Iter, CurrVal),
-    hera:send(Type, Name, node(), Iter, {CurrVal,ValTimestamp}),
+    SentVal = case Type of %% only send timestamp with a measurement
+                    measure -> {CurrVal, ValTimestamp};
+                    calc -> CurrVal
+                end,
+    hera:send(Type, Name, node(), Iter, SentVal),
     State#state{previous_value = Value, num_value = NumValue+1}.
 
