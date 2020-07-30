@@ -77,7 +77,7 @@ init(OsType) when OsType == {unix, rtems} ->
 
   SupervisorCalcFilters = #{
     id => hera_sup_calc_filter,
-    start => {hera_serv, start_link, [calc_filter_pool, 1, {hera_filter, start_link, []}, calc]},
+    start => {hera_sup, start_link, [calc_filter_pool, 1, {hera_filter, start_link, []}, calc]},
     restart => permanent,
     shutdown => 2000,
     type => supervisor
