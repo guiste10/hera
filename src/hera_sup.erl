@@ -24,10 +24,10 @@
     | {shutdown, term()}
     | term()}.
 start_link(Name, Limit, MFA) -> 
-    supervisor:start_link(?MODULE, {Name, Limit, MFA}).
+    supervisor:start_link({local, hera_utils:concat_atoms(sup_, Name)},?MODULE, {Name, Limit, MFA}).
 
 start_link(Name, Limit, MFA, Suffix) ->
-    supervisor:start_link(?MODULE, {Name, Limit, MFA, Suffix}).
+    supervisor:start_link({local, hera_utils:concat_atoms(sup_, Name)},?MODULE, {Name, Limit, MFA, Suffix}).
 
 %--- Callbacks -----------------------------------------------------------------
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
