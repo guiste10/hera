@@ -54,7 +54,7 @@ filter(Name, Value, Iter, UpperBound, AdditionalArgs)->
     {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
     {stop, Reason :: term()} | ignore).
 init({FilteringFunction, Type}) ->
-    {ok, #state{previous_value  = {-1.0, -1}, num_value = 0, num_filtered = 0, filtering_function = FilteringFunction, type = Type}}.
+    {ok, #state{previous_value  = undefined, num_value = 0, num_filtered = 0, filtering_function = FilteringFunction, type = Type}}.
 
 %% @private
 %% @doc Handling call messages
@@ -115,8 +115,8 @@ terminate(_Reason, _State) -> ok.
 %% @private
 %% @doc applies a filter on the received measure.
 % suppose at first call that previous_measure = default distance as in hera_measure:perform_sonar_warmup_aux()
-filter_value(Name, Value, 0, _UpperBound, _AddArgs, State) ->
-    valid_measure(Name, 0, Value, State);
+filter_value(Name, Value, Iter, _UpperBound, _AddArgs, State = #state{previous_value = undefined}) ->
+    valid_measure(Name, Iter, Value, State);
 filter_value(Name, {CurrVal, ValTimestamp} = Value, Iter, UpperBound, AdditionalArgs, State = #state{previous_value = PreviousValue, num_value = NumValue, num_filtered = NumFiltered, filtering_function = FilteringFunction}) ->
     {PrevVal, PrevMeasureTimestamp} = PreviousValue,
     TimeDiff = abs(ValTimestamp - PrevMeasureTimestamp),
