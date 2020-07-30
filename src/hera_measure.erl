@@ -334,7 +334,7 @@ normal_phase(Func, DoFilter, Iter, DefaultM, Name, UpperBound) ->
                 F when is_atom(F) ->
                     hera_sensors_data:store_data(Name, node(), Iter, Measure),
                     hera:send(measure, Name, node(), Iter, {Measure, MeasureTimestamp});
-                Func when is_function(Func, 5) ->
+                Fu when is_function(Fu, 5) ->
                     hera_filter:filter(Name, {Measure, MeasureTimestamp}, Iter, UpperBound, [DefaultM]);
                 Other -> logger:error("[Measurement] Wrong filter value : ~p", [Other])
             end
