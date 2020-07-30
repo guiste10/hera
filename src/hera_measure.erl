@@ -269,9 +269,9 @@ terminate(_Reason, _State) -> ok.
 perform_measurement(State = #state{measurement_func = MeasureFunc
     , warm_up = true
     , synchronization = Sync
-    , filtering = true
+    , filtering = Filter
     , warm_up_state = #warm_up_state{iter = Iter, max_iter = MaxNumIter, measures = Measures, delay = Delay}})
-    when Iter < MaxNumIter ->
+    when Iter < MaxNumIter, is_function(Filter) ->
 
     WarmUpState = State#state.warm_up_state,
     {ok, Measure} = MeasureFunc(),
@@ -285,9 +285,9 @@ perform_measurement(State = #state{measurement_func = MeasureFunc
 perform_measurement(State = #state{name = Name
     , delay = Delay
     , warm_up = true
-    , filtering = true
+    , filtering = Filter
     , warm_up_state = #warm_up_state{max_iter = MaxNumIter, measures = Measures}
-    , synchronization = Sync}) ->
+    , synchronization = Sync}) when is_function(Filter) ->
 
     Measures2 = lists:sort(Measures),
     Median = lists:nth(MaxNumIter div 2 + 1, Measures2),
