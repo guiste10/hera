@@ -89,7 +89,7 @@ init(OsType) when OsType == {unix, rtems} ->
       rest_for_one, [
         #{id => hera_synchronization,
           start => {hera_synchronization, start_link, []}},
-        SupervisorMeasFilters,
+        %%SupervisorMeasFilters,
         SupervisorMeasures
       ]
     ]},
@@ -101,7 +101,7 @@ init(OsType) when OsType == {unix, rtems} ->
     start => {hera_sup2, start_link, [
       supervisor_calculation,
       rest_for_one, [
-        SupervisorCalcFilters,
+        %%SupervisorCalcFilters,
         SupervisorCalculation
       ]
     ]},
