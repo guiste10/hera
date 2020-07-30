@@ -15,7 +15,7 @@ handle_info/2, code_change/3, terminate/2]).
 %%====================================================================
 
 -record(state, {
-    previous_value :: {float(), integer()}, % {measure,timestamp}
+    previous_value :: {any(), integer()}, % {measure,timestamp}
     num_value :: integer(),
     num_filtered :: integer(),
     filtering_function :: fun((any(), any(), integer(), list(any())) -> boolean() | any()),
@@ -123,7 +123,7 @@ filter_value(Name, {CurrVal, ValTimestamp} = Value, Iter, UpperBound, Additional
     case FilteringFunction(CurrVal, PrevVal, TimeDiff, UpperBound, AdditionalArgs) of
         true -> State#state{num_value =  NumValue+1, num_filtered = NumFiltered+1};
         false -> valid_measure(Name, Iter, Value, State);
-        V when not is_boolean(V) -> valid_measure(Name, Iter, V, State);
+        V when not is_boolean(V) -> valid_measure(Name, Iter, {V, hera:get_timestamp()}, State);
         _ -> logger:error("[Filter] Bad return of the filtering function")
     end.
 
