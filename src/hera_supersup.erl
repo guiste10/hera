@@ -56,13 +56,13 @@ init(OsType) when OsType == {unix, rtems} ->
     type => worker},
 
   SupervisorCalculation = #{id => hera_sup_calculation,
-    start => {hera_serv, start_link, [calculation_pool, 1, supervisor_calculation, {hera_calculation, start_link, []}]},
+    start => {hera_sup, start_link, [calculation_pool, 1, {hera_calculation, start_link, []}]},
     restart => permanent,
     shutdown => 2000,
     type => supervisor},
 
   SupervisorMeasures = #{id => hera_sup_measure,
-    start => {hera_serv, start_link, [measurement_pool, 1, supervisor_measurement, {hera_measure, start_link, []}]},
+    start => {hera_sup, start_link, [measurement_pool, 1, {hera_measure, start_link, []}]},
     restart => permanent,
     shutdown => 2000,
     type => supervisor},
