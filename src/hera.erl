@@ -67,8 +67,8 @@ launch_app(Measurements, Calculations) ->
   MeasFilters = lists:filter(fun({_Name, M}) -> is_function(maps:get(filter, M)) end, Measurements),
   hera_pool:set_limit(meas_filter_pool, length(MeasFilters)),
   hera_pool:set_limit(calc_filter_pool, length(CalcFilters)),
-  lists:map(fun({Name, Filter}) -> hera_pool:run(meas_filter_pool, [maps:get(Name, maps:get(filter, Filter)), measure]) end, MeasFilters),
-  lists:map(fun({Name, Filter}) -> hera_pool:run(calc_filter_pool, [maps:get(Name, maps:get(filter, Filter)), calc]) end, CalcFilters),
+  lists:map(fun({Name, Filter}) -> hera_pool:run(meas_filter_pool, [Name, maps:get(filter, Filter), measure]) end, MeasFilters),
+  lists:map(fun({Name, Filter}) -> hera_pool:run(calc_filter_pool, [Name, maps:get(filter, Filter), calc]) end, CalcFilters),
 
   %% starts hera_measure
   hera_pool:set_limit(measurement_pool, length(Measurements)),
