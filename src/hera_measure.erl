@@ -336,7 +336,7 @@ normal_phase(Func, DoFilter, Iter, DefaultM, Name, UpperBound) ->
                     hera:send(measure, Name, node(), Iter, {Measure, MeasureTimestamp});
                 Func when is_function(Func, 5) ->
                     hera_filter:filter(Name, {Measure, MeasureTimestamp}, Iter, UpperBound, [DefaultM]);
-                _ -> logger:error("[Measurement] Wrong filter value")
+                Other -> logger:error("[Measurement] Wrong filter value : ~p", [Other])
             end
     end.
 

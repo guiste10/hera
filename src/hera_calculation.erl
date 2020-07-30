@@ -172,7 +172,7 @@ handle_info(timeout, State = #state{name = Name, calc_function = Func, iter = It
         F when is_atom(F) -> hera:send(calc, Name, node(), Iter, Res);
         Func when is_function(Func, 5) ->
           hera_filter:filter(Name, {Res, TimeStamp}, Iter, UpperBound, []);
-        _ -> logger:error("[Calculation] Wrong filter value")
+        Other -> logger:error("[Calculation] Wrong filter value: ~p", [Other])
       end;
     Other -> logger:error("[Calculation] Bad return of calculation function : ~p, must return {error, Reason} or {ok, Result}.", [Other])
   end,
