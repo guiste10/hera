@@ -56,7 +56,7 @@ init(OsType) when OsType == {unix, rtems} ->
     type => worker},
 
   SupervisorCalculation = #{id => hera_sup_calculation,
-    start => {hera_serv, start_link, [calculation_pool, 1, supervisor_calc_meas, {hera_calculation, start_link, []}]},
+    start => {hera_serv, start_link, [calculation_pool, 1, supervisor_calculation, {hera_calculation, start_link, []}]},
     restart => permanent,
     shutdown => 2000,
     type => supervisor},
@@ -69,7 +69,7 @@ init(OsType) when OsType == {unix, rtems} ->
 
   SupervisorMeasFilters = #{
     id => hera_sup_meas_filter,
-    start => {hera_serv, start_link, [meas_filter_pool, 1, supervisor_meas_filter, {hera_filter, start_link, []}]},
+    start => {hera_serv, start_link, [meas_filter_pool, 1, supervisor_measurement, {hera_filter, start_link, []}]},
     restart => permanent,
     shutdown => 2000,
     type => supervisor
@@ -77,7 +77,7 @@ init(OsType) when OsType == {unix, rtems} ->
 
   SupervisorCalcFilters = #{
     id => hera_sup_calc_filter,
-    start => {hera_serv, start_link, [calc_filter_pool, 1, supervisor_calc_filter, {hera_filter, start_link, []}]},
+    start => {hera_serv, start_link, [calc_filter_pool, 1, supervisor_calculation, {hera_filter, start_link, []}]},
     restart => permanent,
     shutdown => 2000,
     type => supervisor
@@ -99,7 +99,7 @@ init(OsType) when OsType == {unix, rtems} ->
 
   SupervisorCalculations = #{id => hera_sup_calculations,
     start => {hera_sup2, start_link, [
-      supervisor_measurement,
+      supervisor_calculation,
       rest_for_one, [
         SupervisorCalcFilters,
         SupervisorCalculation
