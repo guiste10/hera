@@ -128,7 +128,7 @@ filter_value(Name, {CurrVal, ValTimestamp} = Value, Iter, UpperBound, Additional
     end.
 
 %% @private
-%% @doc applies the procedure when the measure has sucessfully passed the filter
+%% @doc applies the procedure when the measure has successfully passed the filter
 -spec(valid_measure(Name :: atom(), Iter :: integer(), Measure :: {integer()|float(), integer()}, State :: state())->
     State :: state()).
 valid_measure(Name, Iter, {CurrVal, ValTimestamp} = Value, State = #state{num_value = NumValue, type = Type})->

@@ -170,7 +170,7 @@ handle_info(timeout, State = #state{name = Name, calc_function = Func, iter = It
       TimeStamp = hera:get_timestamp(),
       case Filter of
         F when is_atom(F) -> hera:send(calc, Name, node(), Iter, Res);
-        Func when is_function(Func, 5) ->
+        Fu when is_function(Fu, 5) ->
           hera_filter:filter(Name, {Res, TimeStamp}, Iter, UpperBound, []);
         Other -> logger:error("[Calculation] Wrong filter value: ~p", [Other])
       end;

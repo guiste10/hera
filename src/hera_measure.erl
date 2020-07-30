@@ -304,7 +304,7 @@ perform_measurement(State = #state{name = Name
     , iter = Iter
     , delay = Delay
     , filtering = DoFilter
-    , default_Measure = DefaultM
+    , default_Measure = {DefaultM, _Timestamp}
     , max_iterations = MaxIterations
     , upperBound = UpperBound
     , synchronization = Sync})
