@@ -200,11 +200,6 @@ handle_call(stop, _From, State) ->
 handle_call(single_measurement, _From, State) ->
     {NewState, Continuation} = perform_measurement(State),
     {reply, Continuation, NewState};
-handle_call({restart, WarmUp}, _From, State = #state{delay = Delay, synchronization = false}) ->
-    {reply, ok, State#state{warm_up = WarmUp}, Delay};
-handle_call({restart, WarmUp}, _From, State = #state{name = Name, synchronization = true}) ->
-    hera_synchronization:make_measure_request(Name),
-    {reply, ok, State#state{warm_up = WarmUp}};
 handle_call({restart, {Frequency, MaxIterations, WarmUp}}, _From, State = #state{synchronization = false}) ->
     {reply, ok, State#state{iter = 0, max_iterations = MaxIterations, delay = Frequency, warm_up = WarmUp}, Frequency};
 handle_call({restart, MaxIterations, WarmUp}, _From, State = #state{name = Name, synchronization = true}) ->
@@ -215,6 +210,11 @@ handle_call({restart, {Func, Delay, MaxIter, Filtering, WarmUp}}, _From, State =
 handle_call({restart, {Func, MaxIter, Filtering, WarmUp}}, _From, State = #state{name = Name, synchronization = true}) ->
     hera_synchronization:make_measure_request(Name),
     {reply, ok, State#state{iter = 0, measurement_func = Func, max_iterations = MaxIter, filtering = Filtering, warm_up = WarmUp}};
+handle_call({restart, WarmUp}, _From, State = #state{delay = Delay, synchronization = false}) ->
+    {reply, ok, State#state{warm_up = WarmUp}, Delay};
+handle_call({restart, WarmUp}, _From, State = #state{name = Name, synchronization = true}) ->
+    hera_synchronization:make_measure_request(Name),
+    {reply, ok, State#state{warm_up = WarmUp}};
 handle_call(pause, _From, State) ->
     {reply, ok, State, hibernate};
 handle_call(_Msg, _From, State) ->
@@ -318,7 +318,6 @@ perform_measurement(State = #state{name = Name
 
 %% end of normal phase
 perform_measurement(State = #state{synchronization = Sync})  ->
-
     case Sync of
         true -> {State#state{iter = 0, warm_up = true, warm_up_state = #warm_up_state{iter = 0, max_iter = 100, delay = undefined, measures = []}}, stop};
         false -> {noreply, State#state{iter = 0, warm_up = true, warm_up_state = #warm_up_state{iter = 0, max_iter = 100, delay = undefined, measures = []}}, hibernate}
