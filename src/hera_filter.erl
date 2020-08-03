@@ -117,6 +117,8 @@ terminate(_Reason, _State) -> ok.
 % suppose at first call that previous_measure = default distance as in hera_measure:perform_sonar_warmup_aux()
 filter_value(Name, Value, Iter, _UpperBound, _AddArgs, State = #state{previous_value = undefined}) ->
     valid_measure(Name, Iter, Value, State);
+filter_value(Name, Value, Iter, _UpperBound, _AddArgs, State = #state{num_value = NumValue}) when Iter < NumValue ->
+    valid_measure(Name, Iter, Value, State#state{num_value = Iter});
 filter_value(Name, {CurrVal, ValTimestamp} = Value, Iter, UpperBound, AdditionalArgs, State = #state{previous_value = PreviousValue, num_value = NumValue, num_filtered = NumFiltered, filtering_function = FilteringFunction}) ->
     {PrevVal, PrevMeasureTimestamp} = PreviousValue,
     TimeDiff = abs(ValTimestamp - PrevMeasureTimestamp),

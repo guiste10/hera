@@ -279,13 +279,13 @@ pause_measurement(Name) ->
 %%
 %% @spec get_synchronized_measurement(Name :: atom()
 %%                                    , Func :: fun(() -> {ok, term()} | {error, term()} )
-%%                                    , Filtering :: boolean()
+%%                                    , Filtering :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefined
 %%                                    , UpperBound :: float()
 %%                                    , MaxIterations :: integer() | infinity)
 %%      -> sync_measurement().
 %% @end
 %%--------------------------------------------------------------------
--spec get_synchronized_measurement(Name :: atom(), Func :: fun(() -> {ok, term()} | {error, term()} ), Filtering :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefine,
+-spec get_synchronized_measurement(Name :: atom(), Func :: fun(() -> {ok, term()} | {error, term()} ), Filtering :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefined,
     UpperBound :: float(), MaxIterations :: integer() | infinity)
       -> sync_measurement().
 get_synchronized_measurement(Name, Func, Filtering, UpperBound, MaxIterations) ->
@@ -304,14 +304,14 @@ get_synchronized_measurement(Name, Func, Filtering, UpperBound, MaxIterations) -
 %%
 %% @spec get_unsynchronized_measurement(Name :: atom()
 %%                                      , Func :: fun(() -> {ok, term()} | {error, term()} )
-%%                                      , Filtering :: boolean()
+%%                                      , Filtering :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefined
 %%                                      , UpperBound :: float()
 %%                                      , MaxIteration :: integer() | infinity
 %%                                      , Frequency :: integer())
 %%      -> unsync_measurement().
 %% @end
 %%--------------------------------------------------------------------
--spec get_unsynchronized_measurement(Name :: atom(), Func :: fun(() -> {ok, term()} | {error, term()} ), Filtering :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefine,
+-spec get_unsynchronized_measurement(Name :: atom(), Func :: fun(() -> {ok, term()} | {error, term()} ), Filtering :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefined,
     UpperBound :: float(), MaxIteration :: integer() | infinity, Frequency :: integer())
       -> unsync_measurement().
 get_unsynchronized_measurement(Name, Func, Filtering, UpperBound, MaxIteration, Frequency) ->
@@ -329,12 +329,14 @@ get_unsynchronized_measurement(Name, Func, Filtering, UpperBound, MaxIteration, 
 %% @spec get_calculation(Name :: atom
 %%                       , Func :: fun(() -> {ok, term()} | {error, term()})
 %%                       , Frequency :: integer()
-%%                       , MaxIterations :: integer() | infinity)
+%%                       , MaxIterations :: integer() | infinity
+%%                       , Filter :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefined
+%%                       , UpperBound :: float())
 %%      -> calculation().
 %% @end
 %%--------------------------------------------------------------------
 -spec get_calculation(Name :: atom, Func :: fun(() -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer() | infinity,
-    Filter :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefine, UpperBound :: float())
+    Filter :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefined, UpperBound :: float())
       -> calculation().
 get_calculation(Name, Func, Frequency, MaxIterations, Filter, UpperBound) ->
   {Name, #{func => Func, frequency => Frequency, max_iterations => MaxIterations, filter => Filter, upper_bound => UpperBound}}.
