@@ -8,7 +8,7 @@
 -include("hera.hrl").
 
 % API
--export([start_link/3]).
+-export([start_link/3, start_link/4]).
 
 % Callbacks
 -export([init/1]).
@@ -24,7 +24,10 @@
     | {shutdown, term()}
     | term()}.
 start_link(Name, Limit, MFA) -> 
-    supervisor:start_link(?MODULE, {Name, Limit, MFA}).
+    supervisor:start_link({local, hera_utils:concat_atoms(sup_, Name)},?MODULE, {Name, Limit, MFA}).
+
+start_link(Name, Limit, MFA, Suffix) ->
+    supervisor:start_link({local, hera_utils:concat_atoms(sup_, Name)},?MODULE, {Name, Limit, MFA, Suffix}).
 
 %--- Callbacks -----------------------------------------------------------------
 %% Child :: {Id,StartFunc,Restart,Shutdown,Type,Modules}
@@ -40,4 +43,15 @@ init({Name, Limit, MFA}) ->
             permanent,
             5000, % Shutdown time
             worker, % type (= worker because it's not a supervisor)
+            [hera_serv]}]}};
+init({Name, Limit, MFA, Suffix}) ->
+    MaxRestart = 1,
+    MaxTime = 3600,
+    {ok, {{one_for_all, MaxRestart, MaxTime},
+        [{serv,
+            {hera_serv, start_link, [Name, Limit, self(), MFA, Suffix]}, % !! supervisor pid passed to the server
+            permanent,
+            5000, % Shutdown time
+            worker, % type (= worker because it's not a supervisor)
             [hera_serv]}]}}.
+

@@ -21,7 +21,9 @@
   {CalculationName :: atom(),
     #{func => CalculationFunction :: fun(() -> {ok, term()} | {error, term()}),
       frequency => CalculationFrequency :: integer(),
-      max_iterations => MaxIterations :: integer() | infinity
+      max_iterations => MaxIterations :: integer() | infinity,
+      upper_bound => float(),
+      filter => FilteringFunction :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefine
     }
   }.
 
@@ -31,7 +33,7 @@
 -type sync_measurement() ::
   {MeasurementName :: atom(),
     #{func => MeasurementFunction :: fun(() -> {ok, term()} | {error, term()}),
-      filtering => MakeFiltering :: boolean(),
+      filter => FilteringFunction :: fun((any(), any(), integer(), list(any())) -> boolean()| any()) | undefined,
       upper_bound => float(),
       max_iterations => MaxIterations :: integer() | infinity,
       synchronization => MakeSynchronisationOfMeasurements :: true
@@ -45,7 +47,7 @@
 {MeasurementName :: atom(),
   #{func => MeasurementFunction :: fun(() -> {ok, term()} | {error, term()}),
     frequency => CalculationFrequency :: integer(),
-    filtering => MakeFiltering :: boolean(),
+    filter => FilteringFunction :: fun((any(), any(), integer(), list(any())) -> boolean()| any()) | undefined,
     upper_bound => float(),
     max_iterations => MaxIterations :: integer() | infinity,
     synchronization => MakeSynchronisationOfMeasurements :: false

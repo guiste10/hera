@@ -56,16 +56,32 @@ init(OsType) when OsType == {unix, rtems} ->
     type => worker},
 
   SupervisorCalculation = #{id => hera_sup_calculation,
-    start => {hera_serv, start_link, [calculation_pool, 1, supervisor_calc_meas, {hera_calculation, start_link, []}]},
+    start => {hera_sup, start_link, [calculation_pool, 1, {hera_calculation, start_link, []}]},
     restart => permanent,
     shutdown => 2000,
     type => supervisor},
 
   SupervisorMeasures = #{id => hera_sup_measure,
-    start => {hera_serv, start_link, [measurement_pool, 1, supervisor_measurement, {hera_measure, start_link, []}]},
+    start => {hera_sup, start_link, [measurement_pool, 1, {hera_measure, start_link, []}]},
     restart => permanent,
     shutdown => 2000,
     type => supervisor},
+
+  SupervisorMeasFilters = #{
+    id => hera_sup_meas_filter,
+    start => {hera_sup, start_link, [meas_filter_pool, 1, {hera_filter, start_link, []}, meas]},
+    restart => permanent,
+    shutdown => 2000,
+    type => supervisor
+  },
+
+  SupervisorCalcFilters = #{
+    id => hera_sup_calc_filter,
+    start => {hera_sup, start_link, [calc_filter_pool, 1, {hera_filter, start_link, []}, calc]},
+    restart => permanent,
+    shutdown => 2000,
+    type => supervisor
+  },
 
   SupervisorMeasurements = #{id => hera_sup_measurement,
     start => {hera_sup2, start_link, [
@@ -73,9 +89,20 @@ init(OsType) when OsType == {unix, rtems} ->
       rest_for_one, [
         #{id => hera_synchronization,
           start => {hera_synchronization, start_link, []}},
-        #{id => hera_filter,
-          start => {hera_filter, start_link, []}},
+        SupervisorMeasFilters,
         SupervisorMeasures
+      ]
+    ]},
+    restart => permanent,
+    shutdown => 2000,
+    type => supervisor},
+
+  SupervisorCalculations = #{id => hera_sup_calculations,
+    start => {hera_sup2, start_link, [
+      supervisor_calculation,
+      rest_for_one, [
+        SupervisorCalcFilters,
+        SupervisorCalculation
       ]
     ]},
     restart => permanent,
@@ -86,7 +113,7 @@ init(OsType) when OsType == {unix, rtems} ->
     start => {hera_sup2, start_link, [
       supervisor_calc_meas,
       one_for_one, [
-        SupervisorMeasurements, SupervisorCalculation
+        SupervisorMeasurements, SupervisorCalculations
       ]
     ]},
     restart => permanent,

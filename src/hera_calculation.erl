@@ -15,7 +15,7 @@
 -include("hera.hrl").
 
 %% API
--export([start_link/4, stop/1, restart_calculation/4, restart_calculation/1, restart_calculation/3, pause_calculation/1]).
+-export([start_link/6, stop/1, restart_calculation/4, restart_calculation/1, restart_calculation/3, pause_calculation/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
@@ -37,7 +37,9 @@
   calc_function :: function(),
   delay :: integer(),
   iter :: integer(),
-  max_iterations :: integer() | infinity
+  max_iterations :: integer() | infinity,
+  filter :: function() | undefined,
+  upper_bound :: float()
 }).
 -type state() :: #state{}.
 
@@ -47,10 +49,10 @@
 
 %% @private
 %% @doc Spawns the server and registers the local name (unique)
--spec(start_link(Name :: atom(), CalcFunction :: function(), Delay :: integer(), MaxIterations :: integer() | infinity) ->
+-spec(start_link(Name :: atom(), CalcFunction :: function(), Delay :: integer(), MaxIterations :: integer() | infinity, Filter :: fun((any(), any(), integer(), list(any())) -> boolean()) | undefine, UpperBound :: float()) ->
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
-start_link(Name, CalcFunction, Delay, MaxIterations) ->
-  gen_server:start_link({local, Name}, ?MODULE, {Name, CalcFunction, Delay, MaxIterations}, []).
+start_link(Name, CalcFunction, Delay, MaxIterations, Filter, UpperBound) ->
+  gen_server:start_link({local, Name}, ?MODULE, {Name, CalcFunction, Delay, MaxIterations, Filter, UpperBound}, []).
 
 %% @private
 stop(Pid) ->
@@ -122,8 +124,8 @@ pause_calculation(Name) ->
 -spec(init({Name :: atom(), Calc_function :: function(), Args :: list(any()), Delay :: integer(), MaxIterations :: integer() | infinity}) ->
   {ok, State :: state()} | {ok, State :: state(), timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
-init({Name, CalcFunction, Delay, MaxIterations}) ->
-  {ok, #state{name = Name, calc_function = CalcFunction, delay = Delay, iter = 0, max_iterations = MaxIterations}, Delay}.
+init({Name, CalcFunction, Delay, MaxIterations, Filter, UpperBound}) ->
+  {ok, #state{name = Name, calc_function = CalcFunction, delay = Delay, iter = 0, max_iterations = MaxIterations, filter = Filter, upper_bound = UpperBound}, Delay}.
 
 %% @private
 %% @doc Handling call messages
@@ -161,11 +163,18 @@ handle_cast(_Request, State = #state{}) ->
   {noreply, NewState :: state()} |
   {noreply, NewState :: state(), timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: state()}).
-handle_info(timeout, State = #state{name = Name, calc_function = Func, iter = Iter, delay = Delay, max_iterations = MaxIterations}) ->
+handle_info(timeout, State = #state{name = Name, calc_function = Func, iter = Iter, delay = Delay, max_iterations = MaxIterations, filter = Filter, upper_bound = UpperBound}) ->
   case Func() of
     {error, Reason} -> logger:error(Reason);
-    {ok, Res} -> hera:send(calc, Name, node(), Iter, Res);
-    Other -> io:format("result : ~p", [Other])
+    {ok, Res} ->
+      TimeStamp = hera:get_timestamp(),
+      case Filter of
+        F when is_atom(F) -> hera:send(calc, Name, node(), Iter, Res);
+        Fu when is_function(Fu, 5) ->
+          hera_filter:filter(Name, {Res, TimeStamp}, Iter, UpperBound, []);
+        Other -> logger:error("[Calculation] Wrong filter value: ~p", [Other])
+      end;
+    Other -> logger:error("[Calculation] Bad return of calculation function : ~p, must return {error, Reason} or {ok, Result}.", [Other])
   end,
   case MaxIterations of
     Iter -> {noreply, State#state{iter = 0}, hibernate};

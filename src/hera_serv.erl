@@ -1,6 +1,6 @@
 -module(hera_serv).
 -behaviour(gen_server).
--export([start_link/4, run/2, sync_queue/2, async_queue/2, stop/1, set_limit/2]).
+-export([start_link/4, start_link/5, run/2, sync_queue/2, async_queue/2, stop/1, set_limit/2]).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 code_change/3, terminate/2]).
 
@@ -9,6 +9,11 @@ code_change/3, terminate/2]).
     {worker_sup, % name
      {hera_worker_sup, start_link, [MFA]}, % MFA = module,function,argument of the worker to run
      temporary, 10000, supervisor,[hera_worker_sup]}).
+
+-define(SPEC2(MFA, Suffix),
+    {worker_sup, % name
+        {hera_worker_sup, start_link, [MFA, Suffix]}, % MFA = module,function,argument of the worker to run, Suffix = suffix to add to the name
+        temporary, 10000, supervisor,[hera_worker_sup]}).
 
 -record(state, {limit=0, sup, refs, queue=queue:new()}).
 
@@ -23,6 +28,9 @@ code_change/3, terminate/2]).
     {ok , Pid :: pid()} | ignore | {error , Reason :: term()}).
 start_link(Name, Limit, Sup, MFA) when is_atom(Name), is_integer(Limit) ->
     gen_server:start_link({local, Name}, ?MODULE, {Limit, MFA, Sup}, []).
+
+start_link(Name, Limit, Sup, MFA, Suffix) when is_atom(Name), is_integer(Limit), is_atom(Suffix) ->
+    gen_server:start_link({local, Name}, ?MODULE, {Limit, MFA, Sup, Suffix}, []).
 
 -spec(run(Name :: atom(), Arguments :: list()) ->  gen_server:reply()).
 run(Name, Args) ->
@@ -55,7 +63,10 @@ init({Limit, MFA, Sup}) ->
     %% We need to find the Pid of the worker supervisor from here,
     %% but alas, this would be calling the supervisor while it waits for us!
     self() ! {start_worker_supervisor, Sup, MFA},
-    {ok, #state{limit=Limit, refs=gb_sets:empty()}}.
+    {ok, #state{limit=Limit, refs=gb_sets:empty()}};
+init({Limit, MFA, Sup, Suffix}) ->
+    self() ! {start_worker_supervisor, Sup, MFA, Suffix},
+    {ok, #state{limit = Limit, refs = gb_sets:empty()}}.
 
 -spec(handle_info(Request :: term(), State :: state()) ->
     {noreply , State :: state()}).
@@ -69,6 +80,10 @@ handle_info({'DOWN', Ref, process, _Pid, _}, S = #state{refs=Refs}) ->
     end;
 handle_info({start_worker_supervisor, Sup, MFA}, S = #state{}) ->
     {ok, Pid} = supervisor:start_child(Sup, ?SPEC(MFA)), % ask the supervisor "sup" to start a child
+    link(Pid),
+    {noreply, S#state{sup=Pid}};
+handle_info({start_worker_supervisor, Sup, MFA, Suffix}, S = #state{}) ->
+    {ok, Pid} = supervisor:start_child(Sup, ?SPEC2(MFA, Suffix)), % ask the supervisor "sup" to start a child
     link(Pid),
     {noreply, S#state{sup=Pid}};
 handle_info(Msg, State) ->
