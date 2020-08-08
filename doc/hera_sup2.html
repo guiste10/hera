@@ -2,14 +2,14 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<title>Module hera_supersup</title>
+<title>Module hera_sup2</title>
 <link rel="stylesheet" type="text/css" href="stylesheet.css" title="EDoc">
 </head>
 <body bgcolor="white">
 <div class="navbar"><a name="#navbar_top"></a><table width="100%" border="0" cellspacing="0" cellpadding="2" summary="navigation bar"><tr><td><a href="overview-summary.html" target="overviewFrame">Overview</a></td><td><a href="http://www.erlang.org/"><img src="erlang.png" align="right" border="0" alt="erlang logo"></a></td></tr></table></div>
 <hr>
 
-<h1>Module hera_supersup</h1>
+<h1>Module hera_sup2</h1>
 <ul class="index"><li><a href="#description">Description</a></li><li><a href="#index">Function Index</a></li><li><a href="#functions">Function Details</a></li></ul>.
 <p>Copyright © (C) 2020, &lt;COMPANY&gt;</p>
 
@@ -19,14 +19,14 @@
 <h2><a name="description">Description</a></h2>
   
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#start_link-1">start_link/1</a></td><td>Starts the supervisor.</td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#start_link-3">start_link/3</a></td><td>Starts the supervisor.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
 
-<h3 class="function"><a name="start_link-1">start_link/1</a></h3>
+<h3 class="function"><a name="start_link-3">start_link/3</a></h3>
 <div class="spec">
-<p><tt>start_link(OsType::{unix | win32, atom()}) -&gt; {ok, Pid::pid()} | ignore | {error, Reason::term()}</tt><br></p>
+<p><tt>start_link(Name::atom(), RestartStrategy::<a href="supervisor.html#type-restart">supervisor:restart()</a>, ChildSpecs::[<a href="supervisor.html#type-child_spec">supervisor:child_spec()</a>]) -&gt; {ok, Pid::pid()} | ignore | {error, Reason::term()}</tt><br></p>
 </div><p>Starts the supervisor</p>
 <hr>
 

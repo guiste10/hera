@@ -28,7 +28,9 @@
 <tr><td valign="top"><a href="#handle_info-2">handle_info/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#init-1">init/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#run-2">run/2</a></td><td></td></tr>
+<tr><td valign="top"><a href="#set_limit-2">set_limit/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#start_link-4">start_link/4</a></td><td></td></tr>
+<tr><td valign="top"><a href="#start_link-5">start_link/5</a></td><td></td></tr>
 <tr><td valign="top"><a href="#stop-1">stop/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#sync_queue-2">sync_queue/2</a></td><td></td></tr>
 <tr><td valign="top"><a href="#terminate-2">terminate/2</a></td><td></td></tr>
@@ -71,9 +73,19 @@
 <p><tt>run(Name::atom(), Arguments::list()) -&gt; <a href="gen_server.html#type-reply">gen_server:reply()</a></tt><br></p>
 </div>
 
+<h3 class="function"><a name="set_limit-2">set_limit/2</a></h3>
+<div class="spec">
+<p><tt>set_limit(Name::atom(), Limit::integer()) -&gt; ok</tt><br></p>
+</div>
+
 <h3 class="function"><a name="start_link-4">start_link/4</a></h3>
 <div class="spec">
 <p><tt>start_link(Name::atom(), Limit::integer(), Supervisor::atom(), MFA::tuple()) -&gt; {ok, Pid::pid()} | ignore | {error, Reason::term()}</tt><br></p>
+</div>
+
+<h3 class="function"><a name="start_link-5">start_link/5</a></h3>
+<div class="spec">
+<p><tt>start_link(Name, Limit, Sup, MFA, Suffix) -&gt; any()</tt></p>
 </div>
 
 <h3 class="function"><a name="stop-1">stop/1</a></h3>

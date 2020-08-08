@@ -19,99 +19,249 @@
 <h2><a name="description">Description</a></h2>
    Hera public api
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#clusterize-0">clusterize/0</a></td><td>
-  Start the formation of an udp multicast cluster.</td></tr>
-<tr><td valign="top"><a href="#get_data-0">get_data/0</a></td><td>
-  Retrieve the data of sensors of all nodes.</td></tr>
-<tr><td valign="top"><a href="#launch_app-0">launch_app/0</a></td><td>
-  Start only multicast pool.</td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#get_calculation-6">get_calculation/6</a></td><td>
+  Return a well formed calculation.</td></tr>
+<tr><td valign="top"><a href="#get_synchronized_measurement-5">get_synchronized_measurement/5</a></td><td>
+  Return a well formed synchronized measurement.</td></tr>
+<tr><td valign="top"><a href="#get_unsynchronized_measurement-6">get_unsynchronized_measurement/6</a></td><td>
+  Return a well formed unsynchronized measurement.</td></tr>
 <tr><td valign="top"><a href="#launch_app-2">launch_app/2</a></td><td>
   Start all pools.</td></tr>
-<tr><td valign="top"><a href="#log_calculation-4">log_calculation/4</a></td><td>
-  Log the given measure into a file with the same name as the node name.</td></tr>
-<tr><td valign="top"><a href="#log_measure-4">log_measure/4</a></td><td>
-  Log the given measure into a file with the same name as the node name.</td></tr>
+<tr><td valign="top"><a href="#maybe_propagate-1">maybe_propagate/1</a></td><td>
+  Propagate a function to all node.</td></tr>
+<tr><td valign="top"><a href="#pause_calculation-1">pause_calculation/1</a></td><td>
+  Pause the worker that performs the calculation Name.</td></tr>
+<tr><td valign="top"><a href="#pause_measurement-1">pause_measurement/1</a></td><td>
+  Pause the worker that performs the synchronized or unsynchronized measurement Name.</td></tr>
+<tr><td valign="top"><a href="#restart_calculation-1">restart_calculation/1</a></td><td>
+  Restart worker that performs the calculation Name from zero if the previous calculation has terminated, or from the previous state if it is pause.</td></tr>
+<tr><td valign="top"><a href="#restart_calculation-3">restart_calculation/3</a></td><td>
+  Restart worker that performs the calculation Name from zero with new frequency and number of iterations.</td></tr>
+<tr><td valign="top"><a href="#restart_calculation-4">restart_calculation/4</a></td><td>
+  Restart worker that performs the calculation Name from zero with a new function.</td></tr>
+<tr><td valign="top"><a href="#restart_measurement-2">restart_measurement/2</a></td><td>
+  Restart worker that performs the unsynchronized or synchronized measurement Name from zero if the previous calculation has terminated, or from the previous state if it is pause.</td></tr>
+<tr><td valign="top"><a href="#restart_sync_measurement-3">restart_sync_measurement/3</a></td><td>
+  Restart worker that performs the synchronized measurement Name from zero if the previous calculation has terminated, or from the previous state if it is pause.</td></tr>
+<tr><td valign="top"><a href="#restart_sync_measurement-5">restart_sync_measurement/5</a></td><td>
+  Restart worker that performs the synchronized measurement Name from zero with new parameters.</td></tr>
+<tr><td valign="top"><a href="#restart_unsync_measurement-4">restart_unsync_measurement/4</a></td><td>
+  Restart worker that performs the unsynchronized measurement Name from zero with new frequency and number of iterations.</td></tr>
+<tr><td valign="top"><a href="#restart_unsync_measurement-6">restart_unsync_measurement/6</a></td><td>
+  Restart worker that performs the unsynchronized measurement Name from zero with new parameters.</td></tr>
 <tr><td valign="top"><a href="#send-1">send/1</a></td><td>
-  Send a message over the multicast cluster.</td></tr>
-<tr><td valign="top"><a href="#store_data-4">store_data/4</a></td><td>
-  Add a new data for the specified node.</td></tr>
+  Send a message the multicast cluster.</td></tr>
+<tr><td valign="top"><a href="#send-5">send/5</a></td><td>
+  Send a data over the multicast cluster.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
 
-<h3 class="function"><a name="clusterize-0">clusterize/0</a></h3>
+<h3 class="function"><a name="get_calculation-6">get_calculation/6</a></h3>
 <div class="spec">
-<p><tt>clusterize() -&gt; ok</tt><br></p>
+<p><tt>get_calculation(Name::atom, Func::<a href="#type-fun">'fun'</a>(fun(() -&gt; {ok, term()}) | {error, term()}), Frequency::integer(), MaxIterations::integer() | infinity, Filter::<a href="#type-fun">'fun'</a>(fun((any(), any(), integer(), [any()]) -&gt; boolean()) | any()) | undefined, UpperBound::float()) -&gt; <a href="#type-calculation">calculation()</a></tt><br></p>
+<p><tt>Name</tt>: The name of the calculation<br>
+<tt>Func</tt>: The function that performs the calculation<br>
+<tt>Frequency</tt>: The frequency at which the calculations are done<br>
+<tt>MaxIterations</tt>: The number of calculations to be performed<br>
+<tt>Filter</tt>: Filter function or the atom undefined
+ <br>
+<tt>UpperBound</tt>: Maximum value expressed in unit/ms that two successive values cannot exceed<br>
+</p>
 </div><p>
-  Start the formation of an udp multicast cluster
+  Return a well formed calculation
  </p>
 
-<h3 class="function"><a name="get_data-0">get_data/0</a></h3>
+<h3 class="function"><a name="get_synchronized_measurement-5">get_synchronized_measurement/5</a></h3>
 <div class="spec">
-<p><tt>get_data() -&gt; <a href="dict.html#type-dict">dict:dict</a>(string(), {integer(), integer() | float()})</tt><br></p>
+<p><tt>get_synchronized_measurement(Name::atom(), Func::<a href="#type-fun">'fun'</a>(fun(() -&gt; {ok, term()}) | {error, term()}), Filtering::<a href="#type-fun">'fun'</a>(fun((any(), any(), integer(), [any()]) -&gt; boolean()) | any()) | undefined, UpperBound::float(), MaxIterations::integer() | infinity) -&gt; <a href="#type-sync_measurement">sync_measurement()</a></tt><br></p>
+<p><tt>Name</tt>: The name of the measurement<br>
+<tt>Func</tt>: The function that performs the measurement<br>
+<tt>Filtering</tt>: Filter function or the atom undefined<br>
+<tt>UpperBound</tt>: Maximum value expressed in unit/ms that two successive values cannot exceed<br>
+<tt>MaxIterations</tt>: The number of measurements to be performed
+ <br>
+</p>
 </div><p>
-  Retrieve the data of sensors of all nodes
+  Return a well formed synchronized measurement
  </p>
 
-<h3 class="function"><a name="launch_app-0">launch_app/0</a></h3>
+<h3 class="function"><a name="get_unsynchronized_measurement-6">get_unsynchronized_measurement/6</a></h3>
 <div class="spec">
-<p><tt>launch_app() -&gt; ok</tt><br></p>
+<p><tt>get_unsynchronized_measurement(Name::atom(), Func::<a href="#type-fun">'fun'</a>(fun(() -&gt; {ok, term()}) | {error, term()}), Filtering::<a href="#type-fun">'fun'</a>(fun((any(), any(), integer(), [any()]) -&gt; boolean()) | any()) | undefined, UpperBound::float(), MaxIteration::integer() | infinity, Frequency::integer()) -&gt; <a href="#type-unsync_measurement">unsync_measurement()</a></tt><br></p>
+<p><tt>Name</tt>: The name of the measurement<br>
+<tt>Func</tt>: The function that performs the measurement<br>
+<tt>Filtering</tt>: Filter function or the atom undefined<br>
+<tt>UpperBound</tt>: Maximum value expressed in unit/ms that two successive values cannot exceed<br>
+<tt>Frequency</tt>: The frequency at which the measurements are done
+ <br>
+</p>
 </div><p>
-  Start only multicast pool. Function to be called by a shell on a computer
+  Return a well formed unsynchronized measurement
  </p>
 
 <h3 class="function"><a name="launch_app-2">launch_app/2</a></h3>
 <div class="spec">
-<p><tt>launch_app(Measurements::[<a href="#type-measurement">measurement()</a>], Calculations::[<a href="#type-calculation">calculation()</a>]) -&gt; ok</tt><br></p>
+<p><tt>launch_app(Measurements::[<a href="#type-unsync_measurement">unsync_measurement()</a> | <a href="#type-sync_measurement">sync_measurement()</a>], Calculations::[<a href="#type-calculation">calculation()</a>]) -&gt; ok</tt><br></p>
+<p><tt>Measurements</tt>: List of measurements to perform on the node<br>
+<tt>Calculations</tt>: List of calculations to perform on the node
+ <br>
+</p>
 </div><p>
   Start all pools. Function to be called by GRiSP boards
  </p>
 
-<h3 class="function"><a name="log_calculation-4">log_calculation/4</a></h3>
+<h3 class="function"><a name="maybe_propagate-1">maybe_propagate/1</a></h3>
 <div class="spec">
-<p><tt>log_calculation(Name::atom(), Node::atom(), Seqnum::integer(), Data::integer() | float()) -&gt; ok</tt><br></p>
-<p><tt>Name</tt>: The name of the calculation (e.g. position_calculation, temperature_median, ...)<br>
-<tt>Node</tt>: The node who perform the calculation<br>
-<tt>Seqnum</tt>: The sequence number of the calculation result<br>
-</p>
-</div><p>
-  Log the given measure into a file with the same name as the node name
- </p>
-
-<h3 class="function"><a name="log_measure-4">log_measure/4</a></h3>
-<div class="spec">
-<p><tt>log_measure(Name::atom(), Node::atom(), Seqnum::integer(), Data::integer() | float()) -&gt; ok</tt><br></p>
-<p><tt>Name</tt>: The name/type of the measure (e.g. temperature, sonar, humidity, ...)<br>
-<tt>Node</tt>: The node who perform the measurement of the data<br>
-<tt>Seqnum</tt>: The sequence number of the measured data<br>
-<tt>Data</tt>: The data measured by the sensor
+<p><tt>maybe_propagate(Fun::function()) -&gt; any()</tt><br></p>
+<p><tt>Fun</tt>: The function to be propagated
  <br>
 </p>
 </div><p>
-  Log the given measure into a file with the same name as the node name
+  Propagate a function to all node. When receiving the function, the node executes it.
+ </p>
+
+<h3 class="function"><a name="pause_calculation-1">pause_calculation/1</a></h3>
+<div class="spec">
+<p><tt>pause_calculation(Name::atom()) -&gt; ok</tt><br></p>
+<p><tt>Name</tt>: The name of the calculation
+ <br>
+</p>
+</div><p>
+  Pause the worker that performs the calculation Name
+ </p>
+
+<h3 class="function"><a name="pause_measurement-1">pause_measurement/1</a></h3>
+<div class="spec">
+<p><tt>pause_measurement(Name::atom()) -&gt; ok</tt><br></p>
+<p><tt>Name</tt>: The name of the measurement
+ <br>
+</p>
+</div><p>
+  Pause the worker that performs the synchronized or unsynchronized measurement Name
+ </p>
+
+<h3 class="function"><a name="restart_calculation-1">restart_calculation/1</a></h3>
+<div class="spec">
+<p><tt>restart_calculation(Name::atom()) -&gt; ok</tt><br></p>
+<p><tt>Name</tt>: The name of the calculation
+ <br>
+</p>
+</div><p>
+  Restart worker that performs the calculation Name from zero if the previous calculation has terminated, or from the previous state if it is pause.
+ </p>
+
+<h3 class="function"><a name="restart_calculation-3">restart_calculation/3</a></h3>
+<div class="spec">
+<p><tt>restart_calculation(Name::atom(), Frequency::integer(), MaxIterations::integer() | infinity) -&gt; ok</tt><br></p>
+<p><tt>Name</tt>: The name of the calculation<br>
+<tt>Frequency</tt>: The frequency of the calculation<br>
+<tt>MaxIterations</tt>: The number of iterations to be done
+ <br>
+</p>
+</div><p>
+  Restart worker that performs the calculation Name from zero with new frequency and number of iterations
+ </p>
+
+<h3 class="function"><a name="restart_calculation-4">restart_calculation/4</a></h3>
+<div class="spec">
+<p><tt>restart_calculation(Name::atom(), Func::<a href="#type-fun">'fun'</a>(fun((...) -&gt; {ok, term()}) | {error, term()}), Frequency::integer(), MaxIterations::integer()) -&gt; ok</tt><br></p>
+<p><tt>Name</tt>: The name of the measurement<br>
+<tt>Func</tt>: The calculation function to be executed<br>
+<tt>Frequency</tt>: The frequency of the calculation<br>
+<tt>MaxIterations</tt>: The number of iterations to be done
+ <br>
+</p>
+</div><p>
+  Restart worker that performs the calculation Name from zero with a new function
+ </p>
+
+<h3 class="function"><a name="restart_measurement-2">restart_measurement/2</a></h3>
+<div class="spec">
+<p><tt>restart_measurement(Name::atom(), WarmUpPhase::boolean()) -&gt; ok</tt><br></p>
+<p><tt>Name</tt>: The name of the measurement<br>
+<tt>WarmUpPhase</tt>: Boolean that indicates if a warm-up phase must be performed
+ <br>
+</p>
+</div><p>
+  Restart worker that performs the unsynchronized or synchronized measurement Name from zero if the previous calculation has terminated, or from the previous state if it is pause.
+ </p>
+
+<h3 class="function"><a name="restart_sync_measurement-3">restart_sync_measurement/3</a></h3>
+<div class="spec">
+<p><tt>restart_sync_measurement(Name::atom(), MaxIteration::integer(), WarmUpPhase::boolean()) -&gt; ok</tt><br></p>
+<p><tt>Name</tt>: The name of the measurement<br>
+<tt>WarmUpPhase</tt>: Boolean that indicates if a warm-up phase must be performed
+ <br>
+</p>
+</div><p>
+  Restart worker that performs the synchronized measurement Name from zero if the previous calculation has terminated, or from the previous state if it is pause.
+ </p>
+
+<h3 class="function"><a name="restart_sync_measurement-5">restart_sync_measurement/5</a></h3>
+<div class="spec">
+<p><tt>restart_sync_measurement(Name::atom(), Func::<a href="#type-fun">'fun'</a>(fun((...) -&gt; {ok, term()}) | {error, term()}), MaxIterations::integer(), Filtering::<a href="#type-fun">'fun'</a>(fun((any(), any(), integer(), [any()]) -&gt; boolean()) | any()) | undefined, WarmUpPhase::boolean()) -&gt; ok</tt><br></p>
+<p><tt>Name</tt>: The name of the measurement<br>
+<tt>Func</tt>: The measurement function to be executed<br>
+<tt>MaxIterations</tt>: The number of iterations to be done<br>
+<tt>Filtering</tt>: Filter function or the atom undefined<br>
+<tt>WarmUpPhase</tt>: Boolean that indicates if a warm-up phase must be performed
+ <br>
+</p>
+</div><p>
+  Restart worker that performs the synchronized measurement Name from zero with new parameters
+ </p>
+
+<h3 class="function"><a name="restart_unsync_measurement-4">restart_unsync_measurement/4</a></h3>
+<div class="spec">
+<p><tt>restart_unsync_measurement(Name::atom(), Frequency::integer(), MaxIterations::integer(), WarmUpPhase::boolean()) -&gt; ok</tt><br></p>
+<p><tt>Name</tt>: The name of the measurement<br>
+<tt>Frequency</tt>: The frequency of the measurement<br>
+<tt>MaxIterations</tt>: The number of iterations to be done<br>
+<tt>WarmUpPhase</tt>: Boolean that indicates if a warm-up phase must be performed
+ <br>
+</p>
+</div><p>
+  Restart worker that performs the unsynchronized measurement Name from zero with new frequency and number of iterations
+ </p>
+
+<h3 class="function"><a name="restart_unsync_measurement-6">restart_unsync_measurement/6</a></h3>
+<div class="spec">
+<p><tt>restart_unsync_measurement(Name::atom(), Func::<a href="#type-fun">'fun'</a>(fun((...) -&gt; {ok, term()}) | {error, term()}), Frequency::integer(), MaxIterations::integer(), Filtering::<a href="#type-fun">'fun'</a>(fun((any(), any(), integer(), [any()]) -&gt; boolean()) | any()) | undefined, WarmUpPhase::boolean()) -&gt; ok</tt><br></p>
+<p><tt>Name</tt>: The name of the measurement<br>
+<tt>Func</tt>: The measurement function to be executed<br>
+<tt>Frequency</tt>: The frequency of the measurement<br>
+<tt>MaxIterations</tt>: The number of iterations to be done<br>
+<tt>Filtering</tt>: Filter function or the atom undefined<br>
+<tt>WarmUpPhase</tt>: Boolean that indicates if a warm-up phase must be performed
+ <br>
+</p>
+</div><p>
+  Restart worker that performs the unsynchronized measurement Name from zero with new parameters
  </p>
 
 <h3 class="function"><a name="send-1">send/1</a></h3>
 <div class="spec">
-<p><tt>send(Message::term()) -&gt; ok</tt><br></p>
-<p><tt>Message</tt>: the message to be send
+<p><tt>send(Message::term()) -&gt; any()</tt><br></p>
+<p><tt>Message</tt>: The message to be sent
  <br>
 </p>
 </div><p>
-  Send a message over the multicast cluster
+  Send a message the multicast cluster
  </p>
 
-<h3 class="function"><a name="store_data-4">store_data/4</a></h3>
+<h3 class="function"><a name="send-5">send/5</a></h3>
 <div class="spec">
-<p><tt>store_data(Name::atom(), Node::atom(), Seqnum::integer(), Data::integer() | float()) -&gt; ok</tt><br></p>
-<p><tt>Name</tt>: The name/type of the data (e.g. temperature, sonar, humidity, ...)<br>
-<tt>Node</tt>: The node who perform the measurement of the data<br>
-<tt>Seqnum</tt>: The sequence number of the measured data<br>
-<tt>Data</tt>: The data measured by the sensor
+<p><tt>send(MessageType::calc | measure, Name::atom(), Node::atom(), Seqnum::integer(), Data::term()) -&gt; ok</tt><br></p>
+<p><tt>MessageType</tt>: The type of the message to be sent, either calc or measure<br>
+<tt>Name</tt>: The name of the sent data<br>
+<tt>Node</tt>: The node which send the message<br>
+<tt>Seqnum</tt>: The sequence number of the data<br>
+<tt>Data</tt>: The data to be sent
  <br>
 </p>
 </div><p>
-  Add a new data for the specified node
+  Send a data over the multicast cluster
  </p>
 <hr>
 

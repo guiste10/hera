@@ -60,7 +60,7 @@ start_link() ->
 %% @doc
 %% Retrieve the data of the sensors of all nodes
 %%
-%% @spec get_data() -> dict:dict(string(), {integer(), integer() | float()})
+%% @spec get_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float(), integer()})
 %% @end
 %%--------------------------------------------------------------------
 -spec get_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float(), integer()}).
@@ -72,7 +72,7 @@ get_data(Name) ->
 %% @doc
 %% Retrieve the recent (+-500ms or less) data of the sensors of all nodes
 %%
-%% @spec get_data() -> dict:dict(string(), {integer(), integer() | float()})
+%% @spec get_recent_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float(), integer()})
 %% @end
 %%--------------------------------------------------------------------
 -spec get_recent_data(Name :: atom()) -> dict:dict(string(), {integer(), integer() | float(), integer()}).

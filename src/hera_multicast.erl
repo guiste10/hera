@@ -56,7 +56,7 @@ send(Message_type, Name, Node, Seqnum, Data) ->
 %%
 %% @param Message The message to be sent
 %%
-%% @spec send(Message_type :: calc | measure, Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: term()) -> ok
+%% @spec send(Message :: term()) -> any()
 %% @end
 %% -------------------------------------------------------------------
 -spec send(Message :: term()) -> any().

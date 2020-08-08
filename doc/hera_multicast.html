@@ -14,35 +14,47 @@
    Multicast module that creates a multicast group where we can send and receive sensors data.
 <p>Copyright © (C) 2020, &lt;COMPANY&gt;</p>
 
-<p><b>Behaviours:</b> <a href="gen_server.html"><tt>gen_server</tt></a>.</p>
 <p><b>Authors:</b> Julien Bastin (<a href="mailto:julien.bastin@student.uclouvain.be"><tt>julien.bastin@student.uclouvain.be</tt></a>), Guillaume Neirinckx (<a href="mailto:guillaume.neirinckx@student.uclouvain.be"><tt>guillaume.neirinckx@student.uclouvain.be</tt></a>).</p>
 
 <h2><a name="description">Description</a></h2>
    Multicast module that creates a multicast group where we can send and receive sensors data
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#formation-0">formation/0</a></td><td>
-  Initialize the multicast group.</td></tr>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#init-1">init/1</a></td><td></td></tr>
 <tr><td valign="top"><a href="#send-1">send/1</a></td><td>
-  Send a message over the multicast cluster.</td></tr>
+  Send a message the multicast cluster.</td></tr>
+<tr><td valign="top"><a href="#send-5">send/5</a></td><td>
+  Send a data over the multicast cluster.</td></tr>
 </table>
 
 <h2><a name="functions">Function Details</a></h2>
 
-<h3 class="function"><a name="formation-0">formation/0</a></h3>
+<h3 class="function"><a name="init-1">init/1</a></h3>
 <div class="spec">
-<p><tt>formation() -&gt; ok</tt><br></p>
-</div><p>
-  Initialize the multicast group
- </p>
+<p><tt>init(Other) -&gt; any()</tt></p>
+</div>
 
 <h3 class="function"><a name="send-1">send/1</a></h3>
 <div class="spec">
-<p><tt>send(Message::term()) -&gt; ok</tt><br></p>
-<p><tt>Message</tt>: the message to be send
+<p><tt>send(Message::term()) -&gt; any()</tt><br></p>
+<p><tt>Message</tt>: The message to be sent
  <br>
 </p>
 </div><p>
-  Send a message over the multicast cluster
+  Send a message the multicast cluster
+ </p>
+
+<h3 class="function"><a name="send-5">send/5</a></h3>
+<div class="spec">
+<p><tt>send(Message_type::calc | measure, Name::atom(), Node::atom(), Seqnum::integer(), Data::term()) -&gt; ok</tt><br></p>
+<p><tt>Message_type</tt>: The type of the message to be sent, either calc or measure<br>
+<tt>Name</tt>: The name of the sent data<br>
+<tt>Node</tt>: The node which send the message<br>
+<tt>Seqnum</tt>: The sequence number of the data<br>
+<tt>Data</tt>: The data to be sent
+ <br>
+</p>
+</div><p>
+  Send a data over the multicast cluster
  </p>
 <hr>
 

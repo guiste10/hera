@@ -50,12 +50,10 @@ stop(_State) -> ok.
 %%
 %% @param Measurements List of measurements to perform on the node
 %% @param Calculations List of calculations to perform on the node
-%% @param Master set to true if the current node must start the global_sync server, false otherwise
 %%
 %% @spec launch_app(
 %%            Measurements :: list(unsync_measurement() | sync_measurement()),
-%%            Calculations :: list(calculation()),
-%%            Master :: boolean()
+%%            Calculations :: list(calculation())
 %%       ) -> ok
 %% @end
 %% -------------------------------------------------------------------
@@ -102,7 +100,7 @@ send(MessageType, Name, Node, Seqnum, Data) ->
 %%
 %% @param Message The message to be sent
 %%
-%% @spec send(Message_type :: calc | measure, Name :: atom(), Node :: atom(), Seqnum :: integer(), Data :: term()) -> ok
+%% @spec send(Message :: term()) -> any()
 %% @end
 %% -------------------------------------------------------------------
 -spec send(Message :: term()) -> any().
@@ -111,15 +109,14 @@ send(Message) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart worker that performs the calculation <Name> from zero with a new function
+%% Restart worker that performs the calculation Name from zero with a new function
 %%
 %% @param Name The name of the measurement
 %% @param Func The calculation function to be executed
-%% @param Args The arguments of the function
 %% @param Frequency The frequency of the calculation
 %% @param MaxIterations The number of iterations to be done
 %%
-%% @spec restart_calculation(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer()) -> ok.
+%% @spec restart_calculation(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer()) -> ok
 %% @end
 %%--------------------------------------------------------------------
 -spec restart_calculation(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer()) -> ok.
@@ -129,11 +126,11 @@ restart_calculation(Name, Func, Frequency, MaxIterations) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart worker that performs the calculation <Name> from zero if the previous calculation has terminated, or from the previous state if it is pause.
+%% Restart worker that performs the calculation Name from zero if the previous calculation has terminated, or from the previous state if it is pause.
 %%
 %% @param Name The name of the calculation
 %%
-%% @spec restart_calculation(Name :: atom()) -> ok.
+%% @spec restart_calculation(Name :: atom()) -> ok
 %% @end
 %%--------------------------------------------------------------------
 -spec restart_calculation(Name :: atom()) -> ok.
@@ -143,13 +140,13 @@ restart_calculation(Name) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart worker that performs the calculation <Name> from zero with new frequency and number of iterations
+%% Restart worker that performs the calculation Name from zero with new frequency and number of iterations
 %%
 %% @param Name The name of the calculation
 %% @param Frequency The frequency of the calculation
 %% @param MaxIterations The number of iterations to be done
 %%
-%% @spec restart_calculation(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity) -> ok.
+%% @spec restart_calculation(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity) -> ok
 %% @end
 %%--------------------------------------------------------------------
 -spec restart_calculation(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity) -> ok.
@@ -159,11 +156,11 @@ restart_calculation(Name, Frequency, MaxIterations) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Pause the worker that performs the calculation <Name>
+%% Pause the worker that performs the calculation Name
 %%
 %% @param Name The name of the calculation
 %%
-%% @spec pause_calculation(Name :: atom()) -> ok.
+%% @spec pause_calculation(Name :: atom()) -> ok
 %% @end
 %%--------------------------------------------------------------------
 -spec pause_calculation(Name :: atom()) -> ok.
@@ -173,47 +170,56 @@ pause_calculation(Name) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart worker that performs the unsynchronized measurement <Name> from zero with new parameters
+%% Restart worker that performs the unsynchronized measurement Name from zero with new parameters
 %%
 %% @param Name The name of the measurement
 %% @param Func The measurement function to be executed
 %% @param Frequency The frequency of the measurement
 %% @param MaxIterations The number of iterations to be done
-%% @param Filtering Boolean that indicates if a filtering must be done to the data output by the function
+%% @param Filtering Filter function or the atom undefined
 %% @param WarmUpPhase Boolean that indicates if a warm-up phase must be performed
 %%
-%% @spec restart_unsync_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
+%% @spec restart_unsync_measurement(
+%%            Name :: atom(),
+%%            Func :: fun((...) -> {ok, term()} | {error, term()}),
+%%            Frequency :: integer(),
+%%            MaxIterations :: integer(),
+%%            Filtering :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefined,
+%%            WarmUpPhase :: boolean()) -> ok
 %% @end
 %%--------------------------------------------------------------------
--spec restart_unsync_measurement(Name :: atom(), Func ::fun((...) -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean(), WarmUpPhase :: boolean()) -> ok.
+-spec restart_unsync_measurement(Name :: atom(), Func ::fun((...) -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer(),
+    Filtering :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefined, WarmUpPhase :: boolean()) -> ok.
 restart_unsync_measurement(Name, Func, Frequency, MaxIterations, Filtering, WarmUpPhase) ->
   hera_measure:restart_unsync_measurement(Name, Func, Frequency, MaxIterations, Filtering, WarmUpPhase).
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart worker that performs the synchronized measurement <Name> from zero with new parameters
+%% Restart worker that performs the synchronized measurement Name from zero with new parameters
 %%
 %% @param Name The name of the measurement
 %% @param Func The measurement function to be executed
 %% @param MaxIterations The number of iterations to be done
-%% @param Filtering Boolean that indicates if a filtering must be done to the data output by the function
+%% @param Filtering Filter function or the atom undefined
 %% @param WarmUpPhase Boolean that indicates if a warm-up phase must be performed
 %%
-%% @spec restart_unsync_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
+%% @spec restart_sync_measurement(Name :: atom(), Func ::fun((...) -> {ok, term()} | {error, term()}), MaxIterations :: integer(),
+%%    Filtering :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefined , WarmUpPhase :: boolean()) -> ok
 %% @end
 %%--------------------------------------------------------------------
--spec restart_sync_measurement(Name :: atom(), Func ::fun((...) -> {ok, term()} | {error, term()}), MaxIterations :: integer(), Filtering :: boolean(), WarmUpPhase :: boolean()) -> ok.
+-spec restart_sync_measurement(Name :: atom(), Func ::fun((...) -> {ok, term()} | {error, term()}), MaxIterations :: integer(),
+    Filtering :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefined , WarmUpPhase :: boolean()) -> ok.
 restart_sync_measurement(Name, Func, MaxIterations, Filtering, WarmUpPhase) ->
   hera_measure:restart_sync_measurement(Name, Func, MaxIterations, Filtering, WarmUpPhase).
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart worker that performs the unsynchronized or synchronized measurement <Name> from zero if the previous calculation has terminated, or from the previous state if it is pause.
+%% Restart worker that performs the unsynchronized or synchronized measurement Name from zero if the previous calculation has terminated, or from the previous state if it is pause.
 %%
 %% @param Name The name of the measurement
 %% @param WarmUpPhase Boolean that indicates if a warm-up phase must be performed
 %%
-%% @spec restart_measurement(Name :: atom()) -> ok.
+%% @spec restart_measurement(Name :: atom(), WarmUpPhase :: boolean()) -> ok
 %% @end
 %%--------------------------------------------------------------------
 -spec restart_measurement(Name :: atom(), WarmUpPhase :: boolean()) -> ok.
@@ -222,13 +228,13 @@ restart_measurement(Name, WarmUpPhase) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart worker that performs the synchronized measurement <Name> from zero if the previous calculation has terminated, or from the previous state if it is pause.
+%% Restart worker that performs the synchronized measurement Name from zero if the previous calculation has terminated, or from the previous state if it is pause.
 %%
 %% @param Name The name of the measurement
 %% @param MaxIterations The number of iterations to be done
 %% @param WarmUpPhase Boolean that indicates if a warm-up phase must be performed
 %%
-%% @spec restart_sync_measurement(Name :: atom()) -> ok.
+%% @spec restart_sync_measurement(Name :: atom(), MaxIteration :: integer(), WarmUpPhase :: boolean()) -> ok
 %% @end
 %%--------------------------------------------------------------------
 -spec restart_sync_measurement(Name :: atom(), MaxIteration :: integer(), WarmUpPhase :: boolean()) -> ok.
@@ -238,14 +244,14 @@ restart_sync_measurement(Name, MaxIterations, WarmUpPhase) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart worker that performs the unsynchronized measurement <Name> from zero with new frequency and number of iterations
+%% Restart worker that performs the unsynchronized measurement Name from zero with new frequency and number of iterations
 %%
 %% @param Name The name of the measurement
 %% @param Frequency The frequency of the measurement
 %% @param MaxIterations The number of iterations to be done
 %% @param WarmUpPhase Boolean that indicates if a warm-up phase must be performed
 %%
-%% @spec restart_unsync_measurement(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity) -> ok.
+%% @spec restart_unsync_measurement(Name :: atom(), Frequency :: integer(), MaxIterations :: integer(), WarmUpPhase :: boolean()) -> ok
 %% @end
 %%--------------------------------------------------------------------
 -spec restart_unsync_measurement(Name :: atom(), Frequency :: integer(), MaxIterations :: integer(), WarmUpPhase :: boolean()) -> ok.
@@ -255,11 +261,11 @@ restart_unsync_measurement(Name, Frequency, MaxIterations, WarmUpPhase) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Pause the worker that performs the synchronized or unsynchronized measurement <Name>
+%% Pause the worker that performs the synchronized or unsynchronized measurement Name
 %%
 %% @param Name The name of the measurement
 %%
-%% @spec pause_measurement(Name :: atom()) -> ok.
+%% @spec pause_measurement(Name :: atom()) -> ok
 %% @end
 %%--------------------------------------------------------------------
 -spec pause_measurement(Name :: atom()) -> ok.
@@ -273,16 +279,13 @@ pause_measurement(Name) ->
 %%
 %% @param Name The name of the measurement
 %% @param Func The function that performs the measurement
-%% @param Filtering A boolean that indicates if the resulting measures must be filtered
-%% @param UpperBound TODO
+%% @param Filtering Filter function or the atom undefined
+%% @param UpperBound Maximum value expressed in unit/ms that two successive values cannot exceed
 %% @param MaxIterations The number of measurements to be performed
 %%
-%% @spec get_synchronized_measurement(Name :: atom()
-%%                                    , Func :: fun(() -> {ok, term()} | {error, term()} )
-%%                                    , Filtering :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefined
-%%                                    , UpperBound :: float()
-%%                                    , MaxIterations :: integer() | infinity)
-%%      -> sync_measurement().
+%% @spec get_synchronized_measurement(Name :: atom(), Func :: fun(() -> {ok, term()} | {error, term()} ), Filtering :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefined,
+%%    UpperBound :: float(), MaxIterations :: integer() | infinity)
+%%      -> sync_measurement()
 %% @end
 %%--------------------------------------------------------------------
 -spec get_synchronized_measurement(Name :: atom(), Func :: fun(() -> {ok, term()} | {error, term()} ), Filtering :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefined,
@@ -297,8 +300,8 @@ get_synchronized_measurement(Name, Func, Filtering, UpperBound, MaxIterations) -
 %%
 %% @param Name The name of the measurement
 %% @param Func The function that performs the measurement
-%% @param Filtering A boolean that indicates if the resulting measures must be filtered
-%% @param UpperBound TODO
+%% @param Filtering Filter function or the atom undefined
+%% @param UpperBound Maximum value expressed in unit/ms that two successive values cannot exceed
 %% @param MaxIterations The number of measurements to be performed
 %% @param Frequency The frequency at which the measurements are done
 %%
@@ -308,7 +311,7 @@ get_synchronized_measurement(Name, Func, Filtering, UpperBound, MaxIterations) -
 %%                                      , UpperBound :: float()
 %%                                      , MaxIteration :: integer() | infinity
 %%                                      , Frequency :: integer())
-%%      -> unsync_measurement().
+%%      -> unsync_measurement()
 %% @end
 %%--------------------------------------------------------------------
 -spec get_unsynchronized_measurement(Name :: atom(), Func :: fun(() -> {ok, term()} | {error, term()} ), Filtering :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefined,
@@ -325,6 +328,8 @@ get_unsynchronized_measurement(Name, Func, Filtering, UpperBound, MaxIteration, 
 %% @param Func The function that performs the calculation
 %% @param MaxIterations The number of calculations to be performed
 %% @param Frequency The frequency at which the calculations are done
+%% @param UpperBound Maximum value expressed in unit/ms that two successive values cannot exceed
+%% @param Filter Filter function or the atom undefined
 %%
 %% @spec get_calculation(Name :: atom
 %%                       , Func :: fun(() -> {ok, term()} | {error, term()})
@@ -332,7 +337,7 @@ get_unsynchronized_measurement(Name, Func, Filtering, UpperBound, MaxIteration, 
 %%                       , MaxIterations :: integer() | infinity
 %%                       , Filter :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefined
 %%                       , UpperBound :: float())
-%%      -> calculation().
+%%      -> calculation()
 %% @end
 %%--------------------------------------------------------------------
 -spec get_calculation(Name :: atom, Func :: fun(() -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer() | infinity,
@@ -347,7 +352,7 @@ get_calculation(Name, Func, Frequency, MaxIterations, Filter, UpperBound) ->
 %%
 %% @param Fun The function to be propagated
 %%
-%% @spec maybe_propagate(Fun :: function()) -> any().
+%% @spec maybe_propagate(Fun :: function()) -> any()
 %% @end
 %%--------------------------------------------------------------------
 -spec maybe_propagate(Fun :: function()) -> any().

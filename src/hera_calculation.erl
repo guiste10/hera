@@ -60,15 +60,14 @@ stop(Pid) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart workers that performs the calculations
+%% Restart worker that performs the calculation Name from zero with a new function
 %%
 %% @param Name The name of the measurement
 %% @param Func The calculation function to be executed
-%% @param Args The arguments of the function
 %% @param Frequency The frequency of the calculation
 %% @param MaxIterations The number of iterations to be done
 %%
-%% @spec restart_calculation(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer()) -> ok.
+%% @spec restart_calculation(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer()) -> ok
 %% @end
 %%--------------------------------------------------------------------
 -spec restart_calculation(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer()) -> ok.
@@ -77,11 +76,11 @@ restart_calculation(Name, Func, Frequency, MaxIterations) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart worker that performs the calculation <Name>
+%% Restart worker that performs the calculation Name
 %%
 %% @param Name The name of the calculation
 %%
-%% @spec restart_calculation(Name :: atom()) -> ok.
+%% @spec restart_calculation(Name :: atom()) -> ok
 %% @end
 %%--------------------------------------------------------------------
 -spec restart_calculation(Name :: atom()) -> ok.
@@ -90,13 +89,13 @@ restart_calculation(Name) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart worker that performs the calculation <Name>
+%% Restart worker that performs the calculation Name from zero with new frequency and number of iterations
 %%
 %% @param Name The name of the calculation
 %% @param Frequency The frequency of the calculation
 %% @param MaxIterations The number of iterations to be done
 %%
-%% @spec restart_calculation(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity) -> ok.
+%% @spec restart_calculation(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity) -> ok
 %% @end
 %%--------------------------------------------------------------------
 -spec restart_calculation(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity) -> ok.
@@ -105,13 +104,14 @@ restart_calculation(Name, Frequency, MaxIterations) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Pause the worker that performs the calculation <Name>
+%% Pause the worker that performs the calculation Name
 %%
-%% @param Name The name of the calculation <name>
+%% @param Name The name of the calculation Name
 %%
-%% @spec pause_calculation(Name :: atom()) -> ok.
+%% @spec pause_calculation(Name :: atom()) -> ok
 %% @end
 %%--------------------------------------------------------------------
+-spec pause_calculation(Name :: atom()) -> ok.
 pause_calculation(Name) ->
   gen_server:cast(Name, pause).
 

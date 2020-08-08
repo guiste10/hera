@@ -75,47 +75,56 @@ stop(Pid) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart workers that performs the unsynchronized measurements
+%% Restart worker that performs the unsynchronized measurement Name from zero with new parameters
 %%
 %% @param Name The name of the measurement
 %% @param Func The measurement function to be executed
 %% @param Frequency The frequency of the measurement
 %% @param MaxIterations The number of iterations to be done
-%% @param Filtering Boolean that indicates if a filtering must be done to the data output by the function
+%% @param Filtering Filter function or the atom undefined
 %% @param WarmUpPhase Boolean that indicates if a warm-up phase must be performed
 %%
-%% @spec restart_unsync_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
+%% @spec restart_unsync_measurement(
+%%            Name :: atom(),
+%%            Func :: fun((...) -> {ok, term()} | {error, term()}),
+%%            Frequency :: integer(),
+%%            MaxIterations :: integer(),
+%%            Filtering :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefined,
+%%            WarmUpPhase :: boolean()) -> ok
 %% @end
 %%--------------------------------------------------------------------
--spec restart_unsync_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean(), WarmUpPhase :: boolean()) -> ok.
+-spec restart_unsync_measurement(Name :: atom(), Func ::fun((...) -> {ok, term()} | {error, term()}), Frequency :: integer(), MaxIterations :: integer(),
+    Filtering :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefined, WarmUpPhase :: boolean()) -> ok.
 restart_unsync_measurement(Name, Func, Frequency, MaxIterations, Filtering, WarmUpPhase) ->
     gen_server:call(Name, {restart, {Func, Frequency, MaxIterations, Filtering, WarmUpPhase}}).
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart workers that performs the synchronized measurements
+%% Restart worker that performs the synchronized measurement Name from zero with new parameters
 %%
 %% @param Name The name of the measurement
 %% @param Func The measurement function to be executed
 %% @param MaxIterations The number of iterations to be done
-%% @param Filtering Boolean that indicates if a filtering must be done to the data output by the function
+%% @param Filtering Filter function or the atom undefined
 %% @param WarmUpPhase Boolean that indicates if a warm-up phase must be performed
 %%
-%% @spec restart_sync_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), Args :: list(any()), Frequency :: integer(), MaxIterations :: integer(), Filtering :: boolean()) -> ok.
+%% @spec restart_sync_measurement(Name :: atom(), Func ::fun((...) -> {ok, term()} | {error, term()}), MaxIterations :: integer(),
+%%    Filtering :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefined , WarmUpPhase :: boolean()) -> ok
 %% @end
 %%--------------------------------------------------------------------
--spec restart_sync_measurement(Name :: atom(), Func :: fun((...) -> {ok, term()} | {error, term()}), MaxIterations :: integer(), Filtering :: boolean(), WarmUpPhase :: boolean()) -> ok.
-restart_sync_measurement(Name, Func,MaxIterations, Filtering, WarmUpPhase) ->
+-spec restart_sync_measurement(Name :: atom(), Func ::fun((...) -> {ok, term()} | {error, term()}), MaxIterations :: integer(),
+    Filtering :: fun((any(), any(), integer(), list(any())) -> boolean() | any()) | undefined , WarmUpPhase :: boolean()) -> ok.
+restart_sync_measurement(Name, Func, MaxIterations, Filtering, WarmUpPhase) ->
     gen_server:call(Name, {restart, {Func, MaxIterations, Filtering, WarmUpPhase}}).
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart worker that performs the synchronized or unsynchronized measurement <Name>
+%% Restart worker that performs the unsynchronized or synchronized measurement Name from zero if the previous calculation has terminated, or from the previous state if it is pause.
 %%
 %% @param Name The name of the measurement
 %% @param WarmUpPhase Boolean that indicates if a warm-up phase must be performed
 %%
-%% @spec restart_measurement(Name :: atom()) -> ok.
+%% @spec restart_measurement(Name :: atom(), WarmUpPhase :: boolean()) -> ok
 %% @end
 %%--------------------------------------------------------------------
 -spec restart_measurement(Name :: atom(), WarmUpPhase :: boolean()) -> ok.
@@ -124,42 +133,42 @@ restart_measurement(Name, WarmUpPhase) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart worker that performs the synchronized measurement <Name>
+%% Restart worker that performs the synchronized measurement Name from zero if the previous calculation has terminated, or from the previous state if it is pause.
 %%
 %% @param Name The name of the measurement
 %% @param MaxIterations The number of iterations to be done
 %% @param WarmUpPhase Boolean that indicates if a warm-up phase must be performed
 %%
-%% @spec restart_sync_measurement(Name :: atom()) -> ok.
+%% @spec restart_sync_measurement(Name :: atom(), MaxIteration :: integer(), WarmUpPhase :: boolean()) -> ok
 %% @end
 %%--------------------------------------------------------------------
--spec restart_sync_measurement(Name :: atom(), MaxIterations :: integer(), WarmUpPhase :: boolean()) -> ok.
+-spec restart_sync_measurement(Name :: atom(), MaxIteration :: integer(), WarmUpPhase :: boolean()) -> ok.
 restart_sync_measurement(Name, MaxIterations, WarmUpPhase) ->
     gen_server:call(Name, {restart, MaxIterations, WarmUpPhase}).
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Restart worker that performs the unsynchronized measurement <Name>
+%% Restart worker that performs the unsynchronized measurement Name from zero with new frequency and number of iterations
 %%
 %% @param Name The name of the measurement
 %% @param Frequency The frequency of the measurement
 %% @param MaxIterations The number of iterations to be done
 %% @param WarmUpPhase Boolean that indicates if a warm-up phase must be performed
 %%
-%% @spec restart_unsync_measurement(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity) -> ok.
+%% @spec restart_unsync_measurement(Name :: atom(), Frequency :: integer(), MaxIterations :: integer(), WarmUpPhase :: boolean()) -> ok
 %% @end
 %%--------------------------------------------------------------------
--spec restart_unsync_measurement(Name :: atom(), Frequency :: integer(), MaxIterations :: integer() | infinity, WarmUpPhase :: boolean()) -> ok.
+-spec restart_unsync_measurement(Name :: atom(), Frequency :: integer(), MaxIterations :: integer(), WarmUpPhase :: boolean()) -> ok.
 restart_unsync_measurement(Name, Frequency, MaxIterations, WarmUpPhase) ->
     gen_server:call(Name, {restart, {Frequency, MaxIterations, WarmUpPhase}}).
 
 %%--------------------------------------------------------------------
 %% @doc
-%% Pause the worker that performs the measurement <Name>
+%% Pause the worker that performs the measurement Name
 %%
 %% @param Name The name of the measurement
 %%
-%% @spec pause_measurement(Name :: atom()) -> ok.
+%% @spec pause_measurement(Name :: atom()) -> ok
 %% @end
 %%--------------------------------------------------------------------
 pause_measurement(Name) ->

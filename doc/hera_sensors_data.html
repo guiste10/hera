@@ -21,8 +21,10 @@
    Module that stores the last measurement of the sensors in order to allow to perform calculation on it.
    This module also handles logging of measurements and calculations.
 <h2><a name="index">Function Index</a></h2>
-<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#get_data-0">get_data/0</a></td><td>
+<table width="100%" border="1" cellspacing="0" cellpadding="2" summary="function index"><tr><td valign="top"><a href="#get_data-1">get_data/1</a></td><td>
   Retrieve the data of the sensors of all nodes.</td></tr>
+<tr><td valign="top"><a href="#get_recent_data-1">get_recent_data/1</a></td><td>
+  Retrieve the recent (+-500ms or less) data of the sensors of all nodes.</td></tr>
 <tr><td valign="top"><a href="#log_calculation-4">log_calculation/4</a></td><td>
   Log the given measure into a file with the same name as the node name.</td></tr>
 <tr><td valign="top"><a href="#log_measure-4">log_measure/4</a></td><td>
@@ -33,11 +35,18 @@
 
 <h2><a name="functions">Function Details</a></h2>
 
-<h3 class="function"><a name="get_data-0">get_data/0</a></h3>
+<h3 class="function"><a name="get_data-1">get_data/1</a></h3>
 <div class="spec">
-<p><tt>get_data() -&gt; <a href="dict.html#type-dict">dict:dict</a>(string(), {integer(), integer() | float()})</tt><br></p>
+<p><tt>get_data(Name::atom()) -&gt; <a href="dict.html#type-dict">dict:dict</a>(string(), {integer(), integer() | float(), integer()})</tt><br></p>
 </div><p>
   Retrieve the data of the sensors of all nodes
+ </p>
+
+<h3 class="function"><a name="get_recent_data-1">get_recent_data/1</a></h3>
+<div class="spec">
+<p><tt>get_recent_data(Name::atom()) -&gt; <a href="dict.html#type-dict">dict:dict</a>(string(), {integer(), integer() | float(), integer()})</tt><br></p>
+</div><p>
+  Retrieve the recent (+-500ms or less) data of the sensors of all nodes
  </p>
 
 <h3 class="function"><a name="log_calculation-4">log_calculation/4</a></h3>
